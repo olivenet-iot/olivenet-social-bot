@@ -1,0 +1,30 @@
+[Unit]
+Description=Olivenet Social Media Bot
+Documentation=https://github.com/olivenet/olivenet-social
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/opt/olivenet-social
+ExecStart=/usr/bin/python3 /opt/olivenet-social/app/telegram_bot.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Environment
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONPATH=/opt/olivenet-social
+EnvironmentFile=/opt/olivenet-social/.env
+
+# Security hardening (optional)
+# NoNewPrivileges=true
+# ProtectSystem=strict
+# ProtectHome=true
+# ReadWritePaths=/opt/olivenet-social/outputs
+
+[Install]
+WantedBy=multi-user.target

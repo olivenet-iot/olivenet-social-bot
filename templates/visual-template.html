@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Olivenet Sosyal Medya Gorseli</title>
+  <style>
+    /* ===== RESET & BASE ===== */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    /* ===== OLIVENET RENK DEĞİŞKENLERİ ===== */
+    :root {
+      /* Olive Paleti */
+      --olive-900: #1a2e1a;
+      --olive-800: #243524;
+      --olive-700: #2d4a2d;
+      --olive-600: #3a5f3a;
+      --olive-500: #4a7c4a;
+      --olive-400: #5e9a5e;
+      --olive-300: #7ab87a;
+      --olive-200: #a3d4a3;
+      --olive-100: #d1e8d1;
+      --olive-50: #e8f4e8;
+
+      /* Sky/Tech Vurgu */
+      --sky-500: #0ea5e9;
+      --sky-400: #38bdf8;
+      --sky-300: #7dd3fc;
+
+      /* Sektorel Renkler */
+      --emerald-500: #10b981;
+      --amber-500: #f59e0b;
+      --violet-500: #8b5cf6;
+
+      /* Notr */
+      --white: #ffffff;
+      --black: #0a0a0a;
+      --gray-400: #9ca3af;
+      --gray-600: #4b5563;
+    }
+
+    /* ===== ANA CONTAINER (1080x1080) ===== */
+    .social-post {
+      width: 1080px;
+      height: 1080px;
+      background: linear-gradient(135deg, var(--olive-900) 0%, var(--black) 100%);
+      position: relative;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    /* ===== GRID PATTERN ARKA PLAN ===== */
+    .grid-pattern {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(to right, rgba(74,124,74,0.1) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(74,124,74,0.1) 1px, transparent 1px);
+      background-size: 64px 64px;
+    }
+
+    /* ===== GLOWING ORBS ===== */
+    .glow-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+    }
+
+    .glow-orb.primary {
+      width: 400px;
+      height: 400px;
+      background: rgba(74, 124, 74, 0.3);
+      top: -100px;
+      right: -100px;
+    }
+
+    .glow-orb.secondary {
+      width: 300px;
+      height: 300px;
+      background: rgba(14, 165, 233, 0.15);
+      bottom: -50px;
+      left: -50px;
+    }
+
+    /* ===== CORNER DOTS ===== */
+    .corner-dot {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .corner-dot.tl { top: 40px; left: 40px; background: rgba(74, 124, 74, 0.6); }
+    .corner-dot.tr { top: 40px; right: 40px; background: rgba(14, 165, 233, 0.6); }
+    .corner-dot.bl { bottom: 40px; left: 40px; background: rgba(74, 124, 74, 0.4); }
+    .corner-dot.br { bottom: 40px; right: 40px; background: rgba(14, 165, 233, 0.4); }
+
+    /* ===== ICERIK CONTAINER ===== */
+    .content {
+      position: relative;
+      z-index: 10;
+      padding: 60px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ===== HEADER ===== */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 40px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: rgba(74, 124, 74, 0.2);
+      border: 1px solid rgba(74, 124, 74, 0.3);
+      border-radius: 24px;
+      color: var(--olive-400);
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .badge-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--olive-500);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* ===== MAIN CARD (GLASSMORPHISM) ===== */
+    .main-card {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 24px;
+      padding: 48px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ===== BASLIK ALANI ===== */
+    .title-section {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .icon-container {
+      width: 80px;
+      height: 80px;
+      background: rgba(74, 124, 74, 0.2);
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 24px;
+    }
+
+    .icon-container svg {
+      width: 40px;
+      height: 40px;
+      color: var(--olive-400);
+    }
+
+    .title {
+      font-size: 48px;
+      font-weight: 700;
+      color: var(--white);
+      line-height: 1.2;
+      margin-bottom: 16px;
+    }
+
+    .title .highlight {
+      color: var(--olive-400);
+    }
+
+    .subtitle {
+      font-size: 22px;
+      color: var(--gray-400);
+      line-height: 1.4;
+    }
+
+    /* ===== METRIK KUTULARI ===== */
+    .metrics-row {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+
+    .metric-box {
+      flex: 1;
+      background: rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(8px);
+      border-radius: 16px;
+      padding: 20px;
+    }
+
+    .metric-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .metric-icon {
+      width: 20px;
+      height: 20px;
+      color: var(--gray-400);
+    }
+
+    .metric-label {
+      font-size: 14px;
+      color: var(--gray-400);
+    }
+
+    .metric-value {
+      font-size: 28px;
+      font-weight: 600;
+      color: var(--sky-400);
+    }
+
+    .metric-value.olive {
+      color: var(--olive-400);
+    }
+
+    .metric-value.emerald {
+      color: var(--emerald-500);
+    }
+
+    .metric-value.amber {
+      color: var(--amber-500);
+    }
+
+    /* ===== ANA STAT (BUYUK RAKAM) ===== */
+    .main-stat {
+      text-align: center;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .stat-value {
+      font-size: 120px;
+      font-weight: 700;
+      color: var(--olive-400);
+      line-height: 1;
+    }
+
+    .stat-value span {
+      font-size: 60px;
+    }
+
+    .stat-label {
+      font-size: 24px;
+      color: var(--gray-400);
+      margin-top: 8px;
+    }
+
+    /* ===== MINI BAR CHART ===== */
+    .bar-chart {
+      display: flex;
+      align-items: flex-end;
+      gap: 6px;
+      height: 60px;
+      margin: 20px 0;
+    }
+
+    .bar {
+      flex: 1;
+      background: rgba(74, 124, 74, 0.4);
+      border-radius: 4px 4px 0 0;
+    }
+
+    /* ===== TOGGLE CONTROLS ===== */
+    .controls-row {
+      display: flex;
+      gap: 16px;
+      margin-top: auto;
+    }
+
+    .control-box {
+      flex: 1;
+      background: rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(8px);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .control-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .control-icon-wrap {
+      width: 32px;
+      height: 32px;
+      background: rgba(74, 124, 74, 0.2);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .control-icon-wrap svg {
+      width: 16px;
+      height: 16px;
+      color: var(--olive-400);
+    }
+
+    .control-label {
+      font-size: 14px;
+      color: var(--gray-400);
+    }
+
+    .toggle {
+      width: 44px;
+      height: 24px;
+      background: var(--olive-500);
+      border-radius: 12px;
+      position: relative;
+    }
+
+    .toggle-knob {
+      width: 20px;
+      height: 20px;
+      background: var(--white);
+      border-radius: 50%;
+      position: absolute;
+      right: 2px;
+      top: 2px;
+    }
+
+    /* ===== FOOTER ===== */
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 40px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-icon {
+      width: 48px;
+      height: 48px;
+      background: var(--olive-500);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .logo-icon svg {
+      width: 28px;
+      height: 28px;
+      color: var(--white);
+    }
+
+    .logo-text {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--white);
+    }
+
+    .hashtags {
+      font-size: 16px;
+      color: var(--olive-400);
+    }
+
+    /* ===== VARYANTLAR ===== */
+
+    /* Tarim/Sera Varyanti */
+    .social-post.tarim .main-card {
+      background: linear-gradient(135deg, rgba(6, 78, 59, 0.3) 0%, rgba(6, 78, 59, 0.1) 100%);
+      border-color: rgba(16, 185, 129, 0.2);
+    }
+
+    .social-post.tarim .icon-container {
+      background: rgba(16, 185, 129, 0.2);
+    }
+
+    .social-post.tarim .icon-container svg,
+    .social-post.tarim .stat-value,
+    .social-post.tarim .title .highlight {
+      color: var(--emerald-500);
+    }
+
+    /* Enerji Varyanti */
+    .social-post.enerji .main-card {
+      background: linear-gradient(135deg, rgba(120, 53, 15, 0.3) 0%, rgba(120, 53, 15, 0.1) 100%);
+      border-color: rgba(245, 158, 11, 0.2);
+    }
+
+    .social-post.enerji .icon-container {
+      background: rgba(245, 158, 11, 0.2);
+    }
+
+    .social-post.enerji .icon-container svg,
+    .social-post.enerji .stat-value,
+    .social-post.enerji .title .highlight {
+      color: var(--amber-500);
+    }
+
+    /* Kestirimci Bakim Varyanti */
+    .social-post.bakim .main-card {
+      background: linear-gradient(135deg, rgba(76, 29, 149, 0.3) 0%, rgba(76, 29, 149, 0.1) 100%);
+      border-color: rgba(139, 92, 246, 0.2);
+    }
+
+    .social-post.bakim .icon-container {
+      background: rgba(139, 92, 246, 0.2);
+    }
+
+    .social-post.bakim .icon-container svg,
+    .social-post.bakim .stat-value,
+    .social-post.bakim .title .highlight {
+      color: var(--violet-500);
+    }
+
+    /* Bina Varyanti */
+    .social-post.bina .main-card {
+      background: linear-gradient(135deg, rgba(12, 74, 110, 0.3) 0%, rgba(12, 74, 110, 0.1) 100%);
+      border-color: rgba(14, 165, 233, 0.2);
+    }
+
+    .social-post.bina .icon-container {
+      background: rgba(14, 165, 233, 0.2);
+    }
+
+    .social-post.bina .icon-container svg,
+    .social-post.bina .stat-value,
+    .social-post.bina .title .highlight {
+      color: var(--sky-400);
+    }
+  </style>
+</head>
+<body>
+
+<!-- ===== ANA TEMPLATE (Varsayilan - Olive) ===== -->
+<div class="social-post">
+  <!-- Arka Plan Elementleri -->
+  <div class="grid-pattern"></div>
+  <div class="glow-orb primary"></div>
+  <div class="glow-orb secondary"></div>
+  <div class="corner-dot tl"></div>
+  <div class="corner-dot tr"></div>
+  <div class="corner-dot bl"></div>
+  <div class="corner-dot br"></div>
+
+  <!-- Icerik -->
+  <div class="content">
+    <!-- Header Badge -->
+    <div class="header">
+      <div class="badge">
+        <div class="badge-dot"></div>
+        <span>{{BADGE}}</span>
+      </div>
+    </div>
+
+    <!-- Ana Kart -->
+    <div class="main-card">
+      <!-- Baslik -->
+      <div class="title-section">
+        <div class="icon-container">
+          <!-- Placeholder Icon - SVG -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2v4m0 12v4M6 12H2m20 0h-4m-.464-5.536l-2.828 2.828m-5.416 5.416l-2.828 2.828m0-11.072l2.828 2.828m5.416 5.416l2.828 2.828"/>
+          </svg>
+        </div>
+        <h1 class="title">{{TITLE}}</h1>
+        <p class="subtitle">{{SUBTITLE}}</p>
+      </div>
+
+      <!-- Metrikler -->
+      <div class="metrics-row">
+        <div class="metric-box">
+          <div class="metric-header">
+            <svg class="metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 4v6m0 0v6m0-6h6m-6 0H8"/>
+            </svg>
+            <span class="metric-label">{{METRIC1_LABEL}}</span>
+          </div>
+          <div class="metric-value olive">{{METRIC1_VALUE}}</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-header">
+            <svg class="metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+            <span class="metric-label">{{METRIC2_LABEL}}</span>
+          </div>
+          <div class="metric-value">{{METRIC2_VALUE}}</div>
+        </div>
+      </div>
+
+      <!-- Ana Stat -->
+      <div class="main-stat">
+        <div class="stat-value">{{STAT_VALUE}}<span>{{STAT_SUFFIX}}</span></div>
+        <div class="stat-label">{{STAT_LABEL}}</div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <div class="logo">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2v4m0 12v4M6 12H2m20 0h-4m-.464-5.536l-2.828 2.828m-5.416 5.416l-2.828 2.828m0-11.072l2.828 2.828m5.416 5.416l2.828 2.828"/>
+          </svg>
+        </div>
+        <span class="logo-text">Olivenet</span>
+      </div>
+      <div class="hashtags">{{HASHTAGS}}</div>
+    </div>
+  </div>
+</div>
+
+<!--
+===== KULLANIM KILAVUZU =====
+
+PLACEHOLDER'LAR:
+{{BADGE}} - Ust badge metni (orn: "Akilli Tarim", "Enerji Izleme")
+{{TITLE}} - Ana baslik
+{{SUBTITLE}} - Alt baslik/aciklama
+{{METRIC1_LABEL}} - Sol metrik etiketi
+{{METRIC1_VALUE}} - Sol metrik degeri
+{{METRIC2_LABEL}} - Sag metrik etiketi
+{{METRIC2_VALUE}} - Sag metrik degeri
+{{STAT_VALUE}} - Buyuk istatistik rakami
+{{STAT_SUFFIX}} - Istatistik birimi (%, +, vb.)
+{{STAT_LABEL}} - Istatistik aciklamasi
+{{HASHTAGS}} - Hashtag'ler
+
+VARYANTLAR:
+Ana div'e su class'lardan birini ekleyin:
+- tarim: Yesil/Emerald tema
+- enerji: Sari/Amber tema
+- bakim: Mor/Violet tema
+- bina: Mavi/Sky tema
+
+Varsayilan: Olive tema
+
+ORNEK KULLANIM (Tarim):
+<div class="social-post tarim">
+
+IKON DEGISTIRME:
+.icon-container icindeki SVG'yi degistirerek farkli ikonlar kullanabilirsiniz.
+Onerilen ikon kaynaklari:
+- Lucide Icons (https://lucide.dev)
+- Heroicons (https://heroicons.com)
+
+EXPORT ICIN:
+1. Bu HTML'i tarayicida acin
+2. DevTools ile elementi secin
+3. Screenshot alin veya
+4. html2canvas/puppeteer ile PNG'ye donusturun
+
+-->
+
+</body>
+</html>

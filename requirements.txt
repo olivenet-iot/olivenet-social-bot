@@ -1,0 +1,22 @@
+# Olivenet Social Media Bot - Dependencies
+
+# Web Framework
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+
+# Telegram Bot
+python-telegram-bot>=20.7
+
+# Browser Automation (HTML to PNG)
+playwright>=1.40.0
+
+# HTTP Client
+httpx>=0.25.0
+
+# Configuration
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+python-dotenv>=1.0.0
+
+# Async utilities
+asyncio-throttle>=1.0.2
