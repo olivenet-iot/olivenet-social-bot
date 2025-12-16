@@ -61,6 +61,7 @@ class SessionData:
         self.image_path: Optional[str] = None
         self.html_path: Optional[str] = None
         self.visual_type: Optional[str] = None  # 'infographic' or 'realistic'
+        self.suggested_topics: list = []  # Store suggested topics for selection
 
     def reset(self):
         """Reset session to initial state."""
@@ -71,6 +72,7 @@ class SessionData:
         self.image_path = None
         self.html_path = None
         self.visual_type = None
+        self.suggested_topics = []
 
 
 # Global session storage (in production, use Redis or database)
@@ -159,7 +161,6 @@ def get_visual_type_keyboard() -> InlineKeyboardMarkup:
     """Visual type selection keyboard."""
     keyboard = [
         [InlineKeyboardButton("Infografik (Statik)", callback_data="visual_infographic")],
-        [InlineKeyboardButton("Animasyonlu Video", callback_data="visual_animated")],
         [InlineKeyboardButton("Gercekci AI Gorsel", callback_data="visual_realistic")],
         [InlineKeyboardButton("Iptal", callback_data="cancel")]
     ]
@@ -292,14 +293,17 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await handle_new_post(query, session)
     elif action == "suggest_topic":
         await handle_suggest_topic(query, session)
+    elif action == "refresh_suggestions":
+        await handle_suggest_topic(query, session)
+    elif action.startswith("select_topic_"):
+        topic_index = int(action.replace("select_topic_", ""))
+        await handle_select_topic(query, session, topic_index)
     elif action == "status":
         await handle_status(query, session)
     elif action == "approve_post":
         await handle_approve_post(query, session)
     elif action == "visual_infographic":
         await handle_visual_infographic(query, session)
-    elif action == "visual_animated":
-        await handle_visual_animated(query, session)
     elif action == "visual_realistic":
         await handle_visual_realistic(query, session)
     elif action == "regenerate_post":
@@ -358,24 +362,59 @@ async def handle_status(query, session: SessionData):
 
 
 async def handle_suggest_topic(query, session: SessionData):
-    """Handle topic suggestion request - social media expert style."""
+    """Handle topic suggestion request - social media expert style with selection buttons."""
     await query.edit_message_text(
         "Konu onerileri hazirlaniyor...\n\n"
         "Mevsim, gun ve KKTC pazarina uygun oneriler olusturuluyor."
     )
 
     try:
-        suggestions = await suggest_topics()
+        result = await suggest_topics()
+        topics = result.get("topics", [])
 
-        # Create keyboard with main menu option
-        keyboard = [
-            [InlineKeyboardButton("Yeni Post Olustur", callback_data="new_post")],
-            [InlineKeyboardButton("Ana Menu", callback_data="main_menu")]
-        ]
+        # Store topics in session for selection
+        session.suggested_topics = topics
+        save_sessions()
+
+        # Build message with formatted topics
+        topic_emojis = ["1️⃣", "2️⃣", "3️⃣"]
+        engagement_colors = {"yuksek": "🟢", "orta": "🟡", "dusuk": "🔴"}
+
+        message_lines = ["*Bugun Icin Konu Onerileri:*\n"]
+
+        for i, topic in enumerate(topics[:3]):
+            emoji = topic_emojis[i] if i < len(topic_emojis) else f"{i+1}."
+            title = topic.get("title", "Konu")
+            reason = topic.get("reason", "")
+            hook = topic.get("hook", "")
+            engagement = topic.get("engagement", "orta")
+            eng_emoji = engagement_colors.get(engagement, "🟡")
+
+            message_lines.append(f"{emoji} *{title}*")
+            message_lines.append(f"   Neden: {reason}")
+            message_lines.append(f"   Hook: _{hook}_")
+            message_lines.append(f"   Engagement: {eng_emoji} {engagement}\n")
+
+        message_lines.append("_Bir konu secin veya yeni oneriler isteyin:_")
+
+        # Create keyboard with topic selection buttons
+        keyboard = []
+
+        # Topic selection buttons in a row
+        topic_buttons = []
+        for i in range(min(3, len(topics))):
+            topic_buttons.append(
+                InlineKeyboardButton(topic_emojis[i], callback_data=f"select_topic_{i}")
+            )
+        if topic_buttons:
+            keyboard.append(topic_buttons)
+
+        # Refresh and menu buttons
+        keyboard.append([InlineKeyboardButton("🔄 Yeni Öneriler", callback_data="refresh_suggestions")])
+        keyboard.append([InlineKeyboardButton("🏠 Ana Menü", callback_data="main_menu")])
 
         await query.message.reply_text(
-            f"*Bugun Icin Konu Onerileri:*\n\n{suggestions}\n\n"
-            "_Bir konu secip 'Yeni Post Olustur' ile devam edebilirsiniz._",
+            "\n".join(message_lines),
             parse_mode='Markdown',
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
@@ -384,6 +423,51 @@ async def handle_suggest_topic(query, session: SessionData):
         logger.error(f"Failed to suggest topics: {e}")
         await query.message.reply_text(
             f"Konu onerileri olusturulurken hata olustu:\n{str(e)[:200]}",
+            reply_markup=get_main_keyboard()
+        )
+
+
+async def handle_select_topic(query, session: SessionData, topic_index: int):
+    """Handle topic selection from suggestions."""
+    if not session.suggested_topics or topic_index >= len(session.suggested_topics):
+        await query.edit_message_text(
+            "Hata: Konu bulunamadi. Lutfen tekrar oneri alin.",
+            reply_markup=get_main_keyboard()
+        )
+        return
+
+    selected_topic = session.suggested_topics[topic_index]
+    topic_title = selected_topic.get("title", "Konu")
+
+    # Set the topic and generate post
+    session.topic = topic_title
+    session.state = BotState.WAITING_TOPIC  # Will transition after generation
+    save_sessions()
+
+    await query.edit_message_text(
+        f"Secilen konu: *{topic_title}*\n\n"
+        f"Post olusturuluyor... Bu islem 30-60 saniye surebilir.",
+        parse_mode='Markdown'
+    )
+
+    try:
+        post_text = await generate_post_text(topic_title)
+        session.post_text = post_text
+        session.state = BotState.SHOWING_POST
+        save_sessions()
+
+        await query.message.reply_text(
+            f"*Olusturulan Post:*\n\n{post_text}",
+            parse_mode='Markdown',
+            reply_markup=get_post_review_keyboard()
+        )
+
+    except Exception as e:
+        logger.error(f"Failed to generate post from suggestion: {e}")
+        session.state = BotState.IDLE
+        save_sessions()
+        await query.message.reply_text(
+            f"Post olusturulurken hata olustu:\n{str(e)[:200]}",
             reply_markup=get_main_keyboard()
         )
 
@@ -479,53 +563,6 @@ async def handle_visual_realistic(query, session: SessionData):
         print(f"Gemini hatasi: {error_detail}")
         await query.message.reply_text(
             f"AI gorsel olusturma hatasi:\n{str(e)[:300]}\n\nBaska bir gorsel turu denemek ister misiniz?",
-            reply_markup=get_visual_type_keyboard()
-        )
-
-
-async def handle_visual_animated(query, session: SessionData):
-    """Handle animated MP4 visual generation."""
-    await query.edit_message_text(
-        "Animasyonlu video olusturuluyor...\n\n"
-        "Bu islem 1-2 dakika surebilir (frame'ler render ediliyor)."
-    )
-
-    try:
-        from app.claude_helper import generate_animated_visual_html
-        from app.animated_renderer import render_animated_html_to_video
-        from datetime import datetime
-
-        # Generate animated HTML
-        html_content = await generate_animated_visual_html(session.post_text, session.topic)
-        session.html_content = html_content
-        session.visual_type = "animated"
-
-        # Render to video
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_path = f"/opt/olivenet-social/outputs/animated_{timestamp}.mp4"
-
-        await render_animated_html_to_video(html_content, output_path, duration=4, fps=30)
-
-        session.image_path = output_path
-        session.state = BotState.SHOWING_VISUAL
-        save_sessions()
-
-        # Send video
-        with open(output_path, 'rb') as video_file:
-            await query.message.reply_video(
-                video=video_file,
-                caption=f"*Animasyonlu gorsel olusturuldu!*\n\nKonu: {session.topic}\n\nAsagidaki seceneklerden birini secin:",
-                parse_mode='Markdown',
-                reply_markup=get_visual_review_keyboard()
-            )
-
-    except Exception as e:
-        import traceback
-        error_detail = traceback.format_exc()
-        logger.error(f"Animation error: {error_detail}")
-        print(f"Animasyon hatasi: {error_detail}")
-        await query.message.reply_text(
-            f"Animasyon olusturma hatasi:\n{str(e)[:300]}\n\nBaska bir gorsel turu denemek ister misiniz?",
             reply_markup=get_visual_type_keyboard()
         )
 

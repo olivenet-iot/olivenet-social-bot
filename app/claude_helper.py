@@ -11,7 +11,6 @@ from .config import settings
 
 logger = logging.getLogger(__name__)
 
-
 async def run_claude_code(prompt: str, timeout: int = 60) -> str:
     """
     Run Claude Code CLI with the given prompt.
@@ -56,7 +55,6 @@ async def run_claude_code(prompt: str, timeout: int = 60) -> str:
     except FileNotFoundError:
         logger.error("Claude Code CLI not found")
         raise Exception("Claude Code CLI not found. Is it installed?")
-
 
 async def generate_post_text(topic: str) -> str:
     """
@@ -119,15 +117,15 @@ Analiz veya degerlendirme notlarini YAZMA.
 
     return result
 
-
-async def suggest_topics() -> str:
+async def suggest_topics() -> dict:
     """
     Generate topic suggestions like a social media expert.
     Considers current season and day of week.
 
     Returns:
-        Topic suggestions in Turkish
+        Dictionary with topics list: {"topics": [{"title": ..., "reason": ..., "hook": ..., "engagement": ...}, ...]}
     """
+    import json
     from datetime import datetime
 
     today = datetime.now()
@@ -161,36 +159,51 @@ Mevsimsel temalar: {season_themes}
 
 Olivenet icin bugun paylasilabilecek 3 farkli post konusu oner.
 
-Her oneri icin:
-1. Konu basligi (kisa)
-2. Neden bugun? (1 cumle)
-3. Hook onerisi (ilk cumle nasil olmali)
-4. Tahmini engagement (dusuk/orta/yuksek)
-
 Oneriler farkli kategorilerden olsun:
 - Biri egitici/bilgilendirici
 - Biri duygusal/hikaye
 - Biri pratik ipucu
 
-Format:
-**1. [KONU]**
-Neden: ...
-Hook: "..."
-Engagement: ...
+## KRITIK: JSON FORMATI
+SADECE asagidaki JSON formatinda cevap ver, baska bir sey YAZMA:
 
-**2. [KONU]**
-...
+{{"topics": [
+  {{"title": "Konu basligi kisa", "reason": "Neden bugun 1 cumle", "hook": "Hook onerisi ilk cumle", "engagement": "yuksek"}},
+  {{"title": "Ikinci konu", "reason": "Neden", "hook": "Hook", "engagement": "orta"}},
+  {{"title": "Ucuncu konu", "reason": "Neden", "hook": "Hook", "engagement": "yuksek"}}
+]}}
 
-**3. [KONU]**
-...
-
-SADECE onerileri yaz, baska aciklama yapma.
+SADECE JSON yaz, markdown code block (```) KULLANMA!
 """
 
     logger.info("Generating topic suggestions")
     result = await run_claude_code(prompt, timeout=60)
-    return clean_response(result)
+    result = clean_response(result)
 
+    # Parse JSON response
+    try:
+        # Remove any markdown artifacts
+        result = result.strip()
+        if result.startswith('```'):
+            result = result.split('\n', 1)[1]
+        if result.endswith('```'):
+            result = result.rsplit('```', 1)[0]
+        result = result.strip()
+
+        data = json.loads(result)
+        logger.info(f"Parsed {len(data.get('topics', []))} topic suggestions")
+        return data
+    except json.JSONDecodeError as e:
+        logger.error(f"Failed to parse topic suggestions JSON: {e}")
+        # Return a fallback structure
+        return {
+            "topics": [
+                {"title": "IoT ile Enerji Tasarrufu", "reason": "Kis mevsiminde enerji maliyetleri artar", "hook": "Elektrik faturanizi %30 dusurmenin sirri", "engagement": "yuksek"},
+                {"title": "Akilli Sera Otomasyonu", "reason": "Teknoloji ilgi ceker", "hook": "Seraniz siz uyurken bile calissin!", "engagement": "orta"},
+                {"title": "KKTC'de Dijital Donusum", "reason": "Yerel baglam onemli", "hook": "Kibris'ta isletmenizi nasil dijitallestirirsiniz?", "engagement": "yuksek"}
+            ],
+            "error": "JSON parse failed, using fallback"
+        }
 
 async def generate_visual_html(post_text: str, topic: str) -> str:
     """
@@ -288,7 +301,6 @@ HTML icinde {{{{logo}}}} placeholder'i kullan, ben degistirecegim.
 
     return result
 
-
 def clean_response(text: str) -> str:
     """Remove markdown artifacts and clean up response."""
     # Remove code blocks if present
@@ -299,7 +311,6 @@ def clean_response(text: str) -> str:
     text = text.strip()
 
     return text
-
 
 def extract_html(text: str) -> str:
     """Extract HTML content from response, handling various formats."""
@@ -339,7 +350,6 @@ def extract_html(text: str) -> str:
 
     return text
 
-
 async def improve_post_text(original_post: str, feedback: str) -> str:
     """
     Improve an existing post based on feedback.
@@ -372,7 +382,6 @@ SADECE yeni post metnini yaz, aciklama yapma.
     logger.info("Improving post text based on feedback")
     result = await run_claude_code(prompt, timeout=settings.claude_timeout_post)
     return clean_response(result)
-
 
 async def generate_visual_html_with_feedback(post_text: str, topic: str, feedback: str) -> str:
     """
@@ -438,123 +447,6 @@ HTML icinde {{{{logo}}}} placeholder'i kullan.
 """
 
     logger.info(f"Generating visual HTML with feedback for topic: {topic}")
-    result = await run_claude_code(prompt, timeout=120)
-
-    result = extract_html(result)
-
-    if logo_img and "{{logo}}" in result:
-        result = result.replace("{{logo}}", logo_img)
-
-    return result
-
-
-async def generate_animated_visual_html(post_text: str, topic: str) -> str:
-    """
-    Generate animated HTML visual in Olivenet website style.
-    Uses CSS animations similar to the website's framer-motion effects.
-
-    Args:
-        post_text: The post text
-        topic: The topic/subject
-
-    Returns:
-        HTML with CSS animations
-    """
-    try:
-        from app.logo_data import LOGO_BASE64
-        logo_img = LOGO_BASE64.strip()
-    except Exception:
-        logo_img = ""
-
-    short_post = post_text[:400] if len(post_text) > 400 else post_text
-
-    prompt = f"""
-/opt/olivenet-social/context/visual-guidelines.md dosyasini oku.
-
-Bu post icin 1080x1080px ANIMASYONLU sosyal medya gorseli HTML'i olustur.
-
-Post metni: {short_post}
-Konu: {topic}
-
-## CSS ANIMASYONLARI (Olivenet website tarzi):
-
-1. PULSE RINGS (IoT hub efekti):
-@keyframes pulse-ring {{
-  0% {{ transform: scale(1); opacity: 0.4; }}
-  100% {{ transform: scale(2); opacity: 0; }}
-}}
-
-2. FADE-IN-UP (metin girisi):
-@keyframes fadeInUp {{
-  from {{ opacity: 0; transform: translateY(20px); }}
-  to {{ opacity: 1; transform: translateY(0); }}
-}}
-
-3. FLOAT (yuzen elementler):
-@keyframes float {{
-  0%, 100% {{ transform: translateY(0); }}
-  50% {{ transform: translateY(-10px); }}
-}}
-
-4. GLOW PULSE:
-@keyframes glow {{
-  0%, 100% {{ box-shadow: 0 0 20px rgba(74,124,74,0.3); }}
-  50% {{ box-shadow: 0 0 40px rgba(74,124,74,0.6); }}
-}}
-
-## TASARIM KURALLARI:
-
-1. ARKA PLAN:
-   - Koyu gradient: #0a0a0a -> #1a2e1a (135deg)
-   - Grid pattern: 64px aralikli #4a7c4a15 cizgiler
-
-2. MERKEZ ANIMASYON:
-   - Konuya gore SVG animasyonu
-   - 3 adet pulse ring (farkli delay: 0s, 1s, 2s)
-   - Merkez icon veya rakam
-
-3. METIN ANIMASYONLARI:
-   - Baslik: fadeInUp, animation-delay: 0.3s
-   - Alt baslik: fadeInUp, animation-delay: 0.5s
-   - animation-fill-mode: forwards
-
-4. ISTATISTIK KARTLARI (opsiyonel):
-   - Glassmorphism: background: rgba(255,255,255,0.1); backdrop-filter: blur(10px);
-   - fadeInUp animasyonu (staggered delays)
-
-5. SOL ALT - LOGO:
-   <div style="position:absolute;bottom:24px;left:24px;display:flex;align-items:center;gap:12px;">
-     <img src="{{{{logo}}}}" style="width:48px;height:48px;border-radius:8px;">
-     <span style="color:#ffffff;font-size:24px;font-weight:600;font-family:system-ui;">Olivenet</span>
-   </div>
-
-6. FONT: font-family: system-ui, -apple-system, sans-serif;
-
-## SVG ANIMASYON ORNEGI (Pulse Hub):
-<svg viewBox="0 0 200 200" style="width:200px;height:200px;">
-  <circle cx="100" cy="100" r="30" fill="none" stroke="#4a7c4a" stroke-width="2">
-    <animate attributeName="r" values="30;80" dur="3s" repeatCount="indefinite"/>
-    <animate attributeName="opacity" values="0.4;0" dur="3s" repeatCount="indefinite"/>
-  </circle>
-  <circle cx="100" cy="100" r="30" fill="none" stroke="#4a7c4a" stroke-width="2">
-    <animate attributeName="r" values="30;80" dur="3s" begin="1s" repeatCount="indefinite"/>
-    <animate attributeName="opacity" values="0.4;0" dur="3s" begin="1s" repeatCount="indefinite"/>
-  </circle>
-  <circle cx="100" cy="100" r="25" fill="#4a7c4a"/>
-</svg>
-
-## ANIMATION TIMING:
-- Tum animasyonlar SONSUZ dongu (infinite) veya animation-fill-mode: forwards
-- Toplam animasyon dongusu: 3-4 saniye
-- ease-out veya ease-in-out timing
-
-SADECE HTML kodunu yaz. Tum CSS animasyonlari <style> tag icinde olsun.
-Markdown code block KULLANMA.
-Direkt <!DOCTYPE html> ile basla.
-HTML icinde {{{{logo}}}} placeholder'i kullan.
-"""
-
-    logger.info(f"Generating animated visual HTML for topic: {topic}")
     result = await run_claude_code(prompt, timeout=120)
 
     result = extract_html(result)
