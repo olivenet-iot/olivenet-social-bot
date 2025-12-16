@@ -26,7 +26,7 @@ from telegram.ext import (
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app.config import settings
-from app.claude_helper import generate_post_text, generate_visual_html, improve_post_text
+from app.claude_helper import generate_post_text, generate_visual_html, improve_post_text, suggest_topics
 from app.renderer import save_html_and_render, cleanup
 from app.facebook_helper import post_with_photo_to_facebook, post_text_to_facebook, FacebookError
 
@@ -134,6 +134,7 @@ def get_main_keyboard() -> InlineKeyboardMarkup:
     """Main menu keyboard."""
     keyboard = [
         [InlineKeyboardButton("Yeni Post Olustur", callback_data="new_post")],
+        [InlineKeyboardButton("Konu Oner", callback_data="suggest_topic")],
         [InlineKeyboardButton("Durum", callback_data="status")]
     ]
     return InlineKeyboardMarkup(keyboard)
@@ -157,7 +158,8 @@ def get_post_review_keyboard() -> InlineKeyboardMarkup:
 def get_visual_type_keyboard() -> InlineKeyboardMarkup:
     """Visual type selection keyboard."""
     keyboard = [
-        [InlineKeyboardButton("Infografik/Dashboard", callback_data="visual_infographic")],
+        [InlineKeyboardButton("Infografik (Statik)", callback_data="visual_infographic")],
+        [InlineKeyboardButton("Animasyonlu Video", callback_data="visual_animated")],
         [InlineKeyboardButton("Gercekci AI Gorsel", callback_data="visual_realistic")],
         [InlineKeyboardButton("Iptal", callback_data="cancel")]
     ]
@@ -207,6 +209,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Merhaba! Olivenet Sosyal Medya Bot'una hosgeldiniz.\n\n"
         "Bu bot ile:\n"
         "- AI destekli sosyal medya postlari olusturabilir\n"
+        "- Sosyal medya uzmani gibi konu onerileri alabilir\n"
         "- Otomatik gorseller uretebilir\n"
         "- Facebook'a direkt paylasabilirsiniz\n\n"
         "Baslamak icin asagidaki menuyu kullanin:",
@@ -287,12 +290,16 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if action == "new_post":
         await handle_new_post(query, session)
+    elif action == "suggest_topic":
+        await handle_suggest_topic(query, session)
     elif action == "status":
         await handle_status(query, session)
     elif action == "approve_post":
         await handle_approve_post(query, session)
     elif action == "visual_infographic":
         await handle_visual_infographic(query, session)
+    elif action == "visual_animated":
+        await handle_visual_animated(query, session)
     elif action == "visual_realistic":
         await handle_visual_realistic(query, session)
     elif action == "regenerate_post":
@@ -311,6 +318,8 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await handle_cancel_publish(query, session)
     elif action == "cancel":
         await handle_cancel(query, session)
+    elif action == "main_menu":
+        await handle_main_menu(query, session)
 
 
 async def handle_new_post(query, session: SessionData):
@@ -346,6 +355,37 @@ async def handle_status(query, session: SessionData):
         parse_mode='Markdown',
         reply_markup=get_main_keyboard()
     )
+
+
+async def handle_suggest_topic(query, session: SessionData):
+    """Handle topic suggestion request - social media expert style."""
+    await query.edit_message_text(
+        "Konu onerileri hazirlaniyor...\n\n"
+        "Mevsim, gun ve KKTC pazarina uygun oneriler olusturuluyor."
+    )
+
+    try:
+        suggestions = await suggest_topics()
+
+        # Create keyboard with main menu option
+        keyboard = [
+            [InlineKeyboardButton("Yeni Post Olustur", callback_data="new_post")],
+            [InlineKeyboardButton("Ana Menu", callback_data="main_menu")]
+        ]
+
+        await query.message.reply_text(
+            f"*Bugun Icin Konu Onerileri:*\n\n{suggestions}\n\n"
+            "_Bir konu secip 'Yeni Post Olustur' ile devam edebilirsiniz._",
+            parse_mode='Markdown',
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+
+    except Exception as e:
+        logger.error(f"Failed to suggest topics: {e}")
+        await query.message.reply_text(
+            f"Konu onerileri olusturulurken hata olustu:\n{str(e)[:200]}",
+            reply_markup=get_main_keyboard()
+        )
 
 
 async def handle_approve_post(query, session: SessionData):
@@ -439,6 +479,53 @@ async def handle_visual_realistic(query, session: SessionData):
         print(f"Gemini hatasi: {error_detail}")
         await query.message.reply_text(
             f"AI gorsel olusturma hatasi:\n{str(e)[:300]}\n\nBaska bir gorsel turu denemek ister misiniz?",
+            reply_markup=get_visual_type_keyboard()
+        )
+
+
+async def handle_visual_animated(query, session: SessionData):
+    """Handle animated MP4 visual generation."""
+    await query.edit_message_text(
+        "Animasyonlu video olusturuluyor...\n\n"
+        "Bu islem 1-2 dakika surebilir (frame'ler render ediliyor)."
+    )
+
+    try:
+        from app.claude_helper import generate_animated_visual_html
+        from app.animated_renderer import render_animated_html_to_video
+        from datetime import datetime
+
+        # Generate animated HTML
+        html_content = await generate_animated_visual_html(session.post_text, session.topic)
+        session.html_content = html_content
+        session.visual_type = "animated"
+
+        # Render to video
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_path = f"/opt/olivenet-social/outputs/animated_{timestamp}.mp4"
+
+        await render_animated_html_to_video(html_content, output_path, duration=4, fps=30)
+
+        session.image_path = output_path
+        session.state = BotState.SHOWING_VISUAL
+        save_sessions()
+
+        # Send video
+        with open(output_path, 'rb') as video_file:
+            await query.message.reply_video(
+                video=video_file,
+                caption=f"*Animasyonlu gorsel olusturuldu!*\n\nKonu: {session.topic}\n\nAsagidaki seceneklerden birini secin:",
+                parse_mode='Markdown',
+                reply_markup=get_visual_review_keyboard()
+            )
+
+    except Exception as e:
+        import traceback
+        error_detail = traceback.format_exc()
+        logger.error(f"Animation error: {error_detail}")
+        print(f"Animasyon hatasi: {error_detail}")
+        await query.message.reply_text(
+            f"Animasyon olusturma hatasi:\n{str(e)[:300]}\n\nBaska bir gorsel turu denemek ister misiniz?",
             reply_markup=get_visual_type_keyboard()
         )
 
@@ -642,6 +729,14 @@ async def handle_cancel(query, session: SessionData):
 
     await query.edit_message_text(
         "Islem iptal edildi.",
+        reply_markup=get_main_keyboard()
+    )
+
+
+async def handle_main_menu(query, session: SessionData):
+    """Handle main menu request."""
+    await query.edit_message_text(
+        "Ana menu:\n\nNe yapmak istersiniz?",
         reply_markup=get_main_keyboard()
     )
 

@@ -12,10 +12,12 @@ venv/
 .venv/
 ENV/
 
-# Outputs (uretilen gorseller)
+# Outputs (uretilen gorseller/videolar)
 outputs/*.png
 outputs/*.jpg
 outputs/*.html
+outputs/*.mp4
+outputs/*.gif
 !outputs/.gitkeep
 
 # IDE

@@ -4,16 +4,21 @@ set -e
 echo "Olivenet Social Bot Kurulumu"
 echo "================================"
 
-# 1. Bagimliliklari yukle
+# 1. Sistem bagimliliklari
+echo "Sistem bagimliliklari kontrol ediliyor..."
+which ffmpeg > /dev/null || (echo "ffmpeg kuruluyor..." && sudo apt update && sudo apt install -y ffmpeg)
+echo "ffmpeg: OK"
+
+# 2. Python bagimliliklari yukle
 echo "Python bagimliliklari yukleniyor..."
 pip install -r requirements.txt
 
-# 2. Playwright kur
+# 3. Playwright kur
 echo "Playwright Chromium kuruluyor..."
 playwright install chromium
 playwright install-deps
 
-# 3. .env kontrolu
+# 4. .env kontrolu
 if [ ! -f .env ]; then
     echo ".env dosyasi bulunamadi!"
     echo ".env.example'dan kopyalaniyor..."
@@ -25,10 +30,10 @@ if [ ! -f .env ]; then
     exit 1
 fi
 
-# 4. outputs klasoru
-mkdir -p outputs
+# 5. outputs klasoru
+mkdir -p outputs assets
 
-# 5. Test
+# 6. Test
 echo "Sistem testi..."
 python3 -c "from app.config import get_settings; s = get_settings(); print(f'Config OK - Chat ID: {s.telegram_admin_chat_id}')"
 
