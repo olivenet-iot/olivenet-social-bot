@@ -559,3 +559,98 @@ Sadece prompt'u yaz, başka açıklama yapma. Tırnak işareti kullanma.
 
     logger.info(f"Video prompt generated: {result[:100]}...")
     return result
+
+
+async def generate_flux_prompt(post_text: str, topic: str) -> str:
+    """
+    Claude Code ile FLUX.2 Pro için optimize edilmiş prompt üret.
+
+    Args:
+        post_text: Türkçe post metni
+        topic: Konu
+
+    Returns:
+        İngilizce FLUX prompt
+    """
+    short_post = post_text[:400] if len(post_text) > 400 else post_text
+
+    prompt = f"""
+/opt/olivenet-social/context/flux-prompting-guide.md dosyasını oku.
+/opt/olivenet-social/context/company-profile.md dosyasını oku.
+
+## GÖREV: FLUX.2 Pro için Profesyonel Görsel Prompt'u
+
+Post metni (Türkçe): {short_post}
+Konu: {topic}
+
+### FLUX PROMPT KURALLARI:
+
+1. **DİL**: Mutlaka İNGİLİZCE yaz
+
+2. **FRAMEWORK**: Subject + Action + Style + Context
+   - En önemli elementler BAŞTA
+   - 40-80 kelime arası ideal
+
+3. **OLIVENET MARKA KİMLİĞİ**:
+   - Renkler: olive green (#4a7c4a), sky blue (#38bdf8)
+   - Profesyonel, modern, teknolojik
+   - Temiz, minimal estetik
+
+4. **KONUYA GÖRE GÖRSEL TEMALAR**:
+
+   AKILLI TARIM / SERA:
+   - Modern sera, yeşil bitkiler, IoT sensörler
+   - Doğal güneş ışığı, soft shadows
+   - Toprak nem sensörleri, damla sulama
+   - "commercial agriculture photography style"
+
+   ENERJİ İZLEME:
+   - Dijital enerji sayaçları, LED göstergeler
+   - Endüstriyel tesis ortamı
+   - Data visualization, dashboard ekranları
+   - "professional industrial photography"
+
+   KESTİRİMCİ BAKIM:
+   - CNC makineler, endüstriyel ekipman
+   - Vibrasyon sensörleri, diagnostik ekranlar
+   - Mühendis tablet ile çalışıyor
+   - "corporate industrial photography style"
+
+   BİNA OTOMASYONU:
+   - Modern ofis, akıllı termostat
+   - Cam, çelik, minimal mimari
+   - Konfor ve teknoloji birleşimi
+   - "architectural interior photography"
+
+5. **TEKNİK DETAYLAR**:
+   - 1024x1024 kare format için kompozisyon
+   - Shallow depth of field (f/2.8)
+   - Soft, professional lighting
+   - Clean background
+
+6. **ÖRNEK PROMPT YAPISI**:
+   "[Ana konu detaylı], [aksiyon/durum], [ortam], [ışık], olive green (#4a7c4a) and sky blue (#38bdf8) accent colors, [stil], [teknik], [atmosfer]"
+
+7. **YASAKLAR**:
+   - Negatif prompt KULLANMA
+   - "Olivenet" yazısı EKLEME (sonra ekleriz)
+   - Çok karmaşık sahne YAPMA
+
+### ŞİMDİ PROMPT YAZ:
+
+Yukarıdaki kurallara uyarak, verilen post için TEK bir İngilizce görsel prompt yaz.
+Sadece prompt'u yaz, başka açıklama yapma.
+"""
+
+    logger.info(f"Generating FLUX prompt for topic: {topic}")
+    result = await run_claude_code(prompt, timeout=90)
+
+    # Temizle
+    result = result.strip()
+    if result.startswith('"') and result.endswith('"'):
+        result = result[1:-1]
+    if result.startswith("'") and result.endswith("'"):
+        result = result[1:-1]
+
+    logger.info(f"FLUX prompt generated: {result[:100]}...")
+    return result

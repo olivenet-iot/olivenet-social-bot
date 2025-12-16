@@ -164,6 +164,7 @@ def get_visual_type_keyboard() -> InlineKeyboardMarkup:
     keyboard = [
         [InlineKeyboardButton("Infografik (Statik)", callback_data="visual_infographic")],
         [InlineKeyboardButton("Gercekci AI Gorsel", callback_data="visual_realistic")],
+        [InlineKeyboardButton("FLUX.2 Pro (Premium)", callback_data="visual_flux")],
         [InlineKeyboardButton("AI Video (Veo 3)", callback_data="visual_video")],
         [InlineKeyboardButton("Iptal", callback_data="cancel")]
     ]
@@ -309,6 +310,8 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await handle_visual_infographic(query, session)
     elif action == "visual_realistic":
         await handle_visual_realistic(query, session)
+    elif action == "visual_flux":
+        await handle_visual_flux(query, session)
     elif action == "visual_video":
         await handle_visual_video(query, session)
     elif action == "regenerate_post":
@@ -568,6 +571,84 @@ async def handle_visual_realistic(query, session: SessionData):
         print(f"Gemini hatasi: {error_detail}")
         await query.message.reply_text(
             f"AI gorsel olusturma hatasi:\n{str(e)[:300]}\n\nBaska bir gorsel turu denemek ister misiniz?",
+            reply_markup=get_visual_type_keyboard()
+        )
+
+
+async def handle_visual_flux(query, session: SessionData):
+    """Handle FLUX.2 Pro premium visual generation."""
+    await query.edit_message_text(
+        "FLUX.2 Pro gorsel olusturuluyor...\n\n"
+        "Premium kalite icin birkaç saniye bekleyin..."
+    )
+
+    try:
+        from app.claude_helper import generate_flux_prompt
+        from app.flux_helper import generate_image_flux, get_credits
+
+        # Kredi kontrolu
+        credits_result = await get_credits()
+        if credits_result.get("success"):
+            credits = credits_result.get("credits", 0)
+            await query.message.reply_text(
+                f"Kalan kredi: {credits} (${credits * 0.01:.2f})"
+            )
+
+        # 1. Claude ile FLUX prompt'u olustur
+        await query.message.reply_text("FLUX icin prompt hazirlaniyor...")
+
+        flux_prompt = await generate_flux_prompt(session.post_text, session.topic)
+
+        await query.message.reply_text(
+            f"Prompt:\n\n_{flux_prompt[:300]}..._",
+            parse_mode="Markdown"
+        )
+
+        # 2. FLUX.2 Pro ile gorsel uret
+        await query.message.reply_text("FLUX.2 Pro gorsel uretiyor...")
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_path = f"/opt/olivenet-social/outputs/flux_{timestamp}.png"
+
+        result = await generate_image_flux(
+            prompt=flux_prompt,
+            output_path=output_path,
+            width=1024,
+            height=1024
+        )
+
+        if not result["success"]:
+            raise Exception(result.get("error", "Bilinmeyen hata"))
+
+        session.image_path = result["image_path"]
+        session.visual_type = "flux"
+        session.state = BotState.SHOWING_VISUAL
+        save_sessions()
+
+        # 3. Gorseli gonder
+        cost_info = f"Maliyet: {result.get('cost', 'N/A')} kredi" if result.get('cost') else ""
+
+        await query.message.reply_photo(
+            photo=open(result["image_path"], 'rb'),
+            caption=(
+                f"*FLUX.2 Pro gorsel olusturuldu!*\n\n"
+                f"Konu: {session.topic}\n"
+                f"Sure: {result.get('duration', 0):.1f}s\n"
+                f"Boyut: {result.get('file_size', 0)/1024:.1f} KB\n"
+                f"{cost_info}\n\n"
+                f"Asagidaki seceneklerden birini secin:"
+            ),
+            parse_mode='Markdown',
+            reply_markup=get_visual_review_keyboard()
+        )
+
+    except Exception as e:
+        import traceback
+        error_detail = traceback.format_exc()
+        logger.error(f"FLUX error: {error_detail}")
+        print(f"FLUX hatasi: {error_detail}")
+        await query.message.reply_text(
+            f"FLUX gorsel olusturma hatasi:\n{str(e)[:300]}\n\nBaska bir gorsel turu denemek ister misiniz?",
             reply_markup=get_visual_type_keyboard()
         )
 
