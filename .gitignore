@@ -35,3 +35,4 @@ Thumbs.db
 # Playwright
 playwright-report/
 test-results/
+session_state.json

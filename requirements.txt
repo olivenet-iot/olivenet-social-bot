@@ -20,3 +20,12 @@ python-dotenv>=1.0.0
 
 # Async utilities
 asyncio-throttle>=1.0.2
+
+# Gemini AI (realistic image generation)
+google-genai>=1.0.0
+
+# Replicate AI (Flux model for realistic images)
+replicate
+
+# Async HTTP client
+aiohttp

@@ -43,6 +43,7 @@ class BotState(Enum):
     IDLE = auto()
     WAITING_TOPIC = auto()
     SHOWING_POST = auto()
+    CHOOSING_VISUAL_TYPE = auto()
     SHOWING_VISUAL = auto()
     CONFIRMING_PUBLISH = auto()
     WAITING_FEEDBACK = auto()
@@ -58,6 +59,7 @@ class SessionData:
         self.html_content: Optional[str] = None
         self.image_path: Optional[str] = None
         self.html_path: Optional[str] = None
+        self.visual_type: Optional[str] = None  # 'infographic' or 'realistic'
 
     def reset(self):
         """Reset session to initial state."""
@@ -67,6 +69,7 @@ class SessionData:
         self.html_content = None
         self.image_path = None
         self.html_path = None
+        self.visual_type = None
 
 
 # Global session storage (in production, use Redis or database)
@@ -146,6 +149,16 @@ def get_post_review_keyboard() -> InlineKeyboardMarkup:
             InlineKeyboardButton("Duzenle", callback_data="edit_post"),
             InlineKeyboardButton("Iptal", callback_data="cancel")
         ]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def get_visual_type_keyboard() -> InlineKeyboardMarkup:
+    """Visual type selection keyboard."""
+    keyboard = [
+        [InlineKeyboardButton("Infografik/Dashboard", callback_data="visual_infographic")],
+        [InlineKeyboardButton("Gercekci AI Gorsel", callback_data="visual_realistic")],
+        [InlineKeyboardButton("Iptal", callback_data="cancel")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
@@ -278,6 +291,10 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await handle_status(query, session)
     elif action == "approve_post":
         await handle_approve_post(query, session)
+    elif action == "visual_infographic":
+        await handle_visual_infographic(query, session)
+    elif action == "visual_realistic":
+        await handle_visual_realistic(query, session)
     elif action == "regenerate_post":
         await handle_regenerate_post(query, session)
     elif action == "edit_post":
@@ -330,7 +347,7 @@ async def handle_status(query, session: SessionData):
 
 
 async def handle_approve_post(query, session: SessionData):
-    """Handle post approval - generate visual."""
+    """Handle post approval - show visual type selection."""
     if not session.post_text or not session.topic:
         await query.edit_message_text(
             "Hata: Post metni bulunamadi.",
@@ -338,14 +355,30 @@ async def handle_approve_post(query, session: SessionData):
         )
         return
 
+    session.state = BotState.CHOOSING_VISUAL_TYPE
+    save_sessions()
+
+    # Show visual type selection
+    post_preview = session.post_text[:400] + "..." if len(session.post_text) > 400 else session.post_text
+
     await query.edit_message_text(
-        "Gorsel olusturuluyor... Bu islem 1-2 dakika surebilir."
+        f"*Post metni onaylandi!*\n\n{post_preview}\n\n*Gorsel turunu secin:*",
+        parse_mode='Markdown',
+        reply_markup=get_visual_type_keyboard()
+    )
+
+
+async def handle_visual_infographic(query, session: SessionData):
+    """Handle infographic visual generation (existing HTML/Dashboard system)."""
+    await query.edit_message_text(
+        "Infografik gorsel olusturuluyor... Bu islem 1-2 dakika surebilir."
     )
 
     try:
         # Generate visual HTML
         html_content = await generate_visual_html(session.post_text, session.topic)
         session.html_content = html_content
+        session.visual_type = "infographic"
 
         # Render to PNG
         html_path, image_path = await save_html_and_render(html_content)
@@ -357,16 +390,54 @@ async def handle_approve_post(query, session: SessionData):
         # Send the image
         await query.message.reply_photo(
             photo=open(image_path, 'rb'),
-            caption=f"*Gorsel olusturuldu!*\n\nKonu: {session.topic}\n\nAsagidaki seceneklerden birini secin:",
+            caption=f"*Infografik gorsel olusturuldu!*\n\nKonu: {session.topic}\n\nAsagidaki seceneklerden birini secin:",
             parse_mode='Markdown',
             reply_markup=get_visual_review_keyboard()
         )
 
     except Exception as e:
-        logger.error(f"Failed to generate visual: {e}")
+        logger.error(f"Failed to generate infographic visual: {e}")
         await query.message.reply_text(
             f"Gorsel olusturulurken hata olustu:\n{str(e)}\n\nTekrar denemek ister misiniz?",
-            reply_markup=get_post_review_keyboard()
+            reply_markup=get_visual_type_keyboard()
+        )
+
+
+async def handle_visual_realistic(query, session: SessionData):
+    """Handle realistic AI visual generation using Gemini."""
+    await query.edit_message_text(
+        "Gercekci AI gorsel olusturuluyor (Gemini)...\n\nBu islem 30-60 saniye surebilir..."
+    )
+
+    try:
+        from app.gemini_helper import generate_realistic_image
+
+        image_path = await generate_realistic_image(
+            topic=session.topic,
+            post_text=session.post_text
+        )
+
+        session.image_path = image_path
+        session.visual_type = "realistic"
+        session.state = BotState.SHOWING_VISUAL
+        save_sessions()
+
+        # Send the image
+        await query.message.reply_photo(
+            photo=open(image_path, 'rb'),
+            caption=f"*Gercekci AI gorsel olusturuldu!*\n\nKonu: {session.topic}\n\nAsagidaki seceneklerden birini secin:",
+            parse_mode='Markdown',
+            reply_markup=get_visual_review_keyboard()
+        )
+
+    except Exception as e:
+        import traceback
+        error_detail = traceback.format_exc()
+        logger.error(f"Gemini error: {error_detail}")
+        print(f"Gemini hatasi: {error_detail}")
+        await query.message.reply_text(
+            f"AI gorsel olusturma hatasi:\n{str(e)[:300]}\n\nBaska bir gorsel turu denemek ister misiniz?",
+            reply_markup=get_visual_type_keyboard()
         )
 
 
@@ -413,9 +484,23 @@ async def handle_edit_post(query, session: SessionData):
 
 
 async def handle_regenerate_visual(query, session: SessionData):
-    """Handle visual regeneration request."""
-    # Same as approve_post but regenerates
-    await handle_approve_post(query, session)
+    """Handle visual regeneration request - show visual type selection again."""
+    session.state = BotState.CHOOSING_VISUAL_TYPE
+    save_sessions()
+
+    # Fotoğraflı mesajlar için caption, text mesajlar için text kullan
+    try:
+        await query.edit_message_caption(
+            caption="*Gorsel turunu secin:*",
+            parse_mode='Markdown',
+            reply_markup=get_visual_type_keyboard()
+        )
+    except Exception:
+        await query.edit_message_text(
+            "*Gorsel turunu secin:*",
+            parse_mode='Markdown',
+            reply_markup=get_visual_type_keyboard()
+        )
 
 
 async def handle_publish_facebook(query, session: SessionData):
