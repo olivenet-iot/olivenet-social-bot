@@ -455,3 +455,107 @@ HTML icinde {{{{logo}}}} placeholder'i kullan.
         result = result.replace("{{logo}}", logo_img)
 
     return result
+
+
+async def generate_video_prompt(post_text: str, topic: str) -> str:
+    """
+    Claude Code ile Veo 3 için profesyonel video prompt'u üret.
+
+    Args:
+        post_text: Türkçe post metni
+        topic: Konu
+
+    Returns:
+        İngilizce video prompt
+    """
+    short_post = post_text[:400] if len(post_text) > 400 else post_text
+
+    prompt = f"""
+## GÖREV: Veo 3 Video Prompt Mühendisliği
+
+Post metni (Türkçe): {short_post}
+Konu: {topic}
+
+Sen bir profesyonel video prompt mühendisisin. Google Veo 3 için mükemmel bir video prompt'u yazacaksın.
+
+### VEO 3 PROMPT KURALLARI:
+
+1. **DİL**: Mutlaka İNGİLİZCE yaz
+
+2. **YAPI** (Bu sırayla):
+   - Kamera hareketi (örn: "Slow cinematic dolly shot", "Aerial drone view")
+   - Ana sahne açıklaması
+   - Işıklandırma (örn: "soft natural lighting", "cool blue tech lighting")
+   - Renk paleti (Olivenet: olive green #4a7c4a, sky blue #38bdf8)
+   - Atmosfer/mood
+   - Detaylar ve aksiyon
+
+3. **OLIVENET MARKA KİMLİĞİ**:
+   - Renk paleti: Olive green ve sky blue tonları
+   - Profesyonel ama samimi
+   - Teknoloji + doğa birleşimi
+   - Modern, temiz, minimal
+
+4. **KONUYA GÖRE GÖRSEL TEMALAR**:
+
+   AKILLI TARIM / SERA:
+   - Yeşil seralar, bitkiler, damla sulama
+   - Sensörler toprakta/yapraklarda
+   - Güneş ışığı, doğal ortam
+   - Su damlacıkları, büyüme
+
+   ENERJİ İZLEME:
+   - Elektrik sayaçları, LED göstergeler
+   - Veri akışı görselleştirmesi
+   - Fabrika/tesis ortamı
+   - Dashboard ekranlar
+
+   KESTİRİMCİ BAKIM:
+   - Endüstriyel makineler, dişliler
+   - Sensörler, kablolar
+   - Diagnostik ekranlar
+
+   BİNA OTOMASYONU:
+   - Modern ofis/bina içi
+   - Akıllı termostatlar, ışık kontrol
+
+5. **TEKNİK DETAYLAR**:
+   - 5 saniyelik video için yeterli hareket
+   - Çok karmaşık sahneler YAPMA
+   - Tek bir güçlü görsel konsept
+   - Tek sürekli sahne
+
+6. **YASAKLAR**:
+   - Metin/yazı içerme
+   - Logo gösterme
+   - İnsan yüzü close-up
+   - Çok hızlı kamera hareketi
+
+### ÖRNEK İYİ PROMPTLAR:
+
+Tarım:
+"Slow cinematic tracking shot through a modern greenhouse, rows of healthy green plants with small IoT sensors attached to soil, morning sunlight streaming through glass panels creating soft shadows, water droplets on leaves glistening, color palette of olive green and soft earth tones, peaceful and technological atmosphere"
+
+Enerji:
+"Smooth dolly shot revealing a wall of digital energy meters with blue LED displays showing real-time data, soft industrial lighting, data visualization particles flowing between meters, olive green and sky blue accent colors, professional corporate environment"
+
+### ŞİMDİ PROMPT YAZ:
+
+Yukarıdaki kurallara uyarak, verilen post için TEK bir İngilizce video prompt yaz.
+Sadece prompt'u yaz, başka açıklama yapma. Tırnak işareti kullanma.
+"""
+
+    logger.info(f"Generating video prompt for topic: {topic}")
+    result = await run_claude_code(prompt, timeout=90)
+
+    # Temizle
+    result = result.strip()
+
+    # Tırnak işaretlerini kaldır
+    if result.startswith('"') and result.endswith('"'):
+        result = result[1:-1]
+    if result.startswith("'") and result.endswith("'"):
+        result = result[1:-1]
+
+    logger.info(f"Video prompt generated: {result[:100]}...")
+    return result

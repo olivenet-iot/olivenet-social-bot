@@ -1,55 +1,52 @@
 # Olivenet Social Media Bot
 
-Telegram uzerinden Claude Code ile akilli Facebook post otomasyonu.
+Telegram üzerinden Claude Code ile akıllı Facebook post otomasyonu.
 
-## Ozellikler
+## 🌟 Özellikler
 
-### Icerik Uretimi
-- **Claude Code ile akilli post uretimi** - Sosyal medya uzmani gibi dusunur
-- **Konu oneri sistemi** - Mevsim ve gune gore akilli oneriler
-- **Geri bildirim ile duzenleme** - "Daha kisa yap", "Emoji ekle" gibi
+### İçerik Üretimi
+- 🤖 **Claude Code ile akıllı post üretimi** - Sosyal medya uzmanı gibi düşünür
+- 💡 **Konu öneri sistemi** - Mevsim ve güne göre akıllı öneriler
+- 📝 **Geri bildirim ile düzenleme** - "Daha kısa yap", "Emoji ekle" gibi
 
-### Gorsel Uretimi (3 Secenek)
-- **Infografik (Statik)** - Dashboard tarzi PNG gorseller
-- **Animasyonlu Video** - Olivenet website tarzi MP4 (pulse, fade-in efektleri)
-- **Gercekci AI Gorsel** - Gemini 2.5 Flash ile fotograf uretimi
+### Görsel Üretimi (3 Seçenek)
+- 📊 **İnfografik (Statik)** - Dashboard tarzı PNG görseller
+- 📸 **Gerçekçi AI Görsel** - Gemini 2.5 Flash ile fotoğraf üretimi
+- 🎬 **AI Video (Veo 3)** - Google Veo 3 ile profesyonel video üretimi
 
 ### Entegrasyonlar
-- Telegram bot ile kolay yonetim
-- Facebook Graph API entegrasyonu
-- Olivenet marka kimligine uygun icerik
+- 📱 Telegram bot ile kolay yönetim
+- 📘 Facebook Graph API entegrasyonu (fotoğraf + video)
+- 🎯 Olivenet marka kimliğine uygun içerik
 
-## Hizli Kurulum
-
+## 🚀 Hızlı Kurulum
 ```bash
 # 1. Repo'yu klonla
 git clone https://github.com/olivenet-iot/olivenet-social-bot.git
 cd olivenet-social-bot
 
-# 2. Kurulum script'ini calistir
+# 2. Kurulum script'ini çalıştır
 chmod +x setup.sh
 ./setup.sh
 
-# 3. Token'lari ayarla
+# 3. Token'ları ayarla
 nano .env
 
-# 4. Bot'u baslat
+# 4. Bot'u başlat
 python3 app/telegram_bot.py
 ```
 
-## Gereksinimler
+## ⚙️ Gereksinimler
 
 - Python 3.10+
-- Claude Code CLI (kurulu ve calisir durumda)
-- ffmpeg (animasyonlu video icin)
+- Claude Code CLI (kurulu ve çalışır durumda)
 - Telegram Bot Token (@BotFather'dan)
 - Facebook Page Access Token
-- Gemini API Key (opsiyonel, AI gorsel icin)
+- Gemini API Key (görsel + video için)
 
-## Yapilandirma
+## 🔧 Yapılandırma
 
-`.env.example` dosyasini `.env` olarak kopyalayin ve doldurun:
-
+`.env.example` dosyasını `.env` olarak kopyalayın ve doldurun:
 ```env
 # Telegram
 TELEGRAM_BOT_TOKEN=your_bot_token
@@ -59,75 +56,92 @@ TELEGRAM_ADMIN_CHAT_ID=your_chat_id
 FACEBOOK_PAGE_ID=your_page_id
 FACEBOOK_ACCESS_TOKEN=your_access_token
 
-# Gemini AI (opsiyonel)
+# Gemini AI (görsel + Veo video)
 GEMINI_API_KEY=your_gemini_api_key
 ```
 
-## Telegram Komutlari
+## 📱 Telegram Komutları
 
-| Komut/Buton | Aciklama |
+| Komut/Buton | Açıklama |
 |-------------|----------|
-| /start | Ana menu |
-| Yeni Post Olustur | Konu gir, post uret |
-| Konu Oner | Bugune ozel 3 konu onerisi |
-| Gorseli Duzenle | Geri bildirim ile revize |
-| Facebook'a Gonder | Paylas |
+| /start | Ana menü |
+| 📝 Yeni Post Oluştur | Konu gir, post üret |
+| 💡 Konu Öner | Bugüne özel 3 konu önerisi |
+| ✏️ Görseli Düzenle | Geri bildirim ile revize |
+| ✅ Facebook'a Gönder | Paylaş |
 
-## Dosya Yapisi
-
+## 📁 Dosya Yapısı
 ```
 olivenet-social-bot/
 ├── app/
 │   ├── telegram_bot.py      # Ana bot
-│   ├── claude_helper.py     # Claude Code wrapper + post uretimi
-│   ├── renderer.py          # HTML -> PNG (statik)
-│   ├── animated_renderer.py # HTML -> MP4 (animasyonlu)
-│   ├── gemini_helper.py     # Gemini AI gorsel
-│   ├── facebook_helper.py   # Facebook Graph API
+│   ├── claude_helper.py     # Claude Code wrapper + prompt üretimi
+│   ├── renderer.py          # HTML → PNG (infografik)
+│   ├── gemini_helper.py     # Gemini AI görsel
+│   ├── veo_helper.py        # Veo 3 video üretimi
+│   ├── facebook_helper.py   # Facebook Graph API (foto + video)
 │   └── config.py            # Ayarlar
-├── context/                 # Claude icin baglam dosyalari
-│   ├── company-profile.md   # Sirket bilgileri
-│   ├── content-strategy.md  # Icerik stratejisi
-│   ├── visual-guidelines.md # Gorsel tasarim rehberi
-│   └── social-media-expert.md # Sosyal medya uzmanligi
-├── templates/
-│   └── visual-template.html
-├── outputs/                 # Uretilen gorseller/videolar
-├── assets/                  # Logo vb.
+├── context/                 # Claude için bağlam dosyaları
+│   ├── company-profile.md   # Şirket bilgileri
+│   ├── content-strategy.md  # İçerik stratejisi
+│   ├── visual-guidelines.md # Görsel tasarım rehberi
+│   └── social-media-expert.md # Sosyal medya uzmanlığı
+├── outputs/                 # Üretilen görseller/videolar
 ├── setup.sh
 ├── requirements.txt
-├── .env.example
-└── olivenet-social.service
+└── .env.example
 ```
 
-## Gorsel Turleri
+## 🎨 Görsel Türleri
 
-### 1. Infografik (Statik)
-- Glassmorphism dashboard tarzi
-- Olive renk paleti (#4a7c4a, #0ea5e9)
+### 1. İnfografik (Statik)
+- Glassmorphism dashboard tarzı
+- Olivenet renk paleti (#4a7c4a, #0ea5e9)
 - 1080x1080 PNG
+- Playwright ile HTML → PNG render
 
-### 2. Animasyonlu Video
-- Pulse ring efektleri
-- Fade-in metin animasyonlari
-- SVG SMIL animasyonlari
-- 4 saniye MP4
+### 2. Gerçekçi AI Görsel
+- Gemini 2.5 Flash image generation
+- Profesyonel fotoğraf tarzı
+- IoT/teknoloji temalı
+- 1024x1024 PNG
 
-### 3. Gercekci AI Gorsel
-- Gemini 2.5 Flash
-- Profesyonel fotograf tarzi
-- IoT/teknoloji temali
+### 3. AI Video (Veo 3) 🆕
+- Google Veo 3 video generation
+- 5 saniyelik profesyonel video
+- 1280x720 (16:9) MP4
+- Claude Code ile optimize edilmiş prompt
+- Konuya özel görsel temalar:
+  - 🌱 Akıllı Tarım: Sera, sensörler, yeşil bitkiler
+  - ⚡ Enerji İzleme: Sayaçlar, LED'ler, veri akışı
+  - ⚙️ Kestirimci Bakım: Makineler, diagnostik
+  - 🏢 Bina Otomasyonu: Modern ofis, akıllı kontrol
 
-## Sosyal Medya Uzmani Modu
+## 🎬 Veo 3 Video Üretimi
 
-Bot, icerik uretirken sunlari analiz eder:
-- Hook etkisi (ilk cumle dikkat cekiyor mu?)
+Bot, video prompt'u için Claude Code'u kullanır:
+
+1. **Prompt Mühendisliği**: Claude Code, post metnini analiz eder ve Veo 3 için optimize edilmiş İngilizce prompt üretir
+2. **Marka Uyumu**: Olivenet renk paleti (olive green, sky blue) ve profesyonel ton korunur
+3. **Fallback Sistemi**: Veo 3 → Veo 3 Fast → Veo 2 sırasıyla denenir
+
+Örnek Prompt (Claude Code tarafından üretilir):
+```
+"Slow cinematic tracking shot through a modern greenhouse,
+rows of healthy green plants with small IoT sensors attached
+to soil, morning sunlight streaming through glass panels,
+olive green and sky blue color palette..."
+```
+
+## 🧠 Sosyal Medya Uzmanı Modu
+
+Bot, içerik üretirken şunları analiz eder:
+- Hook etkisi (ilk cümle dikkat çekiyor mu?)
 - Duygusal tetikleyiciler (FOMO, merak, umut)
-- KKTC pazari uygunlugu
+- KKTC pazarı uygunluğu
 - Engagement tahmini
 
-## Systemd Servisi
-
+## 🔄 Sistemd Servisi (Opsiyonel)
 ```bash
 sudo cp olivenet-social.service /etc/systemd/system/
 sudo systemctl daemon-reload
@@ -135,11 +149,20 @@ sudo systemctl enable olivenet-social
 sudo systemctl start olivenet-social
 ```
 
-## Lisans
+## 📊 API Kullanımı
+
+| API | Kullanım | Maliyet |
+|-----|----------|---------|
+| Claude Code CLI | Post metni, prompt üretimi | - |
+| Gemini 2.5 Flash | AI görsel | Free tier |
+| Veo 3 | AI video | Pay-per-use |
+| Facebook Graph | Paylaşım | Free |
+
+## 📄 Lisans
 
 MIT License - Olivenet Ltd.
 
-## Baglantilar
+## 🔗 Bağlantılar
 
-- Website: https://olivenet.io
-- GitHub: https://github.com/olivenet-iot
+- Website: [olivenet.io](https://olivenet.io)
+- GitHub: [github.com/olivenet-iot](https://github.com/olivenet-iot)

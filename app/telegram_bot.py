@@ -28,7 +28,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from app.config import settings
 from app.claude_helper import generate_post_text, generate_visual_html, improve_post_text, suggest_topics
 from app.renderer import save_html_and_render, cleanup
-from app.facebook_helper import post_with_photo_to_facebook, post_text_to_facebook, FacebookError
+from app.facebook_helper import post_with_photo_to_facebook, post_text_to_facebook, post_video_to_facebook, FacebookError
 
 # Configure logging
 logging.basicConfig(
@@ -60,7 +60,8 @@ class SessionData:
         self.html_content: Optional[str] = None
         self.image_path: Optional[str] = None
         self.html_path: Optional[str] = None
-        self.visual_type: Optional[str] = None  # 'infographic' or 'realistic'
+        self.visual_type: Optional[str] = None  # 'infographic', 'realistic', or 'video'
+        self.video_path: Optional[str] = None  # Path to generated video
         self.suggested_topics: list = []  # Store suggested topics for selection
 
     def reset(self):
@@ -71,6 +72,7 @@ class SessionData:
         self.html_content = None
         self.image_path = None
         self.html_path = None
+        self.video_path = None
         self.visual_type = None
         self.suggested_topics = []
 
@@ -162,6 +164,7 @@ def get_visual_type_keyboard() -> InlineKeyboardMarkup:
     keyboard = [
         [InlineKeyboardButton("Infografik (Statik)", callback_data="visual_infographic")],
         [InlineKeyboardButton("Gercekci AI Gorsel", callback_data="visual_realistic")],
+        [InlineKeyboardButton("AI Video (Veo 3)", callback_data="visual_video")],
         [InlineKeyboardButton("Iptal", callback_data="cancel")]
     ]
     return InlineKeyboardMarkup(keyboard)
@@ -306,6 +309,8 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await handle_visual_infographic(query, session)
     elif action == "visual_realistic":
         await handle_visual_realistic(query, session)
+    elif action == "visual_video":
+        await handle_visual_video(query, session)
     elif action == "regenerate_post":
         await handle_regenerate_post(query, session)
     elif action == "edit_post":
@@ -567,6 +572,66 @@ async def handle_visual_realistic(query, session: SessionData):
         )
 
 
+async def handle_visual_video(query, session: SessionData):
+    """Handle AI video generation using Veo 3."""
+    await query.edit_message_text(
+        "🎬 AI Video oluşturuluyor (Veo 3)...\n\n"
+        "⏳ Bu işlem 2-5 dakika sürebilir.\n"
+        "Lütfen bekleyin..."
+    )
+
+    try:
+        from app.claude_helper import generate_video_prompt
+        from app.veo_helper import generate_video_with_retry
+
+        # 1. Claude ile video prompt'u oluştur
+        await query.message.reply_text("📝 Video prompt'u hazırlanıyor...")
+        video_prompt = await generate_video_prompt(session.post_text, session.topic)
+        print(f"Video prompt: {video_prompt[:200]}...")
+
+        # 2. Veo 3 ile video üret
+        await query.message.reply_text(
+            f"🎬 Veo 3 video üretimi başlatıldı...\n\n"
+            f"Prompt: {video_prompt[:100]}..."
+        )
+
+        result = await generate_video_with_retry(prompt=video_prompt)
+
+        if not result["success"]:
+            raise Exception(result.get("error", "Video üretimi başarısız"))
+
+        video_path = result["video_path"]
+        session.video_path = video_path
+        session.visual_type = "video"
+        session.state = BotState.SHOWING_VISUAL
+        save_sessions()
+
+        # 3. Videoyu gönder
+        with open(video_path, 'rb') as video_file:
+            await query.message.reply_video(
+                video=video_file,
+                caption=(
+                    f"🎬 *AI Video oluşturuldu!*\n\n"
+                    f"📌 Konu: {session.topic}\n"
+                    f"⏱️ Süre: {result.get('duration', 0):.1f}s\n\n"
+                    f"Aşağıdaki seçeneklerden birini seçin:"
+                ),
+                parse_mode='Markdown',
+                reply_markup=get_visual_review_keyboard()
+            )
+
+    except Exception as e:
+        import traceback
+        error_detail = traceback.format_exc()
+        logger.error(f"Veo video error: {error_detail}")
+        print(f"Veo video hatası: {error_detail}")
+        await query.message.reply_text(
+            f"🎬 Video oluşturma hatası:\n{str(e)[:300]}\n\n"
+            f"Başka bir görsel türü denemek ister misiniz?",
+            reply_markup=get_visual_type_keyboard()
+        )
+
+
 async def handle_regenerate_post(query, session: SessionData):
     """Handle post regeneration request."""
     if not session.topic:
@@ -696,7 +761,13 @@ async def handle_confirm_publish(query, session: SessionData):
         await query.edit_message_caption(caption="Facebook'a gonderiliyor...")
 
     try:
-        if session.image_path:
+        if session.video_path and session.visual_type == "video":
+            # Video paylaşımı
+            result = await post_video_to_facebook(
+                message=session.post_text,
+                video_path=session.video_path
+            )
+        elif session.image_path:
             result = await post_with_photo_to_facebook(
                 message=session.post_text,
                 image_path=session.image_path

@@ -301,3 +301,61 @@ async def test_facebook_connection(
             "error": str(e),
             "error_code": None
         }
+
+
+async def post_video_to_facebook(
+    message: str,
+    video_path: str,
+    page_id: Optional[str] = None,
+    access_token: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Post a video to Facebook Page.
+
+    Facebook Graph API uses the videos endpoint for video uploads.
+    Videos must be in supported formats (MP4 recommended).
+
+    Args:
+        message: The post description/caption
+        video_path: Path to the video file
+        page_id: Facebook Page ID
+        access_token: Page Access Token
+
+    Returns:
+        API response containing video post ID
+    """
+    page_id = page_id or settings.facebook_page_id
+    access_token = access_token or settings.facebook_access_token
+
+    if not page_id or not access_token:
+        raise FacebookError("Facebook credentials not configured")
+
+    video_file = Path(video_path)
+    if not video_file.exists():
+        raise FileNotFoundError(f"Video not found: {video_path}")
+
+    url = f"{GRAPH_API_BASE}/{page_id}/videos"
+
+    async with httpx.AsyncClient() as client:
+        with open(video_path, "rb") as f:
+            response = await client.post(
+                url,
+                data={
+                    "description": message,
+                    "access_token": access_token,
+                },
+                files={"source": (video_file.name, f, "video/mp4")},
+                timeout=300.0  # Videos need longer timeout
+            )
+
+        data = response.json()
+
+        if "error" in data:
+            error = data["error"]
+            raise FacebookError(
+                error.get("message", "Unknown error"),
+                error.get("code")
+            )
+
+        logger.info(f"Posted video to Facebook: {data.get('id')}")
+        return data
