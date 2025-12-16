@@ -275,3 +275,77 @@ SADECE yeni post metnini yaz, aciklama yapma.
     logger.info("Improving post text based on feedback")
     result = await run_claude_code(prompt, timeout=settings.claude_timeout_post)
     return clean_response(result)
+
+
+async def generate_visual_html_with_feedback(post_text: str, topic: str, feedback: str) -> str:
+    """
+    Generate HTML code for social media visual with user feedback.
+
+    Args:
+        post_text: The post text to create a visual for
+        topic: The topic/subject for context
+        feedback: User feedback for visual modification
+
+    Returns:
+        Complete HTML code for the visual (1080x1080px)
+    """
+    short_post = post_text[:500] if len(post_text) > 500 else post_text
+
+    try:
+        from app.logo_data import LOGO_BASE64
+        logo_img = LOGO_BASE64.strip()
+    except Exception:
+        logo_img = ""
+
+    prompt = f"""
+/opt/olivenet-social/context/visual-guidelines.md dosyasini oku.
+
+Bu post icin 1080x1080px sosyal medya gorseli HTML'i olustur:
+
+Post metni: {short_post[:300]}
+Konu: {topic}
+
+KULLANICI GERI BILDIRIMI (ONCELIKLI - MUTLAKA UYGULA):
+{feedback}
+
+## TASARIM KURALLARI:
+
+0. FONT (zorunlu):
+   - System font kullan: font-family: system-ui, sans-serif;
+
+1. RENK PALETI:
+   - Arka plan: Koyu gradient (#0a0a0a, #1a2e1a)
+   - Ana vurgu: Olive yesil (#4a7c4a)
+   - Accent: Sky mavi (#0ea5e9) veya Violet (#8b5cf6)
+
+2. STIL:
+   - Glassmorphism kartlar
+   - Modern, minimal, profesyonel
+   - Cok fazla metin KOYMA - ozet ve gorsel agirlikli
+
+3. SOL ALT KOSE - LOGO:
+   <div style="position:absolute;bottom:24px;left:24px;display:flex;align-items:center;gap:12px;">
+     <img src="{{{{logo}}}}" style="width:48px;height:48px;border-radius:8px;">
+     <span style="color:#ffffff;font-size:24px;font-weight:600;">Olivenet</span>
+   </div>
+
+4. SAG ALT KOSE: Bos birak (hashtag yok)
+
+5. YARATICILIK:
+   - Her gorsel farkli layout dene
+   - Sikici ve tekrarlayan olma
+
+SADECE HTML kodunu yaz. Markdown code block (```) KULLANMA.
+Aciklama yazma, direkt <!DOCTYPE html> ile basla.
+HTML icinde {{{{logo}}}} placeholder'i kullan.
+"""
+
+    logger.info(f"Generating visual HTML with feedback for topic: {topic}")
+    result = await run_claude_code(prompt, timeout=120)
+
+    result = extract_html(result)
+
+    if logo_img and "{{logo}}" in result:
+        result = result.replace("{{logo}}", logo_img)
+
+    return result

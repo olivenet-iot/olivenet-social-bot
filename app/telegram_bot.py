@@ -47,6 +47,7 @@ class BotState(Enum):
     SHOWING_VISUAL = auto()
     CONFIRMING_PUBLISH = auto()
     WAITING_FEEDBACK = auto()
+    EDITING_VISUAL = auto()
 
 
 class SessionData:
@@ -166,11 +167,10 @@ def get_visual_type_keyboard() -> InlineKeyboardMarkup:
 def get_visual_review_keyboard() -> InlineKeyboardMarkup:
     """Visual review keyboard."""
     keyboard = [
+        [InlineKeyboardButton("Facebook'a Gonder", callback_data="publish_facebook")],
+        [InlineKeyboardButton("Gorseli Duzenle", callback_data="edit_visual")],
         [
-            InlineKeyboardButton("Facebook'a Gonder", callback_data="publish_facebook"),
-        ],
-        [
-            InlineKeyboardButton("Gorseli Yeniden Uret", callback_data="regenerate_visual"),
+            InlineKeyboardButton("Yeniden Uret", callback_data="regenerate_visual"),
             InlineKeyboardButton("Metni Duzenle", callback_data="edit_post")
         ],
         [InlineKeyboardButton("Iptal", callback_data="cancel")]
@@ -299,6 +299,8 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await handle_regenerate_post(query, session)
     elif action == "edit_post":
         await handle_edit_post(query, session)
+    elif action == "edit_visual":
+        await handle_edit_visual(query, session)
     elif action == "regenerate_visual":
         await handle_regenerate_visual(query, session)
     elif action == "publish_facebook":
@@ -503,6 +505,24 @@ async def handle_regenerate_visual(query, session: SessionData):
         )
 
 
+async def handle_edit_visual(query, session: SessionData):
+    """Handle visual edit request - ask for feedback."""
+    session.state = BotState.EDITING_VISUAL
+    save_sessions()
+
+    await query.message.reply_text(
+        "Gorsel icin geri bildiriminizi yazin:\n\n"
+        "*Ornekler:*\n"
+        "- 'Arka plani daha acik yap'\n"
+        "- 'Daha az metin olsun'\n"
+        "- 'Istatistikleri buyut'\n"
+        "- 'Daha minimalist bir tasarim'\n"
+        "- 'Turuncu yerine mavi kullan'\n"
+        "- 'Daha fazla yesil ton kullan'",
+        parse_mode='Markdown'
+    )
+
+
 async def handle_publish_facebook(query, session: SessionData):
     """Handle Facebook publish request - ask for confirmation."""
     session.state = BotState.CONFIRMING_PUBLISH
@@ -641,6 +661,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await handle_topic_input(update, session, text)
     elif session.state == BotState.WAITING_FEEDBACK:
         await handle_feedback_input(update, session, text)
+    elif session.state == BotState.EDITING_VISUAL:
+        await handle_visual_feedback_input(update, context, session, text)
     else:
         # Check for natural language commands
         lower_text = text.lower()
@@ -747,6 +769,72 @@ async def handle_feedback_input(update: Update, session: SessionData, feedback: 
         await update.message.reply_text(
             f"Post duzenlenirken hata olustu:\n{str(e)}",
             reply_markup=get_post_review_keyboard()
+        )
+
+
+async def handle_visual_feedback_input(update: Update, context: ContextTypes.DEFAULT_TYPE, session: SessionData, feedback: str):
+    """Handle feedback for visual improvement."""
+    if not session.post_text or not session.topic:
+        await update.message.reply_text(
+            "Hata: Post bilgisi bulunamadi.",
+            reply_markup=get_main_keyboard()
+        )
+        session.state = BotState.IDLE
+        save_sessions()
+        return
+
+    visual_type = session.visual_type or "infographic"
+
+    await update.message.reply_text(
+        f"Gorsel geri bildirime gore yeniden olusturuluyor...\n"
+        f"Geri bildirim: {feedback}"
+    )
+
+    try:
+        if visual_type == "infographic":
+            from app.claude_helper import generate_visual_html_with_feedback
+            from app.renderer import save_html_and_render
+
+            html_content = await generate_visual_html_with_feedback(
+                session.post_text,
+                session.topic,
+                feedback
+            )
+            session.html_content = html_content
+
+            html_path, image_path = await save_html_and_render(html_content)
+            session.html_path = html_path
+            session.image_path = image_path
+
+        else:  # realistic
+            from app.gemini_helper import generate_realistic_image_with_feedback
+
+            image_path = await generate_realistic_image_with_feedback(
+                session.topic,
+                session.post_text,
+                feedback
+            )
+            session.image_path = image_path
+
+        session.state = BotState.SHOWING_VISUAL
+        save_sessions()
+
+        # Send the updated image
+        await context.bot.send_photo(
+            chat_id=update.effective_chat.id,
+            photo=open(session.image_path, 'rb'),
+            caption=f"*Duzenlenmis gorsel hazir!*\n\nGeri bildirim: {feedback[:100]}",
+            parse_mode='Markdown',
+            reply_markup=get_visual_review_keyboard()
+        )
+
+    except Exception as e:
+        logger.error(f"Failed to regenerate visual with feedback: {e}")
+        session.state = BotState.SHOWING_VISUAL
+        save_sessions()
+        await update.message.reply_text(
+            f"Gorsel duzenlenirken hata olustu:\n{str(e)[:200]}",
+            reply_markup=get_visual_review_keyboard()
         )
 
 
