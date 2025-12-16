@@ -4,6 +4,7 @@ Olivenet Social Media Bot - Telegram Bot
 Main bot application with conversation handling.
 """
 import asyncio
+import json
 import logging
 import sys
 from datetime import datetime
@@ -70,6 +71,46 @@ class SessionData:
 
 # Global session storage (in production, use Redis or database)
 sessions: Dict[int, SessionData] = {}
+
+# Session file path for persistence
+SESSION_FILE = Path("/opt/olivenet-social/session_state.json")
+
+
+def save_sessions():
+    """Save sessions to disk."""
+    try:
+        data = {}
+        for user_id, session in sessions.items():
+            data[str(user_id)] = {
+                "state": session.state.name,
+                "topic": session.topic,
+                "post_text": session.post_text,
+                "image_path": session.image_path,
+                "html_path": session.html_path
+            }
+        SESSION_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2))
+    except Exception as e:
+        logger.warning(f"Failed to save sessions: {e}")
+
+
+def load_sessions():
+    """Load sessions from disk."""
+    if not SESSION_FILE.exists():
+        return
+    try:
+        data = json.loads(SESSION_FILE.read_text())
+        for user_id_str, session_data in data.items():
+            user_id = int(user_id_str)
+            session = SessionData()
+            session.state = BotState[session_data.get("state", "IDLE")]
+            session.topic = session_data.get("topic")
+            session.post_text = session_data.get("post_text")
+            session.image_path = session_data.get("image_path")
+            session.html_path = session_data.get("html_path")
+            sessions[user_id] = session
+        logger.info(f"Loaded {len(sessions)} sessions from disk")
+    except Exception as e:
+        logger.warning(f"Failed to load sessions: {e}")
 
 
 def get_session(user_id: int) -> SessionData:
@@ -257,6 +298,7 @@ async def handle_new_post(query, session: SessionData):
     """Handle new post request."""
     session.reset()
     session.state = BotState.WAITING_TOPIC
+    save_sessions()
 
     await query.edit_message_text(
         "Yeni post olusturmak icin bir konu girin.\n\n"
@@ -310,6 +352,7 @@ async def handle_approve_post(query, session: SessionData):
         session.html_path = html_path
         session.image_path = image_path
         session.state = BotState.SHOWING_VISUAL
+        save_sessions()
 
         # Send the image
         await query.message.reply_photo(
@@ -378,26 +421,50 @@ async def handle_regenerate_visual(query, session: SessionData):
 async def handle_publish_facebook(query, session: SessionData):
     """Handle Facebook publish request - ask for confirmation."""
     session.state = BotState.CONFIRMING_PUBLISH
+    save_sessions()
 
-    await query.edit_message_text(
+    confirmation_text = (
         "*Facebook'a Paylasim*\n\n"
         f"Konu: {session.topic}\n\n"
-        "Bu postu Facebook sayfanizda paylasmak istediginizden emin misiniz?",
-        parse_mode='Markdown',
-        reply_markup=get_confirm_publish_keyboard()
+        "Bu postu Facebook sayfanizda paylasmak istediginizden emin misiniz?"
     )
+
+    # Fotoğraflı mesajlar için caption, text mesajlar için text kullan
+    try:
+        await query.edit_message_caption(
+            caption=confirmation_text,
+            parse_mode='Markdown',
+            reply_markup=get_confirm_publish_keyboard()
+        )
+    except Exception:
+        # Fallback: eğer text message ise
+        await query.edit_message_text(
+            confirmation_text,
+            parse_mode='Markdown',
+            reply_markup=get_confirm_publish_keyboard()
+        )
 
 
 async def handle_confirm_publish(query, session: SessionData):
     """Handle confirmed Facebook publish."""
     if not session.post_text:
-        await query.edit_message_text(
-            "Hata: Post metni bulunamadi.",
-            reply_markup=get_main_keyboard()
-        )
+        try:
+            await query.edit_message_text(
+                "Hata: Post metni bulunamadi.",
+                reply_markup=get_main_keyboard()
+            )
+        except Exception:
+            await query.edit_message_caption(
+                caption="Hata: Post metni bulunamadi.",
+                reply_markup=get_main_keyboard()
+            )
         return
 
-    await query.edit_message_text("Facebook'a gonderiliyor...")
+    # Fotoğraflı mesajlar için caption, text mesajlar için text kullan
+    try:
+        await query.edit_message_text("Facebook'a gonderiliyor...")
+    except Exception:
+        await query.edit_message_caption(caption="Facebook'a gonderiliyor...")
 
     try:
         if session.image_path:
@@ -419,18 +486,26 @@ async def handle_confirm_publish(query, session: SessionData):
 
         # Reset session after successful publish
         session.reset()
+        save_sessions()
 
     except FacebookError as e:
-        logger.error(f"Facebook error: {e.message}")
+        import traceback
+        error_detail = traceback.format_exc()
+        logger.error(f"Facebook error: {e.message}\n{error_detail}")
         await query.message.reply_text(
             f"Facebook hatasi:\n{e.message}\n\n"
+            f"Detay: {str(e)[:300]}\n\n"
             "Facebook ayarlarinizi kontrol edin.",
             reply_markup=get_main_keyboard()
         )
     except Exception as e:
-        logger.error(f"Failed to publish: {e}")
+        import traceback
+        error_detail = traceback.format_exc()
+        logger.error(f"Failed to publish: {e}\n{error_detail}")
+        print(f"Facebook paylaşım hatası: {error_detail}")
         await query.message.reply_text(
-            f"Paylasim sirasinda hata olustu:\n{str(e)}",
+            f"Paylasim sirasinda hata olustu:\n{str(e)[:500]}\n\n"
+            f"Image path: {session.image_path}",
             reply_markup=get_visual_review_keyboard()
         )
 
@@ -438,16 +513,27 @@ async def handle_confirm_publish(query, session: SessionData):
 async def handle_cancel_publish(query, session: SessionData):
     """Handle publish cancellation."""
     session.state = BotState.SHOWING_VISUAL
+    save_sessions()
 
-    await query.edit_message_text(
-        "Paylasim iptal edildi.\n\nNe yapmak istersiniz?",
-        reply_markup=get_visual_review_keyboard()
-    )
+    cancel_text = "Paylasim iptal edildi.\n\nNe yapmak istersiniz?"
+
+    # Fotoğraflı mesajlar için caption, text mesajlar için text kullan
+    try:
+        await query.edit_message_caption(
+            caption=cancel_text,
+            reply_markup=get_visual_review_keyboard()
+        )
+    except Exception:
+        await query.edit_message_text(
+            cancel_text,
+            reply_markup=get_visual_review_keyboard()
+        )
 
 
 async def handle_cancel(query, session: SessionData):
     """Handle general cancellation."""
     session.reset()
+    save_sessions()
 
     await query.edit_message_text(
         "Islem iptal edildi.",
@@ -522,6 +608,7 @@ async def generate_and_show_post(update: Update, session: SessionData):
         post_text = await generate_post_text(session.topic)
         session.post_text = post_text
         session.state = BotState.SHOWING_POST
+        save_sessions()
 
         await update.message.reply_text(
             f"*Olusturulan Post:*\n\n{post_text}",
@@ -532,6 +619,7 @@ async def generate_and_show_post(update: Update, session: SessionData):
     except Exception as e:
         logger.error(f"Failed to generate post: {e}")
         session.state = BotState.IDLE
+        save_sessions()
         await update.message.reply_text(
             f"Post olusturulurken hata olustu:\n{str(e)}\n\n"
             "Lutfen tekrar deneyin.",
@@ -561,6 +649,7 @@ async def handle_feedback_input(update: Update, session: SessionData, feedback: 
         # Reset visual since post changed
         session.html_content = None
         session.image_path = None
+        save_sessions()
 
         await update.message.reply_text(
             f"*Duzenlenmis Post:*\n\n{improved_post}",
@@ -602,6 +691,9 @@ def main():
 
     # Ensure directories exist
     settings.ensure_directories()
+
+    # Load saved sessions
+    load_sessions()
 
     # Create application
     application = Application.builder().token(settings.telegram_bot_token).build()

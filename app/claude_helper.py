@@ -109,32 +109,74 @@ async def generate_visual_html(post_text: str, topic: str) -> str:
     # Truncate post text if too long to avoid prompt issues
     short_post = post_text[:500] if len(post_text) > 500 else post_text
 
+    # Logo base64 verisini oku
+    try:
+        from app.logo_data import LOGO_BASE64
+        logo_img = LOGO_BASE64.strip()
+    except Exception:
+        logo_img = ""
+
     prompt = f"""
 /opt/olivenet-social/context/visual-guidelines.md dosyasini oku.
-/opt/olivenet-social/templates/visual-template.html dosyasini referans al.
 
 Bu post icin 1080x1080px sosyal medya gorseli HTML'i olustur:
 
+Post metni: {short_post[:300]}
 Konu: {topic}
-Post ozeti: {short_post[:200]}...
 
-Kurallar:
-- Tam calisir HTML dosyasi (DOCTYPE, html, head, body)
-- Inline CSS (harici dosya yok)
-- Glassmorphism stil (backdrop-filter, transparan kartlar)
-- Olive renk paleti:
-  - Ana: #1a2e1a (koyu), #4a7c4a (orta), #5e9a5e (acik)
-  - Vurgu: #0ea5e9 (mavi)
-- Koyu tema arka plan
-- Grid pattern arka plan deseni
-- Konuyla ilgili baslik ve alt baslik
-- 1-2 metrik/istatistik kutusu
-- Buyuk ana istatistik (ornegin %35, 3000+ gibi)
-- Alt kisimda "Olivenet" logosu (metin olarak)
-- Hashtag alani
+## TASARIM KURALLARI:
+
+0. FONT (zorunlu):
+   - External font KULLANMA (Google Fonts, vb.)
+   - System font kullan: font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+   - Ya da: font-family: system-ui, sans-serif;
+
+1. RENK PALETİ (zorunlu):
+   - Arka plan: Koyu gradient (#0a0a0a, #1a2e1a)
+   - Ana vurgu: Olive yeşil (#4a7c4a)
+   - Accent: Sky mavi (#0ea5e9) veya Violet (#8b5cf6)
+   - Metin: Beyaz ve gri tonları
+
+2. STİL:
+   - Glassmorphism kartlar (backdrop-filter: blur)
+   - Köşelerde dekoratif renkli noktalar
+   - Grid pattern arka plan (opsiyonel)
+   - Modern, minimal, profesyonel
+
+3. SOL ALT KÖŞE - LOGO (zorunlu):
+   - Bu base64 logo resmini kullan: {{{{logo}}}}
+   - Logo ve yazı yan yana olacak:
+   ```
+   <div style="position:absolute;bottom:24px;left:24px;display:flex;align-items:center;gap:12px;">
+     <img src="{{{{logo}}}}" style="width:48px;height:48px;border-radius:8px;">
+     <span style="color:#ffffff;font-size:24px;font-weight:600;font-family:system-ui,sans-serif;">Olivenet</span>
+   </div>
+   ```
+
+4. SAĞ ALT KÖŞE:
+   - Hashtag YAZMA (bunlar post metninde olacak)
+   - Boş bırak veya minimal dekoratif element
+
+5. YARATICILIK (önemli):
+   - Her görsel farklı layout dene
+   - Bazen tek büyük metrik, bazen grid
+   - Bazen ilustrasyon/ikon ağırlıklı, bazen data-driven
+   - Sıkıcı ve tekrarlayan olma
+   - Konuya özel yaratıcı elementler ekle:
+     * Tarım: yaprak, damla, toprak ikonları
+     * Enerji: şimşek, güneş, pil ikonları
+     * Kestirimci bakım: dişli, grafik, kalp atışı
+     * Bina: ev, termometre, hava ikonları
+   - SVG ikonlar kullanabilirsin (inline)
+
+6. İÇERİK:
+   - Dikkat çekici başlık
+   - 1-2 anahtar metrik/istatistik
+   - Konuyla ilgili görsel element
 
 SADECE HTML kodunu yaz. Markdown code block (```) KULLANMA.
 Aciklama yazma, direkt <!DOCTYPE html> ile basla.
+HTML icinde {{{{logo}}}} placeholder'i kullan, ben degistirecegim.
 """
 
     logger.info(f"Generating visual HTML for topic: {topic}")
@@ -142,6 +184,10 @@ Aciklama yazma, direkt <!DOCTYPE html> ile basla.
 
     # Clean up and extract HTML
     result = extract_html(result)
+
+    # Logo placeholder'ı gerçek base64 ile değiştir
+    if logo_img and "{{logo}}" in result:
+        result = result.replace("{{logo}}", logo_img)
 
     return result
 

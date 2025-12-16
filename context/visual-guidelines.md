@@ -473,3 +473,48 @@ background: linear-gradient(to bottom right, #365314, #1a2e1a);
 4. **Dekoratif noktalar** - Köşelerde küçük renkli noktalar
 5. **Grid pattern** - Arka planda hafif grid deseni
 6. **Animasyon izlenimi** - Statik görsellerde "canlılık" hissi veren elementler
+
+---
+
+## Yaratıcılık Rehberi
+
+### Farklı Layout Önerileri
+
+**Layout 1 - Tek Büyük Metrik:**
+- Ortada devasa rakam (%70, 3000+, vb.)
+- Üstte kısa başlık
+- Altta açıklama
+
+**Layout 2 - Dashboard Grid:**
+- 2x2 veya 3x2 metrik kartları
+- Her kartta ikon + değer
+- Üstte başlık
+
+**Layout 3 - Split Screen:**
+- Sol: Metin ve açıklama
+- Sağ: Görsel/ikon/grafik
+
+**Layout 4 - Minimal:**
+- Sadece başlık ve tek güçlü mesaj
+- Büyük ikon veya ilustrasyon
+- Çok az metin
+
+**Layout 5 - İnfografik:**
+- Adımlar veya süreç gösterimi
+- Oklar ve bağlantılar
+- Numbered list görsel
+
+### Konu Bazlı Elementler
+
+| Konu | İkonlar/SVG | Renk Vurgusu |
+|------|-------------|--------------|
+| Tarım/Sera | 🌱💧🌡️ yaprak, damla | Emerald #10b981 |
+| Enerji | ⚡🔋☀️ şimşek, pil | Amber #f59e0b |
+| Kestirimci Bakım | ⚙️📊💓 dişli, grafik | Violet #8b5cf6 |
+| Bina/HVAC | 🏢🌡️💨 bina, termometre | Sky #0ea5e9 |
+
+### Kaçınılacaklar
+- Her görsel aynı layout olmasın
+- Çok fazla metin koymayın
+- Sıkıcı, kurumsal görünümden kaçının
+- Hashtag'leri görsele koymayın

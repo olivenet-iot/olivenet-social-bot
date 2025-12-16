@@ -265,3 +265,39 @@ async def get_page_info(
             )
 
         return data
+
+
+async def test_facebook_connection(
+    page_id: Optional[str] = None,
+    access_token: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Test Facebook connection by getting page info.
+
+    Args:
+        page_id: Facebook Page ID
+        access_token: Page Access Token
+
+    Returns:
+        Dict with connection status and page info
+    """
+    try:
+        page_info = await get_page_info(page_id, access_token)
+        return {
+            "success": True,
+            "page_name": page_info.get("name"),
+            "page_id": page_info.get("id"),
+            "followers": page_info.get("followers_count", 0)
+        }
+    except FacebookError as e:
+        return {
+            "success": False,
+            "error": e.message,
+            "error_code": e.error_code
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "error_code": None
+        }

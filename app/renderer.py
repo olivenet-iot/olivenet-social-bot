@@ -75,16 +75,17 @@ async def render_html_to_png(
         page = await context.new_page()
 
         # Set the HTML content
-        await page.set_content(html_content, wait_until='networkidle')
+        await page.set_content(html_content, wait_until='domcontentloaded')
 
-        # Wait a bit for any CSS animations to settle
-        await asyncio.sleep(0.5)
+        # Kısa bir bekleme (render için)
+        await page.wait_for_timeout(1000)
 
-        # Take screenshot
+        # Take screenshot - font bekleme olmadan
         await page.screenshot(
             path=output_path,
             type='png',
-            clip={'x': 0, 'y': 0, 'width': width, 'height': height}
+            clip={'x': 0, 'y': 0, 'width': width, 'height': height},
+            timeout=60000  # 60 saniye
         )
 
         await context.close()
