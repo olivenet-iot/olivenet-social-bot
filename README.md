@@ -1,54 +1,107 @@
-# Olivenet Social Media Bot
+# 🤖 Olivenet AI Content System
 
-Telegram üzerinden Claude Code ile akıllı Facebook post otomasyonu.
+**Multi-Agent AI ile Semi-Autonomous Sosyal Medya İçerik Sistemi**
 
-## Özellikler
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://python.org)
 
-### İçerik Üretimi
-- **Claude Code ile akıllı post üretimi** - Sosyal medya uzmanı gibi düşünür
-- **Konu öneri sistemi** - Mevsim ve güne göre akıllı öneriler
-- **Geri bildirim ile düzenleme** - "Daha kısa yap", "Emoji ekle" gibi
+---
+
+## 🌟 Özellikler
+
+### Multi-Agent Mimari
+| Agent | Görev |
+|-------|-------|
+| 🎯 **Orchestrator** | Merkezi koordinatör, haftalık planlama, strateji güncelleme |
+| 📋 **Planner** | Konu önerisi, trend analizi, içerik takvimi |
+| ✍️ **Creator** | Post metni, görsel prompt üretimi |
+| 🔍 **Reviewer** | Kalite kontrol, puanlama (1-10), onay/red |
+| 📤 **Publisher** | Facebook/Instagram paylaşım |
+| 📊 **Analytics** | Performans takip, raporlama |
+
+### Self-Learning Strateji
+- 📈 AI performans verilerini analiz eder
+- 📅 En iyi günleri ve saatleri öğrenir
+- 🎨 İçerik ve görsel mix'ini optimize eder
+- 🔄 Haftalık strateji günceller
 
 ### Görsel Üretimi (4 Seçenek)
-- **İnfografik (Statik)** - Dashboard tarzı PNG görseller
-- **Gerçekçi AI Görsel** - Gemini 2.5 Flash ile fotoğraf üretimi
-- **FLUX.2 Pro (Premium)** - Black Forest Labs premium görsel üretimi
-- **AI Video (Veo 3)** - Google Veo 3 ile profesyonel video üretimi
+| Seçenek | Teknoloji | Kalite | Maliyet |
+|---------|-----------|--------|---------|
+| 📊 İnfografik | HTML → PNG | İyi | Ücretsiz |
+| 📸 Gerçekçi AI | Gemini 2.5 Flash | İyi | Ücretsiz |
+| 🎨 FLUX.2 Pro | Black Forest Labs | Premium | ~$0.03/görsel |
+| 🎬 AI Video | Google Veo 3 | Premium | Kullanım başı |
 
-### Entegrasyonlar
-- Telegram bot ile kolay yönetim
-- Facebook Graph API entegrasyonu (fotoğraf + video)
-- Olivenet marka kimliğine uygun içerik
+### Semi-Autonomous Mod
+Her aşamada Telegram üzerinden onay bekler:
 
-## Hızlı Kurulum
+```
+📋 Konu önerisi → Onay
+✍️ Post metni → Onay
+🎨 Görsel → Onay
+🔍 Review → Final onay
+🚀 Yayınla
+```
+
+---
+
+## 🏗️ Sistem Mimarisi
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   🧠 ORCHESTRATOR AGENT                      │
+│                  (Merkezi Karar Verici)                      │
+└─────────────────────────────────────────────────────────────┘
+                            │
+        ┌───────────────────┼───────────────────┐
+        ▼                   ▼                   ▼
+┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
+│ 📋 PLANNER      │ │ ✍️ CREATOR      │ │ 🎨 VISUAL       │
+│    AGENT        │ │    AGENT        │ │    DIRECTOR     │
+└─────────────────┘ └─────────────────┘ └─────────────────┘
+        │                   │                   │
+        └───────────────────┼───────────────────┘
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   🔍 REVIEWER AGENT                          │
+│                  (Kalite Kontrol)                            │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│              📤 PUBLISHER → 📊 ANALYTICS                     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🚀 Kurulum
 ```bash
-# 1. Repo'yu klonla
+# 1. Klonla
 git clone https://github.com/olivenet-iot/olivenet-social-bot.git
 cd olivenet-social-bot
 
-# 2. Kurulum script'ini çalıştır
-chmod +x setup.sh
-./setup.sh
+# 2. Virtual environment (önerilen)
+python3 -m venv venv
+source venv/bin/activate
 
-# 3. Token'ları ayarla
-nano .env
+# 3. Bağımlılıkları kur
+pip install -r requirements.txt
+playwright install chromium
 
-# 4. Bot'u başlat
-python3 app/telegram_bot.py
+# 4. .env ayarla
+cp .env.example .env
+nano .env  # API key'leri gir
+
+# 5. Çalıştır
+python3 start_pipeline.py
 ```
 
-## Gereksinimler
+---
 
-- Python 3.10+
-- Claude Code CLI (kurulu ve çalışır durumda)
-- Telegram Bot Token (@BotFather'dan)
-- Facebook Page Access Token
-- Gemini API Key (görsel + video için)
-- BFL API Key (FLUX.2 Pro için - opsiyonel)
+## ⚙️ Yapılandırma
 
-## Yapılandırma
-
-`.env.example` dosyasını `.env` olarak kopyalayın ve doldurun:
+### .env Dosyası
 ```env
 # Telegram
 TELEGRAM_BOT_TOKEN=your_bot_token
@@ -58,171 +111,202 @@ TELEGRAM_ADMIN_CHAT_ID=your_chat_id
 FACEBOOK_PAGE_ID=your_page_id
 FACEBOOK_ACCESS_TOKEN=your_access_token
 
-# Gemini AI (görsel + Veo video)
-GEMINI_API_KEY=your_gemini_api_key
-
-# Black Forest Labs FLUX API (premium görsel - opsiyonel)
-BFL_API_KEY=your_bfl_api_key
+# AI APIs
+GEMINI_API_KEY=your_gemini_key
+BFL_API_KEY=your_bfl_key  # FLUX.2 Pro için
 ```
 
-## Telegram Komutları
+---
 
-| Komut/Buton | Açıklama |
-|-------------|----------|
-| /start | Ana menü |
-| Yeni Post Oluştur | Konu gir, post üret |
-| Konu Öner | Bugüne özel 3 konu önerisi |
-| Görseli Düzenle | Geri bildirim ile revize |
-| Facebook'a Gönder | Paylaş |
-
-## Dosya Yapısı
+## 📁 Proje Yapısı
 ```
 olivenet-social-bot/
 ├── app/
-│   ├── telegram_bot.py      # Ana bot
-│   ├── claude_helper.py     # Claude Code wrapper + prompt üretimi
-│   ├── renderer.py          # HTML → PNG (infografik)
-│   ├── gemini_helper.py     # Gemini AI görsel
-│   ├── flux_helper.py       # FLUX.2 Pro API client
-│   ├── veo_helper.py        # Veo 3 video üretimi
-│   ├── facebook_helper.py   # Facebook Graph API (foto + video)
-│   └── config.py            # Ayarlar
-├── context/                 # Claude için bağlam dosyaları
-│   ├── company-profile.md   # Şirket bilgileri
-│   ├── content-strategy.md  # İçerik stratejisi
-│   ├── visual-guidelines.md # Görsel tasarım rehberi
-│   ├── social-media-expert.md # Sosyal medya uzmanlığı
-│   └── flux-prompting-guide.md # FLUX prompt rehberi
-├── outputs/                 # Üretilen görseller/videolar
-├── setup.sh
+│   ├── agents/                  # 🤖 AI Agent'lar
+│   │   ├── base_agent.py        # Temel agent sınıfı
+│   │   ├── orchestrator.py      # Merkezi koordinatör
+│   │   ├── planner.py           # İçerik planlayıcı
+│   │   ├── creator.py           # İçerik üretici
+│   │   ├── reviewer.py          # Kalite kontrol
+│   │   ├── publisher.py         # Yayıncı
+│   │   └── analytics.py         # Performans takip
+│   │
+│   ├── scheduler/               # ⏰ Zamanlayıcı
+│   │   ├── pipeline.py          # 6 aşamalı içerik pipeline'ı
+│   │   └── scheduler.py         # Cron-like görev yönetimi
+│   │
+│   ├── database/                # 💾 Veritabanı
+│   │   ├── models.py            # SQLite şeması
+│   │   └── crud.py              # CRUD operasyonları
+│   │
+│   ├── telegram_pipeline.py     # 📱 Telegram bot (yeni)
+│   ├── claude_helper.py         # Claude Code CLI
+│   ├── flux_helper.py           # FLUX.2 Pro API
+│   ├── veo_helper.py            # Veo 3 Video API
+│   ├── gemini_helper.py         # Gemini API
+│   ├── facebook_helper.py       # Facebook Graph API
+│   └── renderer.py              # HTML → PNG
+│
+├── context/                     # 📚 AI Context
+│   ├── company-profile.md       # Şirket bilgileri
+│   ├── content-strategy.md      # İçerik stratejisi
+│   ├── visual-guidelines.md     # Görsel kuralları
+│   ├── flux-prompting-guide.md  # FLUX prompt rehberi
+│   └── agent-personas/          # Agent kişilikleri
+│       ├── orchestrator.md
+│       ├── planner.md
+│       └── reviewer.md
+│
+├── data/
+│   └── content.db               # SQLite veritabanı
+│
+├── start_pipeline.py            # 🚀 Ana başlatıcı
 ├── requirements.txt
 └── .env.example
 ```
 
-## Görsel Türleri
+---
 
-### 1. İnfografik (Statik)
-- Glassmorphism dashboard tarzı
-- Olivenet renk paleti (#4a7c4a, #0ea5e9)
-- 1080x1080 PNG
-- Playwright ile HTML → PNG render
+## 📊 Database Tabloları
 
-### 2. Gerçekçi AI Görsel
-- Gemini 2.5 Flash image generation
-- Profesyonel fotoğraf tarzı
-- IoT/teknoloji temalı
-- 1024x1024 PNG
+| Tablo | Açıklama |
+|-------|----------|
+| `posts` | Tüm içerikler (metin, görsel, durum) |
+| `analytics` | Performans metrikleri (views, likes, shares) |
+| `content_calendar` | Haftalık içerik takvimi |
+| `strategy` | AI'ın öğrendiği stratejiler |
+| `agent_logs` | Agent aktivite logları |
 
-### 3. FLUX.2 Pro (Premium)
-- Black Forest Labs FLUX.2 Pro API
-- En yüksek kalite AI görsel üretimi
-- HEX renk kodu desteği (#4a7c4a, #38bdf8)
-- Claude Code ile optimize edilmiş prompt
-- 1024x1024 PNG
-- Maliyet: ~$0.03/görsel
+---
 
-### 4. AI Video (Veo 3)
-- Google Veo 3 video generation
-- 5 saniyelik profesyonel video
-- 1280x720 (16:9) MP4
-- Claude Code ile optimize edilmiş prompt
-- Konuya özel görsel temalar:
-  - Akıllı Tarım: Sera, sensörler, yeşil bitkiler
-  - Enerji İzleme: Sayaçlar, LED'ler, veri akışı
-  - Kestirimci Bakım: Makineler, diagnostik
-  - Bina Otomasyonu: Modern ofis, akıllı kontrol
+## ⏰ Otomatik Görevler
 
-## FLUX.2 Pro Prompting
+| Zaman | Gün | Görev |
+|-------|-----|-------|
+| 08:00 | Pazartesi | 📅 Haftalık planlama |
+| 09:00 | Pzt-Cum | 🚀 Günlük içerik pipeline |
+| 20:00 | Her gün | 📊 Analytics raporu |
+| 21:00 | Pazar | 🔄 Strateji güncelleme |
 
-Bot, FLUX prompt'u için Claude Code'u kullanır:
+---
 
-1. **Prompt Framework**: Subject + Action + Style + Context
-2. **Renk Kontrolü**: HEX kod desteği (#4a7c4a olive green, #38bdf8 sky blue)
-3. **Optimal Uzunluk**: 40-80 kelime arası
-4. **Marka Uyumu**: Olivenet kimliği korunur
+## 📱 Telegram Komutları
 
-Örnek Prompt (Claude Code tarafından üretilir):
+| Komut | Açıklama |
+|-------|----------|
+| `/start` | Ana menü |
+| `/status` | Sistem durumu |
+| `/manual` | Manuel içerik oluşturma |
+
+### Ana Menü
+- 🚀 Günlük İçerik Başlat
+- 📅 Haftalık Plan
+- 📊 Strateji Göster
+- 📈 Analytics Raporu
+- ⏰ Scheduler Durumu
+
+---
+
+## 🔄 Pipeline Akışı
 ```
-"Modern greenhouse interior with rows of healthy tomato plants,
-small IoT soil moisture sensors embedded in rich dark soil,
-soft natural morning sunlight filtering through glass panels,
-olive green (#4a7c4a) and sky blue (#38bdf8) accent colors,
-commercial agriculture photography style, f/2.8 shallow depth
-of field, clean minimal composition, professional and modern"
-```
-
-## Sosyal Medya Uzmanı Modu
-
-Bot, içerik üretirken şunları analiz eder:
-- Hook etkisi (ilk cümle dikkat çekiyor mu?)
-- Duygusal tetikleyiciler (FOMO, merak, umut)
-- KKTC pazarı uygunluğu
-- Engagement tahmini
-
-## API Maliyetleri
-
-| API | Kullanım | Maliyet |
-|-----|----------|---------|
-| Claude Code CLI | Post + prompt | Free |
-| Gemini 2.5 Flash | AI görsel | Free tier |
-| FLUX.2 Pro | Premium görsel | ~$0.03/görsel |
-| Veo 3 | AI video | ~$0.10/video |
-| Facebook Graph | Paylaşım | Free |
-
-## Systemd Servisi
-```bash
-# Servis dosyasını kopyala
-sudo cp olivenet-social.service /etc/systemd/system/
-
-# Servisi etkinleştir
-sudo systemctl daemon-reload
-sudo systemctl enable olivenet-social
-sudo systemctl start olivenet-social
-
-# Durum kontrolü
-sudo systemctl status olivenet-social
+IDLE
+  ↓
+PLANNING (AI konu önerir)
+  ↓
+AWAITING_TOPIC_APPROVAL ←── 📱 Telegram onay
+  ↓
+CREATING_CONTENT (AI post yazar)
+  ↓
+AWAITING_CONTENT_APPROVAL ←── 📱 Telegram onay
+  ↓
+CREATING_VISUAL (AI görsel üretir)
+  ↓
+AWAITING_VISUAL_APPROVAL ←── 📱 Telegram onay
+  ↓
+REVIEWING (AI kalite kontrol)
+  ↓
+AWAITING_FINAL_APPROVAL ←── 📱 Telegram onay
+  ↓
+PUBLISHING (Facebook'a gönder)
+  ↓
+COMPLETED ✅
 ```
 
-## Sorun Giderme
+---
 
-### Bot çalışmıyor
-```bash
-# Log kontrol
-tail -f /tmp/bot.log
+## 🧠 Self-Learning
 
-# Manuel başlat
-cd /opt/olivenet-social
-source venv/bin/activate
-python3 app/telegram_bot.py
+AI şunları öğrenir ve stratejisini günceller:
+```json
+{
+  "posts_per_week": 5,
+  "best_days": ["tuesday", "thursday"],
+  "best_hours": ["10:00", "14:00"],
+  "content_mix": {
+    "egitici": 35,
+    "tanitim": 25,
+    "ipucu": 20,
+    "haber": 10,
+    "basari_hikayesi": 10
+  },
+  "visual_mix": {
+    "flux": 35,
+    "infographic": 30,
+    "gemini": 25,
+    "video": 10
+  }
+}
 ```
 
-### API key hatası
-```bash
-# .env kontrolü
-cat .env | grep -E "(TELEGRAM|GEMINI|BFL|FACEBOOK)"
+---
 
-# Test
-python3 -c "from dotenv import load_dotenv; import os; load_dotenv(); print(os.getenv('BFL_API_KEY'))"
+## 🔧 Özelleştirme
+
+### Yeni Agent Ekleme
+```python
+from app.agents.base_agent import BaseAgent
+
+class MyAgent(BaseAgent):
+    def __init__(self):
+        super().__init__("my_agent")
+
+    async def execute(self, input_data: dict) -> dict:
+        # Agent mantığı
+        result = await self.call_claude("prompt...")
+        return {"success": True, "data": result}
 ```
 
-### FLUX kredi kontrolü
-```bash
-source venv/bin/activate
-python3 -c "
-import asyncio
-from app.flux_helper import get_credits
-result = asyncio.run(get_credits())
-print(f'Krediler: {result}')
-"
+### Yeni Zamanlanmış Görev
+```python
+from app.scheduler import ScheduledTask
+
+task = ScheduledTask(
+    name="my_task",
+    callback=my_async_function,
+    hour=10,
+    minute=30,
+    days=["monday", "wednesday", "friday"]
+)
+scheduler.add_task(task)
 ```
 
-## Lisans
+---
 
-MIT License - Olivenet Ltd.
+## 📄 Lisans
 
-## Bağlantılar
+MIT License - [Olivenet Ltd.](https://olivenet.io)
 
-- **Website:** [olivenet.io](https://olivenet.io)
-- **GitHub:** [github.com/olivenet-iot](https://github.com/olivenet-iot)
-- **FLUX API:** [bfl.ai](https://bfl.ai)
-- **Gemini API:** [ai.google.dev](https://ai.google.dev)
+---
+
+## 🔗 Bağlantılar
+
+- 🌐 Website: [olivenet.io](https://olivenet.io)
+- 📧 Email: info@olivenet.io
+- 🐙 GitHub: [github.com/olivenet-iot](https://github.com/olivenet-iot)
+
+---
+
+<p align="center">
+  <b>Built with ❤️ by Olivenet IoT</b><br>
+  <i>Smart Agriculture • Energy Monitoring • Industrial IoT</i>
+</p>
