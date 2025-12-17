@@ -3,7 +3,11 @@ Olivenet Social Media Bot - Configuration
 """
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
+
+# .env dosyasını manuel olarak yükle
+load_dotenv("/opt/olivenet-social-bot/.env")
 from pydantic import Field
 
 
@@ -29,13 +33,13 @@ class Settings(BaseSettings):
     claude_timeout_visual: int = Field(default=90, description="Timeout for visual generation (seconds)")
 
     # Paths
-    base_dir: Path = Field(default=Path("/opt/olivenet-social"))
-    context_dir: Path = Field(default=Path("/opt/olivenet-social/context"))
-    templates_dir: Path = Field(default=Path("/opt/olivenet-social/templates"))
-    outputs_dir: Path = Field(default=Path("/opt/olivenet-social/outputs"))
+    base_dir: Path = Field(default=Path("/opt/olivenet-social-bot"))
+    context_dir: Path = Field(default=Path("/opt/olivenet-social-bot/context"))
+    templates_dir: Path = Field(default=Path("/opt/olivenet-social-bot/templates"))
+    outputs_dir: Path = Field(default=Path("/opt/olivenet-social-bot/outputs"))
 
     model_config = {
-        "env_file": "/opt/olivenet-social/.env",
+        "env_file": "/opt/olivenet-social-bot/.env",
         "env_file_encoding": "utf-8",
         "extra": "ignore"
     }

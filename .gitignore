@@ -38,3 +38,6 @@ Thumbs.db
 playwright-report/
 test-results/
 session_state.json
+
+# Backup (old system)
+_backup/
