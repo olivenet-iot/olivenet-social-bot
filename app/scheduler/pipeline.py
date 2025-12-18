@@ -388,7 +388,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                     "post_text": content_result.get("post_text"),
                     "image_path": image_path,
                     "video_path": video_path,
-                    "platform": "facebook"
+                    "platform": "both"  # Facebook + Instagram
                 })
 
                 if publish_result.get("success"):
@@ -614,7 +614,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 "post_text": content_result.get("post_text"),
                 "image_path": image_path,
                 "video_path": video_path,
-                "platform": "facebook"
+                "platform": "both"  # Facebook + Instagram
             })
 
             if publish_result.get("success"):

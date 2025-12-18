@@ -1,6 +1,6 @@
 """
 Scheduler - Zamanlanmış görevler
-KKTC timezone (Europe/Istanbul - UTC+3) kullanır
+KKTC timezone (Europe/Istanbul - UTC+2) kullanır
 """
 
 import asyncio
@@ -8,12 +8,12 @@ from datetime import datetime, timedelta, timezone
 from typing import Dict, Any, Callable, List
 import json
 
-# KKTC timezone (UTC+3 - Europe/Istanbul ile aynı)
-KKTC_TIMEZONE = timezone(timedelta(hours=3))
+# KKTC timezone (UTC+2 - Europe/Istanbul ile aynı)
+KKTC_TIMEZONE = timezone(timedelta(hours=2))
 
 
 def get_kktc_now() -> datetime:
-    """KKTC saatini döndür (UTC+3)"""
+    """KKTC saatini döndür (UTC+2)"""
     return datetime.now(KKTC_TIMEZONE)
 
 class ScheduledTask:
@@ -111,7 +111,7 @@ class ContentScheduler:
         """Scheduler'ı başlat"""
         kktc_time = get_kktc_now().strftime("%Y-%m-%d %H:%M:%S")
         print(f"[SCHEDULER] Starting... (check every {check_interval}s)")
-        print(f"[SCHEDULER] KKTC Time (UTC+3): {kktc_time}")
+        print(f"[SCHEDULER] KKTC Time (UTC+2): {kktc_time}")
         self.running = True
 
         while self.running:
