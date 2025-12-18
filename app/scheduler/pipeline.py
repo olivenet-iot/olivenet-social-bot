@@ -428,3 +428,226 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             )
 
             return result
+
+    async def run_autonomous_content(self, min_score: int = 7) -> Dict[str, Any]:
+        """
+        Tam otonom içerik pipeline'ı - Telegram onayı beklemez
+
+        Args:
+            min_score: Minimum kabul edilebilir review puanı (default: 7/10)
+                       Bu puanın altındaki içerikler yayınlanmaz
+
+        Returns:
+            Pipeline sonucu
+        """
+        self.log("OTONOM MOD: İçerik pipeline'ı başlatılıyor...")
+        self.state = PipelineState.PLANNING
+
+        result = {
+            "success": False,
+            "stages_completed": [],
+            "final_state": None,
+            "autonomous": True
+        }
+
+        try:
+            # ========== AŞAMA 1: Konu Önerisi ==========
+            self.log("[OTONOM] Aşama 1: Konu seçiliyor...")
+
+            topic_result = await self.planner.execute({"action": "suggest_topic"})
+
+            if "error" in topic_result:
+                raise Exception(f"Planner error: {topic_result['error']}")
+
+            self.current_data["topic_suggestion"] = topic_result
+            result["stages_completed"].append("planning")
+            result["topic"] = topic_result.get("topic")
+
+            self.log(f"[OTONOM] Konu: {topic_result.get('topic')}")
+
+            # Telegram'a bilgi gönder (sadece bilgi, onay beklenmez)
+            await self.notify_telegram(
+                message=f"🤖 *OTONOM MOD* - Konu Secildi\n\nKonu: {topic_result.get('topic', 'N/A')}\nKategori: {topic_result.get('category', 'N/A')}",
+                data=topic_result,
+                buttons=[]
+            )
+
+            # ========== AŞAMA 2: İçerik Üretimi ==========
+            self.log("[OTONOM] Aşama 2: İçerik üretiliyor...")
+            self.state = PipelineState.CREATING_CONTENT
+
+            content_result = await self.creator.execute({
+                "action": "create_post",
+                "topic": topic_result.get("topic"),
+                "category": topic_result.get("category"),
+                "suggested_hooks": topic_result.get("suggested_hooks", []),
+                "visual_type": topic_result.get("suggested_visual", "flux")
+            })
+
+            if "error" in content_result:
+                raise Exception(f"Creator error: {content_result['error']}")
+
+            self.current_data["content"] = content_result
+            result["stages_completed"].append("content_creation")
+
+            self.log(f"[OTONOM] İçerik üretildi ({content_result.get('word_count', 0)} kelime)")
+
+            # ========== AŞAMA 3: Görsel Üretimi ==========
+            self.log("[OTONOM] Aşama 3: Görsel üretiliyor...")
+            self.state = PipelineState.CREATING_VISUAL
+
+            visual_type = topic_result.get("suggested_visual", "flux")
+
+            visual_prompt_result = await self.creator.execute({
+                "action": "create_visual_prompt",
+                "post_text": content_result.get("post_text"),
+                "topic": topic_result.get("topic"),
+                "visual_type": visual_type,
+                "post_id": content_result.get("post_id")
+            })
+
+            if "error" in visual_prompt_result:
+                raise Exception(f"Visual prompt error: {visual_prompt_result['error']}")
+
+            self.current_data["visual_prompt"] = visual_prompt_result
+            result["stages_completed"].append("visual_prompt")
+
+            # Görsel üret
+            self.log(f"[OTONOM] Görsel üretiliyor ({visual_type})...")
+
+            image_path = None
+            video_path = None
+
+            if visual_type == "flux":
+                from app.flux_helper import generate_image_flux
+                visual_result = await generate_image_flux(
+                    prompt=visual_prompt_result.get("visual_prompt"),
+                    width=1024,
+                    height=1024
+                )
+                if visual_result.get("success"):
+                    image_path = visual_result.get("image_path")
+
+            elif visual_type == "video":
+                from app.veo_helper import generate_video_with_retry
+                visual_result = await generate_video_with_retry(
+                    prompt=visual_prompt_result.get("visual_prompt")
+                )
+                if visual_result.get("success"):
+                    video_path = visual_result.get("video_path")
+
+            elif visual_type == "gemini":
+                # Gemini devre dışı - FLUX kullan
+                self.log("[OTONOM] Gemini devre dışı, FLUX kullanılıyor...")
+                from app.flux_helper import generate_image_flux
+                visual_result = await generate_image_flux(
+                    prompt=visual_prompt_result.get("visual_prompt"),
+                    width=1024,
+                    height=1024
+                )
+                if visual_result.get("success"):
+                    image_path = visual_result.get("image_path")
+
+            elif visual_type == "infographic":
+                from app.claude_helper import generate_visual_html
+                from app.renderer import render_html_to_png
+                html = await generate_visual_html(
+                    content_result.get("post_text"),
+                    topic_result.get("topic")
+                )
+                image_path = await render_html_to_png(html)
+                visual_result = {"success": True, "image_path": image_path}
+
+            self.current_data["visual_result"] = {
+                "image_path": image_path,
+                "video_path": video_path,
+                "visual_type": visual_type
+            }
+
+            # Görsel başarısız olduysa hata ver
+            if not image_path and not video_path:
+                error_msg = visual_result.get("error", "Görsel üretilemedi") if visual_result else "Görsel üretilemedi"
+                raise Exception(f"Visual generation failed: {error_msg}")
+
+            result["stages_completed"].append("visual_generation")
+            self.log(f"[OTONOM] Görsel üretildi: {image_path or video_path}")
+
+            # ========== AŞAMA 4: Kalite Kontrol ==========
+            self.log("[OTONOM] Aşama 4: Kalite kontrol...")
+            self.state = PipelineState.REVIEWING
+
+            review_result = await self.reviewer.execute({
+                "action": "review_post",
+                "post_text": content_result.get("post_text"),
+                "topic": topic_result.get("topic"),
+                "post_id": content_result.get("post_id")
+            })
+
+            self.current_data["review"] = review_result
+            result["stages_completed"].append("review")
+
+            score = review_result.get("total_score", 0)
+            decision = review_result.get("decision", "revise")
+            result["review_score"] = score
+
+            self.log(f"[OTONOM] Review: {score}/10 - Karar: {decision}")
+
+            # Puan kontrolü
+            if score < min_score:
+                self.log(f"[OTONOM] Puan yetersiz ({score} < {min_score}), yayınlanmıyor!")
+                await self.notify_telegram(
+                    message=f"⚠️ *OTONOM MOD* - Icerik Reddedildi\n\nPuan: {score}/10 (min: {min_score})\nKonu: {topic_result.get('topic')}\n\nIcerik kalite standardini karsilamiyor, yayinlanmadi.",
+                    data=review_result,
+                    buttons=[]
+                )
+                self.state = PipelineState.IDLE
+                result["reason"] = f"Review puanı yetersiz: {score}/{min_score}"
+                return result
+
+            # ========== AŞAMA 5: Yayınla ==========
+            self.log("[OTONOM] Aşama 5: Yayınlanıyor...")
+            self.state = PipelineState.PUBLISHING
+
+            publish_result = await self.publisher.execute({
+                "action": "publish",
+                "post_id": content_result.get("post_id"),
+                "post_text": content_result.get("post_text"),
+                "image_path": image_path,
+                "video_path": video_path,
+                "platform": "facebook"
+            })
+
+            if publish_result.get("success"):
+                result["stages_completed"].append("published")
+                result["success"] = True
+                result["facebook_post_id"] = publish_result.get("facebook_post_id")
+
+                self.log(f"[OTONOM] Başarıyla yayınlandı! Post ID: {publish_result.get('facebook_post_id')}")
+
+                await self.notify_telegram(
+                    message=f"🎉 *OTONOM MOD* - Yayinlandi!\n\nKonu: {topic_result.get('topic')}\nPuan: {score}/10\nPost ID: {publish_result.get('facebook_post_id', 'N/A')}",
+                    data=publish_result,
+                    buttons=[]
+                )
+            else:
+                raise Exception(f"Publish error: {publish_result.get('error')}")
+
+            self.state = PipelineState.COMPLETED
+            result["final_state"] = self.state.value
+
+            self.log("[OTONOM] Pipeline tamamlandı!")
+            return result
+
+        except Exception as e:
+            self.log(f"[OTONOM] Pipeline hatası: {str(e)}")
+            self.state = PipelineState.ERROR
+            result["error"] = str(e)
+            result["final_state"] = self.state.value
+
+            await self.notify_telegram(
+                message=f"❌ *OTONOM MOD* - Hata\n\n{str(e)}",
+                data={"error": str(e)},
+                buttons=[]
+            )
+
+            return result

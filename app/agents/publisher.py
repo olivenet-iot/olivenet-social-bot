@@ -77,9 +77,46 @@ class PublisherAgent(BaseAgent):
                 else:
                     result["error"] = fb_result.get("error", "Unknown error")
 
-            # TODO: Instagram desteği eklenecek
             elif platform == "instagram":
-                result["error"] = "Instagram desteği henüz eklenmedi"
+                # Instagram için görsel CDN'e yüklenmeli (public URL gerekli)
+                from app.instagram_helper import (
+                    post_photo_to_instagram,
+                    post_video_to_instagram,
+                    upload_image_to_cdn
+                )
+
+                if video_path:
+                    # Video için CDN URL gerekli
+                    # Şimdilik sadece public URL destekleniyor
+                    ig_result = {"success": False, "error": "Instagram video için CDN URL gerekli"}
+
+                elif image_path:
+                    # Görseli CDN'e yükle
+                    image_url = await upload_image_to_cdn(image_path)
+
+                    if image_url:
+                        ig_result = await post_photo_to_instagram(
+                            image_url=image_url,
+                            caption=post_text
+                        )
+                    else:
+                        ig_result = {"success": False, "error": "Gorsel CDN'e yuklenemedi"}
+                else:
+                    ig_result = {"error": "No media provided"}
+
+                if ig_result.get("success") or ig_result.get("id"):
+                    result["success"] = True
+                    result["instagram_post_id"] = ig_result.get("id")
+
+                    if post_id:
+                        update_post(
+                            post_id,
+                            status="published",
+                            published_at=datetime.now(),
+                            instagram_post_id=ig_result.get("id")
+                        )
+                else:
+                    result["error"] = ig_result.get("error", "Unknown error")
 
             log_agent_action(
                 agent_name=self.name,

@@ -1,11 +1,20 @@
 """
 Scheduler - Zamanlanmış görevler
+KKTC timezone (Europe/Istanbul - UTC+3) kullanır
 """
 
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Any, Callable, List
 import json
+
+# KKTC timezone (UTC+3 - Europe/Istanbul ile aynı)
+KKTC_TIMEZONE = timezone(timedelta(hours=3))
+
+
+def get_kktc_now() -> datetime:
+    """KKTC saatini döndür (UTC+3)"""
+    return datetime.now(KKTC_TIMEZONE)
 
 class ScheduledTask:
     """Zamanlanmış görev"""
@@ -30,11 +39,11 @@ class ScheduledTask:
         self.enabled = True
 
     def should_run(self) -> bool:
-        """Şimdi çalışmalı mı?"""
+        """Şimdi çalışmalı mı? (KKTC saati kullanır)"""
         if not self.enabled:
             return False
 
-        now = datetime.now()
+        now = get_kktc_now()
 
         # Interval bazlı
         if self.interval_minutes:
@@ -59,7 +68,7 @@ class ScheduledTask:
 
     async def run(self):
         """Görevi çalıştır"""
-        self.last_run = datetime.now()
+        self.last_run = get_kktc_now()
         try:
             if asyncio.iscoroutinefunction(self.callback):
                 return await self.callback()
@@ -100,7 +109,9 @@ class ContentScheduler:
 
     async def start(self, check_interval: int = 60):
         """Scheduler'ı başlat"""
+        kktc_time = get_kktc_now().strftime("%Y-%m-%d %H:%M:%S")
         print(f"[SCHEDULER] Starting... (check every {check_interval}s)")
+        print(f"[SCHEDULER] KKTC Time (UTC+3): {kktc_time}")
         self.running = True
 
         while self.running:
@@ -130,15 +141,31 @@ class ContentScheduler:
         }
 
 
-def create_default_scheduler(pipeline) -> ContentScheduler:
-    """Varsayılan scheduler'ı oluştur"""
+def create_default_scheduler(pipeline, autonomous: bool = False) -> ContentScheduler:
+    """
+    Varsayılan scheduler'ı oluştur
+
+    Args:
+        pipeline: ContentPipeline instance
+        autonomous: True = Tam otonom (onay beklemez), False = Semi-autonomous (onay bekler)
+    """
     scheduler = ContentScheduler()
     scheduler.set_pipeline(pipeline)
+
+    # Mod seçimi
+    if autonomous:
+        content_callback = lambda: pipeline.run_autonomous_content(min_score=7)
+        mode_text = "OTONOM"
+    else:
+        content_callback = lambda: pipeline.run_daily_content()
+        mode_text = "SEMI-AUTONOMOUS"
+
+    print(f"[SCHEDULER] Mode: {mode_text}")
 
     # Sabah günlük içerik kontrolü (09:00)
     scheduler.add_task(ScheduledTask(
         name="daily_content_check",
-        callback=lambda: pipeline.run_daily_content(),
+        callback=content_callback,
         hour=9,
         minute=0,
         days=["monday", "tuesday", "wednesday", "thursday", "friday"]

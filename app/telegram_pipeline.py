@@ -118,7 +118,8 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     admin_chat_id = update.effective_chat.id
 
     keyboard = [
-        [InlineKeyboardButton("🚀 Günlük İçerik Başlat", callback_data="start_daily")],
+        [InlineKeyboardButton("🚀 Günlük İçerik (Onaylı)", callback_data="start_daily")],
+        [InlineKeyboardButton("🤖 Otonom İçerik (Otomatik)", callback_data="start_autonomous")],
         [InlineKeyboardButton("📅 Haftalık Plan", callback_data="weekly_plan")],
         [InlineKeyboardButton("📊 Strateji Göster", callback_data="show_strategy")],
         [InlineKeyboardButton("📈 Analytics Raporu", callback_data="analytics_report")],
@@ -129,8 +130,9 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(
         "🤖 *Olivenet AI Content System*\n\n"
-        "Semi-autonomous içerik üretim sistemi.\n"
-        "Her aşamada sizden onay bekler.\n\n"
+        "Iki mod desteklenir:\n"
+        "• *Onayali:* Her asamada onay bekler\n"
+        "• *Otonom:* Tam otomatik (min 7/10 puan)\n\n"
         "Ne yapmak istersiniz?",
         parse_mode="Markdown",
         reply_markup=reply_markup
@@ -184,7 +186,8 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ===== ANA MENÜ =====
     if action == "main_menu":
         keyboard = [
-            [InlineKeyboardButton("🚀 Günlük İçerik Başlat", callback_data="start_daily")],
+            [InlineKeyboardButton("🚀 Günlük İçerik (Onaylı)", callback_data="start_daily")],
+            [InlineKeyboardButton("🤖 Otonom İçerik (Otomatik)", callback_data="start_autonomous")],
             [InlineKeyboardButton("📅 Haftalık Plan", callback_data="weekly_plan")],
             [InlineKeyboardButton("📊 Strateji Göster", callback_data="show_strategy")],
             [InlineKeyboardButton("📈 Analytics Raporu", callback_data="analytics_report")]
@@ -196,12 +199,24 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=reply_markup
         )
 
-    # ===== GÜNLÜK İÇERİK BAŞLAT =====
+    # ===== GÜNLÜK İÇERİK BAŞLAT (ONAYLI) =====
     elif action == "start_daily":
-        await query.edit_message_text("🚀 *Günlük içerik pipeline'ı başlatılıyor...*", parse_mode="Markdown")
+        await query.edit_message_text("🚀 *Günlük içerik pipeline'ı başlatılıyor (Onaylı Mod)...*", parse_mode="Markdown")
 
         # Pipeline'ı arka planda çalıştır
         asyncio.create_task(pipeline.run_daily_content())
+
+    # ===== OTONOM İÇERİK BAŞLAT =====
+    elif action == "start_autonomous":
+        await query.edit_message_text(
+            "🤖 *OTONOM MOD* baslatiliyor...\n\n"
+            "Icerik otomatik olusturulacak.\n"
+            "Kalite puani 7/10 uzerindeyse otomatik yayinlanacak.\n"
+            "Sadece sonuc bildirilecek."
+        )
+
+        # Otonom pipeline'ı arka planda çalıştır
+        asyncio.create_task(pipeline.run_autonomous_content(min_score=7))
 
     # ===== HAFTALIK PLAN =====
     elif action == "weekly_plan":
