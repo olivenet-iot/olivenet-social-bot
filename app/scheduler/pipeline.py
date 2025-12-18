@@ -245,9 +245,13 @@ class ContentPipeline:
                     video_path = visual_result.get("video_path")
 
             elif visual_type == "gemini":
-                from app.gemini_helper import generate_image_gemini
-                visual_result = await generate_image_gemini(
-                    prompt=visual_prompt_result.get("visual_prompt")
+                # Gemini devre dışı - FLUX'a yönlendir
+                self.log("Gemini devre dışı, FLUX kullanılıyor...")
+                from app.flux_helper import generate_image_flux
+                visual_result = await generate_image_flux(
+                    prompt=visual_prompt_result.get("visual_prompt"),
+                    width=1024,
+                    height=1024
                 )
                 if visual_result.get("success"):
                     image_path = visual_result.get("image_path")
