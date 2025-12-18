@@ -5,6 +5,7 @@ from .crud import (
     get_scheduled_posts, get_published_posts,
     # Analytics
     record_analytics, get_post_analytics, get_analytics_summary,
+    update_post_analytics, get_posts_with_analytics,
     # Strategy
     get_current_strategy, update_strategy,
     # Calendar

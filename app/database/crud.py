@@ -353,3 +353,57 @@ def get_agent_logs(agent_name: str = None, limit: int = 50) -> List[Dict]:
     rows = cursor.fetchall()
     conn.close()
     return [dict(row) for row in rows]
+
+
+# ============ ANALYTICS ============
+
+def update_post_analytics(post_id: int, analytics: dict):
+    """Post analytics verilerini güncelle"""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    updates = []
+    values = []
+
+    for key, value in analytics.items():
+        if key in ['fb_reach', 'fb_likes', 'fb_comments', 'fb_shares',
+                   'fb_engagement_rate', 'ig_reach', 'ig_likes',
+                   'ig_comments', 'ig_engagement_rate']:
+            updates.append(f"{key} = ?")
+            values.append(value)
+
+    if updates:
+        updates.append("insights_updated_at = ?")
+        values.append(datetime.now().isoformat())
+        values.append(post_id)
+
+        query = f"UPDATE posts SET {', '.join(updates)} WHERE id = ?"
+        cursor.execute(query, values)
+        conn.commit()
+
+    conn.close()
+
+
+def get_posts_with_analytics(days: int = 30) -> List[Dict]:
+    """Analytics verileri ile postları al"""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    since = (datetime.now() - timedelta(days=days)).isoformat()
+
+    cursor.execute("""
+        SELECT id, topic, visual_type, status,
+               facebook_post_id, instagram_post_id,
+               fb_reach, fb_likes, fb_comments, fb_shares, fb_engagement_rate,
+               ig_reach, ig_likes, ig_comments, ig_engagement_rate,
+               published_at, insights_updated_at
+        FROM posts
+        WHERE status = 'published' AND published_at > ?
+        ORDER BY published_at DESC
+    """, (since,))
+
+    rows = cursor.fetchall()
+    columns = [desc[0] for desc in cursor.description]
+    conn.close()
+
+    return [dict(zip(columns, row)) for row in rows]
