@@ -651,3 +651,149 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             )
 
             return result
+
+    async def run_autonomous_content_with_plan(self, plan: dict) -> Dict[str, Any]:
+        """Plana göre otonom içerik üret ve paylaş"""
+        topic = plan.get('topic_suggestion', 'Genel IoT konusu')
+        self.log(f"Planlı içerik üretiliyor: {topic[:50]}...")
+
+        result = {
+            "success": False,
+            "stages_completed": [],
+            "post_id": None
+        }
+
+        try:
+            category = plan.get('topic_category', 'egitici')
+            visual_type = plan.get('visual_type_suggestion', 'flux')
+
+            # 1. İçerik üret
+            self.log("Aşama 1: İçerik üretiliyor...")
+            content_result = await self.creator.execute({
+                "action": "create_post",
+                "topic": topic,
+                "category": category,
+                "suggested_hooks": [],
+                "visual_type": visual_type
+            })
+
+            if "error" in content_result:
+                raise Exception(f"Creator error: {content_result['error']}")
+
+            result["stages_completed"].append("content")
+            result["post_id"] = content_result.get("post_id")
+
+            # 2. Görsel prompt
+            self.log("Aşama 2: Görsel prompt oluşturuluyor...")
+            visual_prompt_result = await self.creator.execute({
+                "action": "create_visual_prompt",
+                "post_text": content_result.get("post_text"),
+                "topic": topic,
+                "visual_type": visual_type,
+                "post_id": content_result.get("post_id")
+            })
+
+            if "error" in visual_prompt_result:
+                raise Exception(f"Visual prompt error: {visual_prompt_result['error']}")
+
+            result["stages_completed"].append("visual_prompt")
+
+            # 3. Görsel üret
+            self.log(f"Aşama 3: Görsel üretiliyor ({visual_type})...")
+            image_path = None
+            video_path = None
+
+            if visual_type == "flux":
+                from app.flux_helper import generate_image_flux
+                visual_result = await generate_image_flux(
+                    prompt=visual_prompt_result.get("visual_prompt"),
+                    width=1024, height=1024
+                )
+                if visual_result.get("success"):
+                    image_path = visual_result.get("image_path")
+
+            elif visual_type == "infographic":
+                from app.claude_helper import generate_visual_html
+                from app.renderer import render_html_to_png
+                html = await generate_visual_html(content_result.get("post_text"), topic)
+                image_path = await render_html_to_png(html)
+
+            elif visual_type == "video":
+                from app.veo_helper import generate_video_with_retry
+                visual_result = await generate_video_with_retry(
+                    prompt=visual_prompt_result.get("visual_prompt")
+                )
+                if visual_result.get("success"):
+                    video_path = visual_result.get("video_path")
+
+            if not image_path and not video_path:
+                raise Exception("Görsel üretilemedi")
+
+            result["stages_completed"].append("visual")
+
+            # 4. Review
+            self.log("Aşama 4: Kalite kontrol...")
+            review_result = await self.reviewer.execute({
+                "action": "review_post",
+                "post_text": content_result.get("post_text"),
+                "topic": topic,
+                "post_id": content_result.get("post_id")
+            })
+
+            score = review_result.get("total_score", 0)
+            self.log(f"Review puanı: {score}/10")
+
+            if score < 7:
+                self.log(f"Puan düşük ({score}), revizyon yapılıyor...")
+                revision_result = await self.creator.execute({
+                    "action": "revise_post",
+                    "post_text": content_result.get("post_text"),
+                    "feedback": review_result.get("feedback", "Daha etkili yaz"),
+                    "post_id": content_result.get("post_id")
+                })
+                content_result["post_text"] = revision_result.get("revised_post", content_result["post_text"])
+
+            result["stages_completed"].append("review")
+
+            # 5. Yayınla
+            self.log("Aşama 5: Yayınlanıyor...")
+            publish_result = await self.publisher.execute({
+                "action": "publish",
+                "post_id": content_result.get("post_id"),
+                "post_text": content_result.get("post_text"),
+                "image_path": image_path,
+                "video_path": video_path,
+                "platform": "both"
+            })
+
+            if publish_result.get("success"):
+                result["stages_completed"].append("published")
+                result["success"] = True
+
+                fb_ok = publish_result.get("platforms", {}).get("facebook", {}).get("success", False)
+                ig_ok = publish_result.get("platforms", {}).get("instagram", {}).get("success", False)
+
+                platforms = []
+                if fb_ok: platforms.append("Facebook")
+                if ig_ok: platforms.append("Instagram")
+
+                await self.notify_telegram(
+                    message=f"✅ Planlı İçerik Yayınlandı!\n\n"
+                    f"📝 Konu: {topic[:50]}...\n"
+                    f"🎨 Görsel: {visual_type}\n"
+                    f"📱 Platform: {', '.join(platforms)}\n"
+                    f"⭐ Puan: {score}/10",
+                    data={},
+                    buttons=[]
+                )
+
+                self.log("✅ Planlı içerik başarıyla paylaşıldı!")
+            else:
+                raise Exception(f"Publish error: {publish_result.get('error')}")
+
+            return result
+
+        except Exception as e:
+            self.log(f"❌ Planlı içerik hatası: {str(e)}")
+            result["error"] = str(e)
+            return result

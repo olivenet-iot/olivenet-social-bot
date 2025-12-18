@@ -263,22 +263,47 @@ def get_week_calendar(week_start: datetime) -> List[Dict]:
     conn.close()
     return [dict(row) for row in rows]
 
-def get_todays_calendar() -> List[Dict]:
+def get_todays_calendar(day_of_week: int = None) -> List[Dict]:
     """Bugünün takvim girişlerini getir"""
     conn = get_connection()
     cursor = conn.cursor()
     today = datetime.now()
-    day_of_week = today.weekday()
-    week_start = today - timedelta(days=day_of_week)
+
+    if day_of_week is None:
+        day_of_week = today.weekday()
+
+    week_start = today - timedelta(days=today.weekday())
 
     cursor.execute('''
         SELECT * FROM content_calendar
-        WHERE week_start = DATE(?) AND day_of_week = ?
+        WHERE week_start = DATE(?) AND day_of_week = ? AND status != 'published'
         ORDER BY scheduled_time
     ''', (week_start.date(), day_of_week))
     rows = cursor.fetchall()
     conn.close()
     return [dict(row) for row in rows]
+
+
+def update_calendar_status(calendar_id: int, status: str, post_id: int = None):
+    """Calendar entry durumunu güncelle"""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    if post_id:
+        cursor.execute('''
+            UPDATE content_calendar
+            SET status = ?, post_id = ?
+            WHERE id = ?
+        ''', (status, post_id, calendar_id))
+    else:
+        cursor.execute('''
+            UPDATE content_calendar
+            SET status = ?
+            WHERE id = ?
+        ''', (status, calendar_id))
+
+    conn.commit()
+    conn.close()
 
 # ============ AGENT LOGS ============
 

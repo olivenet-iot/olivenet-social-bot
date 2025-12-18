@@ -8,7 +8,7 @@ from .crud import (
     # Strategy
     get_current_strategy, update_strategy,
     # Calendar
-    create_calendar_entry, get_week_calendar, get_todays_calendar,
+    create_calendar_entry, get_week_calendar, get_todays_calendar, update_calendar_status,
     # Logs
     log_agent_action, get_agent_logs
 )
