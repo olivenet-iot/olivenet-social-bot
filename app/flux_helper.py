@@ -11,7 +11,7 @@ from typing import Optional, Dict, Any
 from dotenv import load_dotenv
 
 # .env dosyasını yükle
-load_dotenv('/opt/olivenet-social/.env')
+load_dotenv('/opt/olivenet-social-bot/.env')
 
 # API Base URL
 BFL_API_BASE = "https://api.bfl.ai/v1"
@@ -52,7 +52,7 @@ async def generate_image_flux(
     # Çıktı yolu
     if not output_path:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_path = f"/opt/olivenet-social/outputs/flux_{timestamp}.{output_format}"
+        output_path = f"/opt/olivenet-social-bot/outputs/flux_{timestamp}.{output_format}"
 
     headers = {
         "x-key": api_key,

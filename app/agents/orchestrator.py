@@ -40,8 +40,8 @@ class OrchestratorAgent(BaseAgent):
         strategy = get_current_strategy()
 
         # Geçmiş performans verilerini al
-        analytics = get_analytics_summary(days=30)
-        published_posts = get_published_posts(days=30)
+        analytics = get_analytics_summary(days=30) or {}
+        published_posts = get_published_posts(days=30) or []
 
         # Context dosyalarını yükle
         company_profile = self.load_context("company-profile.md")
@@ -64,9 +64,9 @@ class OrchestratorAgent(BaseAgent):
 - Görsel mix: {strategy.get('visual_mix', {})}
 
 ### Son 30 Gün Performans
-- Toplam post: {analytics.get('total_posts', 0)}
-- Ortalama engagement: {analytics.get('avg_engagement_rate', 0):.2f}%
-- Ortalama reach: {analytics.get('avg_reach', 0)}
+- Toplam post: {analytics.get('total_posts') or 0}
+- Ortalama engagement: {(analytics.get('avg_engagement_rate') or 0):.2f}%
+- Ortalama reach: {analytics.get('avg_reach') or 0}
 
 ### Son Paylaşılan Konular
 {json.dumps([p.get('topic') for p in published_posts[:10]], ensure_ascii=False)}
@@ -101,7 +101,7 @@ Sadece JSON döndür, başka açıklama yapma.
 
         try:
             # JSON parse et
-            result = json.loads(response)
+            result = json.loads(self._clean_json_response(response))
 
             # Takvime kaydet
             week_start = datetime.now() - timedelta(days=datetime.now().weekday())
@@ -213,7 +213,7 @@ Sadece JSON döndür.
         response = await self.call_claude(prompt)
 
         try:
-            result = json.loads(response)
+            result = json.loads(self._clean_json_response(response))
 
             # Stratejiyi güncelle
             if "updated_strategy" in result:

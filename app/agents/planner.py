@@ -114,7 +114,7 @@ Sadece JSON döndür.
         response = await self.call_claude(prompt, timeout=90)
 
         try:
-            result = json.loads(response)
+            result = json.loads(self._clean_json_response(response))
 
             log_agent_action(
                 agent_name=self.name,
@@ -204,7 +204,7 @@ Sadece JSON döndür.
         response = await self.call_claude(prompt, timeout=120)
 
         try:
-            result = json.loads(response)
+            result = json.loads(self._clean_json_response(response))
 
             log_agent_action(
                 agent_name=self.name,
@@ -264,6 +264,6 @@ Sadece JSON döndür.
         response = await self.call_claude(prompt, timeout=90)
 
         try:
-            return json.loads(response)
+            return json.loads(self._clean_json_response(response))
         except json.JSONDecodeError:
             return {"error": "JSON parse error", "raw_response": response}

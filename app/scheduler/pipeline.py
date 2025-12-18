@@ -254,20 +254,40 @@ class ContentPipeline:
 
             elif visual_type == "infographic":
                 from app.claude_helper import generate_visual_html
-                from app.renderer import render_html_to_image
+                from app.renderer import render_html_to_png
                 html = await generate_visual_html(
                     content_result.get("post_text"),
                     topic_result.get("topic")
                 )
-                visual_result = await render_html_to_image(html)
-                if visual_result.get("success"):
-                    image_path = visual_result.get("image_path")
+                # render_html_to_png direkt path döndürür
+                image_path = await render_html_to_png(html)
+                visual_result = {"success": True, "image_path": image_path}
 
             self.current_data["visual_result"] = {
                 "image_path": image_path,
                 "video_path": video_path,
                 "visual_type": visual_type
             }
+
+            # Görsel üretimi başarısız olduysa hata ver
+            if not image_path and not video_path:
+                error_msg = visual_result.get("error", "Görsel üretilemedi") if visual_result else "Görsel üretilemedi"
+                self.log(f"Görsel üretim hatası: {error_msg}")
+                await self.notify_telegram(
+                    message=f"❌ Görsel üretim hatası: {error_msg}",
+                    buttons=[
+                        {"text": "🔄 Tekrar Dene", "callback": "retry_visual"},
+                        {"text": "🎨 Tip Değiştir", "callback": "change_visual_type"},
+                        {"text": "❌ İptal", "callback": "cancel"}
+                    ]
+                )
+                self.state = PipelineState.AWAITING_VISUAL_APPROVAL
+                approval = await self.wait_for_approval()
+                if approval.get("action") == "cancel":
+                    return {"success": False, "reason": "Görsel üretilemedi"}
+                # retry_visual ve change_visual_type için ayrı handler gerekli
+                return {"success": False, "reason": error_msg, "retry_available": True}
+
             result["stages_completed"].append("visual_generation")
 
             # Telegram'a görseli gönder

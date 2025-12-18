@@ -45,13 +45,24 @@ async def telegram_notify(message: str, data: dict = None, buttons: list = None)
     if data and data.get("image_path"):
         try:
             with open(data["image_path"], "rb") as photo:
-                await bot.send_photo(
-                    chat_id=admin_chat_id,
-                    photo=photo,
-                    caption=message[:1024],
-                    parse_mode="Markdown",
-                    reply_markup=reply_markup
-                )
+                try:
+                    await bot.send_photo(
+                        chat_id=admin_chat_id,
+                        photo=photo,
+                        caption=message[:1024],
+                        parse_mode="Markdown",
+                        reply_markup=reply_markup
+                    )
+                except Exception:
+                    # Markdown hatası - tekrar dene
+                    photo.seek(0)
+                    clean_msg = message.replace("*", "").replace("_", "").replace("`", "")
+                    await bot.send_photo(
+                        chat_id=admin_chat_id,
+                        photo=photo,
+                        caption=clean_msg[:1024],
+                        reply_markup=reply_markup
+                    )
                 return
         except Exception as e:
             print(f"[TELEGRAM] Photo send error: {e}")
@@ -60,24 +71,43 @@ async def telegram_notify(message: str, data: dict = None, buttons: list = None)
     if data and data.get("video_path"):
         try:
             with open(data["video_path"], "rb") as video:
-                await bot.send_video(
-                    chat_id=admin_chat_id,
-                    video=video,
-                    caption=message[:1024],
-                    parse_mode="Markdown",
-                    reply_markup=reply_markup
-                )
+                try:
+                    await bot.send_video(
+                        chat_id=admin_chat_id,
+                        video=video,
+                        caption=message[:1024],
+                        parse_mode="Markdown",
+                        reply_markup=reply_markup
+                    )
+                except Exception:
+                    video.seek(0)
+                    clean_msg = message.replace("*", "").replace("_", "").replace("`", "")
+                    await bot.send_video(
+                        chat_id=admin_chat_id,
+                        video=video,
+                        caption=clean_msg[:1024],
+                        reply_markup=reply_markup
+                    )
                 return
         except Exception as e:
             print(f"[TELEGRAM] Video send error: {e}")
 
     # Normal mesaj gönder
-    await bot.send_message(
-        chat_id=admin_chat_id,
-        text=message,
-        parse_mode="Markdown",
-        reply_markup=reply_markup
-    )
+    try:
+        await bot.send_message(
+            chat_id=admin_chat_id,
+            text=message,
+            parse_mode="Markdown",
+            reply_markup=reply_markup
+        )
+    except Exception as e:
+        # Markdown parse hatası - düz metin gönder
+        clean_message = message.replace("*", "").replace("_", "").replace("`", "")
+        await bot.send_message(
+            chat_id=admin_chat_id,
+            text=clean_message,
+            reply_markup=reply_markup
+        )
 
 
 # ============ KOMUTLAR ============
@@ -197,61 +227,61 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # ===== STRATEJİ GÖSTER =====
     elif action == "show_strategy":
-        strategy = get_current_strategy()
+        strategy = get_current_strategy() or {}
 
-        text = f"""📊 *Mevcut Strateji*
+        content_mix = strategy.get('content_mix', {})
+        visual_mix = strategy.get('visual_mix', {})
 
-📅 *Haftalık Post:* {strategy.get('posts_per_week', 5)}
-📆 *En İyi Günler:* {', '.join(strategy.get('best_days', [])[:3])}
-⏰ *En İyi Saatler:* {', '.join(strategy.get('best_hours', [])[:3])}
+        text = "📊 Mevcut Strateji\n\n"
+        text += f"📅 Haftalık Post: {strategy.get('posts_per_week', 5)}\n"
+        text += f"📆 En İyi Günler: {', '.join(strategy.get('best_days', [])[:3])}\n"
+        text += f"⏰ En İyi Saatler: {', '.join(strategy.get('best_hours', [])[:3])}\n\n"
+        text += "📝 İçerik Mix:\n"
+        for k, v in content_mix.items():
+            text += f"  • {k}: {v}%\n"
+        text += "\n🎨 Görsel Mix:\n"
+        for k, v in visual_mix.items():
+            text += f"  • {k}: {v}%\n"
 
-📝 *İçerik Mix:*
-{chr(10).join([f"• {k}: %{v}" for k, v in strategy.get('content_mix', {}).items()])}
-
-🎨 *Görsel Mix:*
-{chr(10).join([f"• {k}: %{v}" for k, v in strategy.get('visual_mix', {}).items()])}
-"""
         keyboard = [[InlineKeyboardButton("🏠 Ana Menü", callback_data="main_menu")]]
-        await query.edit_message_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
 
     # ===== ANALYTICS RAPORU =====
     elif action == "analytics_report":
-        summary = get_analytics_summary(days=7)
+        summary = get_analytics_summary(days=7) or {}
 
-        text = f"""📈 *Son 7 Gün Performansı*
+        text = "📈 Son 7 Gün Performansı\n\n"
+        text += f"📊 Toplam Post: {summary.get('total_posts') or 0}\n"
+        text += f"👁️ Görüntüleme: {summary.get('total_views') or 0}\n"
+        text += f"👍 Beğeni: {summary.get('total_likes') or 0}\n"
+        text += f"💬 Yorum: {summary.get('total_comments') or 0}\n"
+        text += f"🔄 Paylaşım: {summary.get('total_shares') or 0}\n\n"
+        text += f"📈 Ortalama Engagement: {(summary.get('avg_engagement_rate') or 0):.2f}%\n"
+        text += f"👥 Ortalama Reach: {(summary.get('avg_reach') or 0):.0f}\n"
 
-📊 *Toplam Post:* {summary.get('total_posts', 0)}
-👁️ *Görüntüleme:* {summary.get('total_views', 0)}
-👍 *Beğeni:* {summary.get('total_likes', 0)}
-💬 *Yorum:* {summary.get('total_comments', 0)}
-🔄 *Paylaşım:* {summary.get('total_shares', 0)}
-
-📈 *Ortalama Engagement:* {summary.get('avg_engagement_rate', 0):.2f}%
-👥 *Ortalama Reach:* {summary.get('avg_reach', 0):.0f}
-"""
         keyboard = [[InlineKeyboardButton("🏠 Ana Menü", callback_data="main_menu")]]
-        await query.edit_message_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
 
     # ===== SCHEDULER DURUMU =====
     elif action == "scheduler_status":
         status = scheduler.get_status() if scheduler else {"running": False, "tasks": []}
 
-        text = f"⏰ *Scheduler Durumu*\n\n"
-        text += f"*Durum:* {'🟢 Çalışıyor' if status['running'] else '🔴 Durdu'}\n\n"
-        text += "*Görevler:*\n"
+        text = "⏰ Scheduler Durumu\n\n"
+        text += f"Durum: {'🟢 Çalışıyor' if status.get('running') else '🔴 Durdu'}\n\n"
+        text += "Görevler:\n"
 
         for task in status.get("tasks", []):
-            text += f"• {task['name']}: "
+            text += f"• {task.get('name', 'N/A')}: "
             if task.get('hour') is not None:
                 text += f"{task['hour']:02d}:{task.get('minute', 0):02d}"
-            text += f" ({'Aktif' if task['enabled'] else 'Pasif'})\n"
+            text += f" ({'Aktif' if task.get('enabled') else 'Pasif'})\n"
 
         keyboard = [
-            [InlineKeyboardButton("▶️ Başlat" if not status['running'] else "⏹️ Durdur",
+            [InlineKeyboardButton("▶️ Başlat" if not status.get('running') else "⏹️ Durdur",
                                   callback_data="toggle_scheduler")],
             [InlineKeyboardButton("🏠 Ana Menü", callback_data="main_menu")]
         ]
-        await query.edit_message_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
 
     # ===== PIPELINE ONAYLARI =====
     elif action == "approve_topic":

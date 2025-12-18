@@ -47,17 +47,24 @@ class PublisherAgent(BaseAgent):
                 if video_path:
                     # Video paylaş
                     from app.facebook_helper import post_video_to_facebook
-                    fb_result = await post_video_to_facebook(video_path, post_text)
+                    fb_result = await post_video_to_facebook(
+                        message=post_text,
+                        video_path=video_path
+                    )
                 elif image_path:
                     # Fotoğraf paylaş
-                    from app.facebook_helper import post_to_facebook
-                    fb_result = await post_to_facebook(image_path, post_text)
+                    from app.facebook_helper import post_with_photo_to_facebook
+                    fb_result = await post_with_photo_to_facebook(
+                        message=post_text,
+                        image_path=image_path
+                    )
                 else:
-                    fb_result = {"success": False, "error": "No media provided"}
+                    fb_result = {"error": "No media provided"}
 
-                if fb_result.get("success"):
+                # Facebook API "id" döndürür, "success" değil
+                if fb_result.get("id"):
                     result["success"] = True
-                    result["facebook_post_id"] = fb_result.get("post_id")
+                    result["facebook_post_id"] = fb_result.get("id")
 
                     # Database güncelle
                     if post_id:

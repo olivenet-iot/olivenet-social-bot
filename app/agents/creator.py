@@ -91,7 +91,7 @@ Sadece JSON döndür.
         response = await self.call_claude(prompt, timeout=90)
 
         try:
-            result = json.loads(response)
+            result = json.loads(self._clean_json_response(response))
 
             # Database'e kaydet
             post_id = create_post(
@@ -193,7 +193,7 @@ Sadece JSON döndür.
         response = await self.call_claude(prompt, timeout=90)
 
         try:
-            result = json.loads(response)
+            result = json.loads(self._clean_json_response(response))
 
             # Post'u güncelle
             if post_id:
@@ -250,7 +250,7 @@ Sadece JSON döndür.
         response = await self.call_claude(prompt, timeout=60)
 
         try:
-            result = json.loads(response)
+            result = json.loads(self._clean_json_response(response))
 
             # Post'u güncelle
             if post_id:
