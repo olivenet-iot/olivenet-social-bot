@@ -1,6 +1,6 @@
 # 🤖 Olivenet AI Content System
 
-**Multi-Agent AI ile Semi-Autonomous Sosyal Medya İçerik Sistemi**
+**Multi-Agent AI ile Full-Autonomous Sosyal Medya İçerik Sistemi**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://python.org)
@@ -14,9 +14,9 @@
 |-------|-------|
 | 🎯 **Orchestrator** | Merkezi koordinatör, haftalık planlama, strateji güncelleme |
 | 📋 **Planner** | Konu önerisi, trend analizi, içerik takvimi |
-| ✍️ **Creator** | Post metni, görsel prompt üretimi |
+| ✍️ **Creator** | Post metni, görsel prompt üretimi (Claude AI) |
 | 🔍 **Reviewer** | Kalite kontrol, puanlama (1-10), onay/red |
-| 📤 **Publisher** | Facebook/Instagram paylaşım |
+| 📤 **Publisher** | Dual-platform paylaşım (Facebook + Instagram) |
 | 📊 **Analytics** | Performans takip, raporlama |
 
 ### Self-Learning Strateji
@@ -33,16 +33,28 @@
 | 🎨 FLUX.2 Pro | Black Forest Labs | Premium | ~$0.03/görsel |
 | 🎬 AI Video | Google Veo 3 | Premium | Kullanım başı |
 
-### Semi-Autonomous Mod
-Her aşamada Telegram üzerinden onay bekler:
+### 🚀 Full-Autonomous Mod (YENİ!)
+Sıfır manuel müdahale ile çalışır:
 
 ```
-📋 Konu önerisi → Onay
-✍️ Post metni → Onay
-🎨 Görsel → Onay
-🔍 Review → Final onay
-🚀 Yayınla
+📅 Content Calendar taranır (her 5 dk)
+     ↓
+⏰ Zamanı gelen içerik tespit edilir (±5 dk tolerans)
+     ↓
+✍️ AI içerik üretir (Claude)
+     ↓
+🎨 AI görsel üretir (FLUX.2 Pro)
+     ↓
+🔍 AI kalite kontrolü yapar (min 7/10)
+     ↓
+📤 Facebook + Instagram'a paylaşır
+     ↓
+📱 Telegram'a bildirim gönderir
 ```
+
+### 📱 Dual-Platform Publishing
+- **Facebook**: Graph API ile direkt paylaşım
+- **Instagram**: ImgBB CDN üzerinden görsel yükleme → Instagram API
 
 ---
 
@@ -69,7 +81,7 @@ Her aşamada Telegram üzerinden onay bekler:
                             │
                             ▼
 ┌─────────────────────────────────────────────────────────────┐
-│              📤 PUBLISHER → 📊 ANALYTICS                     │
+│       📤 PUBLISHER (FB + IG) → 📊 ANALYTICS                  │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -78,7 +90,7 @@ Her aşamada Telegram üzerinden onay bekler:
 ## 🚀 Kurulum
 ```bash
 # 1. Klonla
-git clone https://github.com/olivenet-iot/olivenet-social-bot.git
+git clone https://github.com/seyidmemmedli/olivenet-social-bot.git
 cd olivenet-social-bot
 
 # 2. Virtual environment (önerilen)
@@ -93,8 +105,11 @@ playwright install chromium
 cp .env.example .env
 nano .env  # API key'leri gir
 
-# 5. Çalıştır
-python3 start_pipeline.py
+# 5. Systemd servisi kur (Production)
+sudo cp olivenet-social-bot.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable olivenet-social-bot
+sudo systemctl start olivenet-social-bot
 ```
 
 ---
@@ -111,10 +126,31 @@ TELEGRAM_ADMIN_CHAT_ID=your_chat_id
 FACEBOOK_PAGE_ID=your_page_id
 FACEBOOK_ACCESS_TOKEN=your_access_token
 
+# Instagram
+INSTAGRAM_ACCOUNT_ID=your_instagram_business_account_id
+
 # AI APIs
 GEMINI_API_KEY=your_gemini_key
-BFL_API_KEY=your_bfl_key  # FLUX.2 Pro için
+BFL_API_KEY=your_bfl_key           # FLUX.2 Pro için
+REPLICATE_API_TOKEN=your_replicate_key
+
+# CDN (Instagram için gerekli)
+IMGBB_API_KEY=your_imgbb_key       # https://api.imgbb.com
 ```
+
+### Gerekli API Anahtarları
+
+| Servis | Amaç | Zorunlu |
+|--------|------|---------|
+| `TELEGRAM_BOT_TOKEN` | Telegram bot kontrolü | ✅ |
+| `TELEGRAM_ADMIN_CHAT_ID` | Admin bildirim chat ID | ✅ |
+| `FACEBOOK_PAGE_ID` | Facebook sayfa ID | ✅ |
+| `FACEBOOK_ACCESS_TOKEN` | Facebook Graph API token | ✅ |
+| `INSTAGRAM_ACCOUNT_ID` | Instagram Business Account ID | ✅ |
+| `GEMINI_API_KEY` | Google Gemini AI (içerik + video) | ✅ |
+| `BFL_API_KEY` | Black Forest Labs FLUX.2 Pro | ✅ |
+| `IMGBB_API_KEY` | ImgBB CDN (Instagram için) | ✅ |
+| `REPLICATE_API_TOKEN` | Replicate API (alternatif) | ⚪ |
 
 ---
 
@@ -128,18 +164,19 @@ olivenet-social-bot/
 │   │   ├── planner.py           # İçerik planlayıcı
 │   │   ├── creator.py           # İçerik üretici
 │   │   ├── reviewer.py          # Kalite kontrol
-│   │   ├── publisher.py         # Yayıncı
+│   │   ├── publisher.py         # Dual-platform yayıncı
 │   │   └── analytics.py         # Performans takip
 │   │
 │   ├── scheduler/               # ⏰ Zamanlayıcı
 │   │   ├── pipeline.py          # 6 aşamalı içerik pipeline'ı
-│   │   └── scheduler.py         # Cron-like görev yönetimi
+│   │   └── scheduler.py         # Full-autonomous scheduler
 │   │
 │   ├── database/                # 💾 Veritabanı
 │   │   ├── models.py            # SQLite şeması
 │   │   └── crud.py              # CRUD operasyonları
 │   │
-│   ├── telegram_pipeline.py     # 📱 Telegram bot (yeni)
+│   ├── telegram_pipeline.py     # 📱 Telegram bot (ana giriş)
+│   ├── instagram_helper.py      # Instagram + CDN yardımcıları
 │   ├── claude_helper.py         # Claude Code CLI
 │   ├── flux_helper.py           # FLUX.2 Pro API
 │   ├── veo_helper.py            # Veo 3 Video API
@@ -153,14 +190,13 @@ olivenet-social-bot/
 │   ├── visual-guidelines.md     # Görsel kuralları
 │   ├── flux-prompting-guide.md  # FLUX prompt rehberi
 │   └── agent-personas/          # Agent kişilikleri
-│       ├── orchestrator.md
-│       ├── planner.md
-│       └── reviewer.md
 │
 ├── data/
 │   └── content.db               # SQLite veritabanı
 │
-├── start_pipeline.py            # 🚀 Ana başlatıcı
+├── generated_images/            # Üretilen görseller
+├── start_bot.sh                 # 🚀 Başlatma scripti
+├── olivenet-social-bot.service  # Systemd servisi
 ├── requirements.txt
 └── .env.example
 ```
@@ -171,22 +207,37 @@ olivenet-social-bot/
 
 | Tablo | Açıklama |
 |-------|----------|
-| `posts` | Tüm içerikler (metin, görsel, durum) |
+| `posts` | Tüm içerikler (metin, görsel, durum, platform ID'leri) |
 | `analytics` | Performans metrikleri (views, likes, shares) |
 | `content_calendar` | Haftalık içerik takvimi |
 | `strategy` | AI'ın öğrendiği stratejiler |
 | `agent_logs` | Agent aktivite logları |
 
+### Content Calendar Şeması
+| Alan | Açıklama |
+|------|----------|
+| `week_start` | Haftanın başlangıç tarihi |
+| `day_of_week` | Gün (0=Pazartesi, 6=Pazar) |
+| `scheduled_time` | Yayınlama saati (HH:MM) |
+| `topic_category` | Konu kategorisi |
+| `topic_suggestion` | Önerilen konu |
+| `visual_type_suggestion` | Görsel tipi (flux/infographic/video) |
+| `status` | Durum (pending/in_progress/published) |
+
 ---
 
 ## ⏰ Otomatik Görevler
 
-| Zaman | Gün | Görev |
-|-------|-----|-------|
+| Zaman (KKTC/UTC+2) | Gün | Görev |
+|-------------------|-----|-------|
 | 08:00 | Pazartesi | 📅 Haftalık planlama |
-| 09:00 | Pzt-Cum | 🚀 Günlük içerik pipeline |
+| Her 5 dk | Her gün | 🔍 Calendar kontrol + paylaşım |
 | 20:00 | Her gün | 📊 Analytics raporu |
 | 21:00 | Pazar | 🔄 Strateji güncelleme |
+
+### Timezone
+- **KKTC**: UTC+2 (Kuzey Kıbrıs Türk Cumhuriyeti)
+- Tüm zamanlamalar KKTC saatine göredir
 
 ---
 
@@ -196,7 +247,9 @@ olivenet-social-bot/
 |-------|----------|
 | `/start` | Ana menü |
 | `/status` | Sistem durumu |
-| `/manual` | Manuel içerik oluşturma |
+| `/calendar` | Bu haftanın takvimi |
+| `/generate` | Manuel içerik oluşturma |
+| `/plan` | Haftalık plan oluştur |
 
 ### Ana Menü
 - 🚀 Günlük İçerik Başlat
@@ -207,29 +260,30 @@ olivenet-social-bot/
 
 ---
 
-## 🔄 Pipeline Akışı
+## 🔄 Full-Autonomous Pipeline
+
 ```
-IDLE
-  ↓
-PLANNING (AI konu önerir)
-  ↓
-AWAITING_TOPIC_APPROVAL ←── 📱 Telegram onay
-  ↓
-CREATING_CONTENT (AI post yazar)
-  ↓
-AWAITING_CONTENT_APPROVAL ←── 📱 Telegram onay
-  ↓
-CREATING_VISUAL (AI görsel üretir)
-  ↓
-AWAITING_VISUAL_APPROVAL ←── 📱 Telegram onay
-  ↓
-REVIEWING (AI kalite kontrol)
-  ↓
-AWAITING_FINAL_APPROVAL ←── 📱 Telegram onay
-  ↓
-PUBLISHING (Facebook'a gönder)
-  ↓
-COMPLETED ✅
+CONTENT CALENDAR
+       │
+       ▼
+┌──────────────────────────────────┐
+│  check_calendar_and_publish()    │  ← Her 5 dakikada çalışır
+│  (scheduler.py)                  │
+└──────────────────────────────────┘
+       │
+       ▼ Zamanı gelen içerik varsa
+┌──────────────────────────────────┐
+│  run_autonomous_content_with_plan│
+│  (pipeline.py)                   │
+└──────────────────────────────────┘
+       │
+       ├──► Creator Agent: İçerik üret
+       ├──► Visual Generator: Görsel üret (FLUX.2 Pro)
+       ├──► Reviewer Agent: Kalite kontrol (min 7/10)
+       └──► Publisher Agent: FB + IG'ye paylaş
+               │
+               ├──► Facebook: Graph API
+               └──► Instagram: ImgBB CDN → IG API
 ```
 
 ---
@@ -256,6 +310,30 @@ AI şunları öğrenir ve stratejisini günceller:
     "video": 10
   }
 }
+```
+
+---
+
+## 🔧 Servis Yönetimi
+
+```bash
+# Servisi başlat
+sudo systemctl start olivenet-social-bot
+
+# Servisi durdur
+sudo systemctl stop olivenet-social-bot
+
+# Servisi yeniden başlat
+sudo systemctl restart olivenet-social-bot
+
+# Logları izle (canlı)
+sudo journalctl -u olivenet-social-bot -f
+
+# Son 100 log satırı
+sudo journalctl -u olivenet-social-bot -n 100
+
+# Durumu kontrol et
+sudo systemctl status olivenet-social-bot
 ```
 
 ---
@@ -302,7 +380,8 @@ MIT License - [Olivenet Ltd.](https://olivenet.io)
 
 - 🌐 Website: [olivenet.io](https://olivenet.io)
 - 📧 Email: info@olivenet.io
-- 🐙 GitHub: [github.com/olivenet-iot](https://github.com/olivenet-iot)
+- 📘 Facebook: [Olivenet](https://facebook.com/672821805923920)
+- 📷 Instagram: [@olivenet.io](https://instagram.com/olivenet.io)
 
 ---
 
