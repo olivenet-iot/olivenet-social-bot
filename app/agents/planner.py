@@ -42,6 +42,7 @@ class PlannerAgent(BaseAgent):
         # Context yükle
         company_profile = self.load_context("company-profile.md")
         content_strategy = self.load_context("content-strategy.md")
+        topics_pool = self.load_context("topics.md")
         strategy = get_current_strategy()
 
         # Son postları al (tekrar önleme)
@@ -59,6 +60,9 @@ class PlannerAgent(BaseAgent):
 
 ### Şirket Profili
 {company_profile}
+
+### Konu Havuzu (BU HAVUZDAN SEÇ!)
+{topics_pool}
 
 ### İçerik Stratejisi
 {content_strategy}
@@ -142,6 +146,8 @@ Sadece JSON döndür.
 
         company_profile = self.load_context("company-profile.md")
         content_strategy = self.load_context("content-strategy.md")
+        topics_pool = self.load_context("topics.md")
+        schedule_strategy = self.load_context("schedule-strategy.md")
         strategy = get_current_strategy()
 
         posts_per_week = strategy.get('posts_per_week', 5)
@@ -158,21 +164,26 @@ Sadece JSON döndür.
 ### Şirket Profili
 {company_profile}
 
+### Konu Havuzu (BU HAVUZDAN SEÇ!)
+{topics_pool}
+
+### Zamanlama Stratejisi
+{schedule_strategy}
+
 ### İçerik Stratejisi
 {content_strategy}
-
-### Parametreler
-- Haftalık post sayısı: {posts_per_week}
-- Tercih edilen günler: {best_days}
-- Tercih edilen saatler: {best_hours}
-- İçerik dağılımı: {content_mix}
 
 ### Son 30 Günde Paylaşılan Konular (TEKRAR ETME!)
 {json.dumps(recent_topics, ensure_ascii=False)}
 
 ---
 
-{posts_per_week} adet içerik planla. Her biri farklı gün ve kategoride olsun.
+## KRİTİK KURALLAR:
+1. Haftada 12 içerik: 9 post + 3 reels
+2. Reels günleri: Salı 19:00, Perşembe 19:00, Cumartesi 14:00
+3. Facebook: Sadece Pzt/Çar/Cuma 10:00 (platform: "both")
+4. Her içerik FARKLI kategoriden olmalı
+5. Konu havuzundaki kategorilerden dengeli seç
 
 ÇIKTI FORMATI (JSON):
 ```json
@@ -183,16 +194,29 @@ Sadece JSON döndür.
       "day_of_week": 0,
       "time": "10:00",
       "topic": "Konu başlığı",
-      "category": "egitici",
+      "category": "Tarım & Sera",
+      "content_type": "post",
+      "platform": "both",
       "visual_type": "flux",
       "brief": "Kısa açıklama"
+    }},
+    {{
+      "day": "tuesday",
+      "day_of_week": 1,
+      "time": "19:00",
+      "topic": "Reels konusu",
+      "category": "LoRaWAN",
+      "content_type": "reels",
+      "platform": "instagram",
+      "visual_type": "reels",
+      "brief": "Reels açıklama"
     }}
   ],
-  "content_balance": {{
-    "egitici": 2,
-    "tanitim": 1,
-    "ipucu": 1,
-    "haber": 1
+  "summary": {{
+    "total": 12,
+    "posts": 9,
+    "reels": 3,
+    "facebook": 3
   }},
   "notes": "Plan hakkında notlar"
 }}
