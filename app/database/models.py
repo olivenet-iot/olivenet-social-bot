@@ -33,7 +33,7 @@ def init_database():
             -- İçerik
             topic TEXT NOT NULL,
             post_text TEXT NOT NULL,
-            visual_type TEXT,  -- infographic, gemini, flux, video
+            visual_type TEXT,  -- infographic, gemini, flux, video, carousel
             visual_path TEXT,
             visual_prompt TEXT,
 
@@ -136,6 +136,30 @@ def init_database():
             error_message TEXT
         )
     ''')
+
+    conn.commit()
+
+    # Analytics kolonlarını posts tablosuna ekle (migration)
+    alter_statements = [
+        "ALTER TABLE posts ADD COLUMN fb_reach INTEGER DEFAULT 0",
+        "ALTER TABLE posts ADD COLUMN fb_likes INTEGER DEFAULT 0",
+        "ALTER TABLE posts ADD COLUMN fb_comments INTEGER DEFAULT 0",
+        "ALTER TABLE posts ADD COLUMN fb_shares INTEGER DEFAULT 0",
+        "ALTER TABLE posts ADD COLUMN fb_engagement_rate REAL DEFAULT 0",
+        "ALTER TABLE posts ADD COLUMN ig_reach INTEGER DEFAULT 0",
+        "ALTER TABLE posts ADD COLUMN ig_likes INTEGER DEFAULT 0",
+        "ALTER TABLE posts ADD COLUMN ig_comments INTEGER DEFAULT 0",
+        "ALTER TABLE posts ADD COLUMN ig_engagement_rate REAL DEFAULT 0",
+        "ALTER TABLE posts ADD COLUMN insights_updated_at TIMESTAMP",
+        "ALTER TABLE posts ADD COLUMN post_text_ig TEXT",
+        "ALTER TABLE posts ADD COLUMN post_text_fb TEXT"
+    ]
+
+    for stmt in alter_statements:
+        try:
+            cursor.execute(stmt)
+        except sqlite3.OperationalError:
+            pass  # Kolon zaten var
 
     conn.commit()
     conn.close()

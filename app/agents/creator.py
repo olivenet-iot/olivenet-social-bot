@@ -28,6 +28,8 @@ class CreatorAgent(BaseAgent):
             return await self.create_visual_prompt(input_data)
         elif action == "create_reels_prompt":
             return await self.create_reels_prompt(input_data)
+        elif action == "create_carousel_content":
+            return await self.create_carousel_content(input_data)
         elif action == "revise_post":
             return await self.revise_post(input_data)
         else:
@@ -500,4 +502,154 @@ Sadece JSON döndür, başka açıklama ekleme.
 
         except json.JSONDecodeError as e:
             self.log(f"JSON parse hatası: {e}")
+            return {"success": False, "error": f"JSON parse error: {e}", "raw_response": response[:500]}
+
+    async def create_carousel_content(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Instagram Carousel için çoklu görsel içeriği üret.
+
+        Args:
+            input_data: {
+                "topic": str - Ana konu
+                "slide_count": int - Slide sayısı (default 5)
+                "category": str - Kategori (egitici, showcase, vb.)
+            }
+
+        Returns:
+            {
+                "post_id": int,
+                "caption": str,
+                "slides": List[Dict],
+                "hashtags": List[str],
+                "slide_count": int
+            }
+        """
+        self.log("Carousel içeriği oluşturuluyor...")
+
+        topic = input_data.get("topic", "")
+        slide_count = input_data.get("slide_count", 5)
+        category = input_data.get("category", "egitici")
+
+        # Slide sayısı sınırlaması
+        slide_count = max(3, min(slide_count, 7))
+
+        company_profile = self.load_context("company-profile.md")
+        visual_guidelines = self.load_context("visual-guidelines.md")
+
+        prompt = f"""
+## GÖREV: Instagram Carousel İçeriği Oluştur
+
+### Şirket Profili
+{company_profile[:1500]}
+
+### Görsel Rehberi
+{visual_guidelines[:1000]}
+
+### Carousel Detayları
+- Konu: {topic}
+- Slide sayısı: {slide_count}
+- Kategori: {category}
+
+---
+
+## TALİMATLAR
+
+Eğitici ve görsel açıdan tutarlı bir carousel oluştur.
+
+### Slide Yapısı:
+1. **Slide 1 (Hook)**: Dikkat çekici soru veya şok istatistik
+2. **Slide 2-{slide_count-1} (İçerik)**: Ana bilgiler, adımlar veya karşılaştırmalar
+3. **Slide {slide_count} (CTA)**: Aksiyon çağrısı
+
+### Her Slide İçin:
+- title: Kısa başlık (max 5 kelime)
+- content: Ana metin (max 30 kelime, bullet point'ler tercih edilir)
+- image_prompt: FLUX için İngilizce görsel prompt (tutarlı stil)
+
+### Caption:
+- Instagram için optimize (max 120 kelime)
+- Hook ile başla
+- Konu özeti
+- CTA ile bitir
+
+### Hashtag'ler:
+- 6-8 adet
+- Sabit: #Olivenet #KKTC #IoT
+- Konu bazlı eklemeler
+
+---
+
+## ÇIKTI FORMATI (JSON):
+```json
+{{
+    "caption": "Instagram caption metni...",
+    "slides": [
+        {{
+            "title": "Başlık 1",
+            "content": "- Madde 1\\n- Madde 2\\n- Madde 3",
+            "image_prompt": "Professional infographic style, olive green (#4a7c4a) and sky blue (#38bdf8) color scheme, clean modern design, IoT/technology theme, [specific scene description]. 1:1 aspect ratio, high quality."
+        }},
+        ...
+    ],
+    "hashtags": ["#Olivenet", "#KKTC", "#IoT", ...]
+}}
+```
+
+### ÖNEMLİ:
+1. Her slide'ın image_prompt'u İNGİLİZCE olmalı
+2. Tüm prompt'lar aynı renk paleti kullanmalı (tutarlılık)
+3. Slides dizisi tam {slide_count} element içermeli
+4. Content Türkçe, image_prompt İngilizce
+
+Sadece JSON döndür.
+"""
+
+        response = await self.call_claude(prompt, timeout=120)
+
+        try:
+            result = json.loads(self._clean_json_response(response))
+
+            # Database'e kaydet
+            caption = result.get("caption", "")
+            hashtags = result.get("hashtags", [])
+
+            post_id = create_post(
+                topic=topic,
+                post_text=caption,
+                post_text_ig=caption,
+                visual_type="carousel",
+                platform="instagram",
+                topic_category=category
+            )
+
+            slides = result.get("slides", [])
+
+            log_agent_action(
+                agent_name=self.name,
+                action="create_carousel_content",
+                input_data={"topic": topic, "slide_count": slide_count},
+                output_data={"post_id": post_id, "slide_count": len(slides)},
+                success=True
+            )
+
+            self.log(f"Carousel oluşturuldu (ID: {post_id}, {len(slides)} slide)")
+
+            return {
+                "success": True,
+                "post_id": post_id,
+                "caption": caption,
+                "slides": slides,
+                "hashtags": hashtags,
+                "slide_count": len(slides),
+                "topic": topic
+            }
+
+        except json.JSONDecodeError as e:
+            self.log(f"JSON parse hatası: {e}")
+            log_agent_action(
+                agent_name=self.name,
+                action="create_carousel_content",
+                success=False,
+                error_message=f"JSON parse error: {e}"
+            )
             return {"success": False, "error": f"JSON parse error: {e}", "raw_response": response[:500]}

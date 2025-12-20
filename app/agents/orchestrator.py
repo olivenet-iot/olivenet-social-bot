@@ -16,6 +16,29 @@ from app.database import (
 class OrchestratorAgent(BaseAgent):
     """Merkezi koordinatör - tüm süreci yönetir"""
 
+    # Yeni haftalık schedule template (5 Reels + 2 Carousel + 5 Post)
+    WEEKLY_SCHEDULE = [
+        # Pazartesi
+        {"day": 0, "day_name": "monday", "time": "10:00", "type": "post", "platform": "both"},
+        {"day": 0, "day_name": "monday", "time": "19:00", "type": "reels", "platform": "instagram"},
+        # Salı
+        {"day": 1, "day_name": "tuesday", "time": "10:00", "type": "reels", "platform": "instagram"},
+        {"day": 1, "day_name": "tuesday", "time": "19:00", "type": "post", "platform": "instagram"},
+        # Çarşamba
+        {"day": 2, "day_name": "wednesday", "time": "10:00", "type": "carousel", "platform": "instagram"},
+        {"day": 2, "day_name": "wednesday", "time": "19:00", "type": "post", "platform": "both"},
+        # Perşembe
+        {"day": 3, "day_name": "thursday", "time": "10:00", "type": "post", "platform": "instagram"},
+        {"day": 3, "day_name": "thursday", "time": "19:00", "type": "reels", "platform": "instagram"},
+        # Cuma
+        {"day": 4, "day_name": "friday", "time": "10:00", "type": "reels", "platform": "instagram"},
+        {"day": 4, "day_name": "friday", "time": "19:00", "type": "post", "platform": "both"},
+        # Cumartesi
+        {"day": 5, "day_name": "saturday", "time": "14:00", "type": "carousel", "platform": "instagram"},
+        # Pazar
+        {"day": 6, "day_name": "sunday", "time": "14:00", "type": "reels", "platform": "instagram"},
+    ]
+
     def __init__(self):
         super().__init__("orchestrator")
 
@@ -33,8 +56,8 @@ class OrchestratorAgent(BaseAgent):
             return {"error": f"Unknown action: {action}"}
 
     async def plan_week(self) -> Dict[str, Any]:
-        """Haftalık içerik planı oluştur"""
-        self.log("Haftalık plan oluşturuluyor...")
+        """Haftalık içerik planı oluştur (12 içerik: 5 Reels + 2 Carousel + 5 Post)"""
+        self.log("Haftalık plan oluşturuluyor (12 içerik)...")
 
         # Mevcut stratejiyi al
         strategy = get_current_strategy()
@@ -46,34 +69,43 @@ class OrchestratorAgent(BaseAgent):
         # Context dosyalarını yükle
         company_profile = self.load_context("company-profile.md")
         content_strategy = self.load_context("content-strategy.md")
+        schedule_strategy = self.load_context("schedule-strategy.md")
+
+        # Schedule template'ini JSON'a çevir
+        schedule_json = json.dumps(self.WEEKLY_SCHEDULE, ensure_ascii=False, indent=2)
 
         prompt = f"""
 ## GÖREV: Haftalık İçerik Planı Oluştur
 
 ### Şirket Profili
-{company_profile}
+{company_profile[:2000]}
 
 ### İçerik Stratejisi
-{content_strategy}
+{content_strategy[:2000]}
+
+### Schedule Template (12 içerik/hafta)
+{schedule_json}
 
 ### Mevcut Strateji
-- Haftalık post sayısı: {strategy.get('posts_per_week', 5)}
+- Haftalık post sayısı: 12 (5 Reels + 2 Carousel + 5 Post)
 - En iyi günler: {strategy.get('best_days', [])}
 - En iyi saatler: {strategy.get('best_hours', [])}
 - İçerik mix: {strategy.get('content_mix', {})}
-- Görsel mix: {strategy.get('visual_mix', {})}
 
 ### Son 30 Gün Performans
 - Toplam post: {analytics.get('total_posts') or 0}
 - Ortalama engagement: {(analytics.get('avg_engagement_rate') or 0):.2f}%
-- Ortalama reach: {analytics.get('avg_reach') or 0}
 
-### Son Paylaşılan Konular
+### Son Paylaşılan Konular (tekrar önlemek için)
 {json.dumps([p.get('topic') for p in published_posts[:10]], ensure_ascii=False)}
 
 ---
 
-Yukarıdaki bilgilere dayanarak bu hafta için içerik planı oluştur.
+Schedule template'indeki her slot için konu öner.
+Her content type için uygun konular seç:
+- **reels**: Kısa, dinamik, hook'lu (demo, teknik, problem-çözüm)
+- **carousel**: Eğitici, adım adım, karşılaştırmalı
+- **post**: Detaylı, bilgilendirici
 
 ÇIKTI FORMATI (JSON):
 ```json
@@ -83,21 +115,38 @@ Yukarıdaki bilgilere dayanarak bu hafta için içerik planı oluştur.
       "day": "monday",
       "day_of_week": 0,
       "time": "10:00",
+      "content_type": "post",
+      "platform": "both",
       "topic_category": "egitici",
       "topic": "Konu başlığı",
       "visual_type": "flux",
-      "reasoning": "Neden bu konu ve bu gün?"
+      "reasoning": "Neden bu konu?"
+    }},
+    {{
+      "day": "monday",
+      "day_of_week": 0,
+      "time": "19:00",
+      "content_type": "reels",
+      "platform": "instagram",
+      "topic_category": "tanitim",
+      "topic": "Reels konusu",
+      "visual_type": "video",
+      "reasoning": "Neden bu konu?"
     }}
   ],
-  "strategy_notes": "Genel strateji notları",
-  "expected_performance": "Beklenen performans tahmini"
+  "strategy_notes": "Genel notlar",
+  "content_distribution": {{
+    "reels": 5,
+    "carousel": 2,
+    "post": 5
+  }}
 }}
 ```
 
-Sadece JSON döndür, başka açıklama yapma.
+Tam 12 entry olmalı. Sadece JSON döndür.
 """
 
-        response = await self.call_claude(prompt)
+        response = await self.call_claude(prompt, timeout=120)
 
         try:
             # JSON parse et
@@ -107,13 +156,22 @@ Sadece JSON döndür, başka açıklama yapma.
             week_start = datetime.now() - timedelta(days=datetime.now().weekday())
 
             for entry in result.get("week_plan", []):
+                content_type = entry.get("content_type", "post")
+                # visual_type'ı content_type'a göre ayarla
+                if content_type == "reels":
+                    visual_type = "video"
+                elif content_type == "carousel":
+                    visual_type = "carousel"
+                else:
+                    visual_type = entry.get("visual_type", "flux")
+
                 create_calendar_entry(
                     week_start=week_start.date(),
                     day_of_week=entry.get("day_of_week", 0),
                     scheduled_time=entry.get("time", "10:00"),
                     topic_category=entry.get("topic_category", "egitici"),
                     topic_suggestion=entry.get("topic", ""),
-                    visual_type_suggestion=entry.get("visual_type", "flux")
+                    visual_type_suggestion=visual_type
                 )
 
             # Log
@@ -125,7 +183,11 @@ Sadece JSON döndür, başka açıklama yapma.
                 success=True
             )
 
-            self.log(f"Haftalık plan oluşturuldu: {len(result.get('week_plan', []))} post planlandı")
+            plan_count = len(result.get('week_plan', []))
+            reels_count = sum(1 for e in result.get('week_plan', []) if e.get('content_type') == 'reels')
+            carousel_count = sum(1 for e in result.get('week_plan', []) if e.get('content_type') == 'carousel')
+
+            self.log(f"Haftalık plan: {plan_count} içerik ({reels_count} Reels, {carousel_count} Carousel)")
             return result
 
         except json.JSONDecodeError:

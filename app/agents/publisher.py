@@ -19,7 +19,12 @@ class PublisherAgent(BaseAgent):
     async def execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Ana yürütme metodu"""
         action = input_data.get("action", "publish")
-        
+
+        # Carousel routing
+        visual_type = input_data.get("visual_type")
+        if visual_type == "carousel" or action == "publish_carousel":
+            return await self.publish_carousel(input_data)
+
         if action == "publish":
             return await self.publish(input_data)
         elif action == "schedule":
@@ -193,3 +198,103 @@ class PublisherAgent(BaseAgent):
             return {"success": True, "scheduled_at": str(scheduled_time)}
         
         return {"success": False, "error": "Missing post_id or scheduled_time"}
+
+    async def publish_carousel(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Instagram'a carousel (çoklu görsel) paylaş.
+
+        Args:
+            input_data: {
+                "post_id": int,
+                "caption": str,
+                "image_urls": List[str],  # Public CDN URL'leri
+                "hashtags": List[str]
+            }
+        """
+        self.log("🎠 Carousel yayınlanıyor...")
+
+        post_id = input_data.get("post_id")
+        caption = input_data.get("caption", "")
+        image_urls = input_data.get("image_urls", [])
+        hashtags = input_data.get("hashtags", [])
+
+        result = {
+            "success": False,
+            "post_id": post_id,
+            "platform": "instagram"
+        }
+
+        try:
+            from app.instagram_helper import post_carousel_to_instagram
+
+            # Caption + hashtags
+            full_caption = caption
+            if hashtags:
+                full_caption = f"{caption}\n\n{' '.join(hashtags)}"
+
+            # Minimum 2 görsel kontrolü
+            if len(image_urls) < 2:
+                return {"success": False, "error": "Carousel için minimum 2 görsel gerekli"}
+
+            self.log(f"Carousel: {len(image_urls)} görsel ile paylaşılıyor...")
+
+            # Instagram'a carousel paylaş
+            ig_result = await post_carousel_to_instagram(image_urls, full_caption)
+
+            if ig_result.get("success"):
+                result["success"] = True
+                result["instagram_post_id"] = ig_result.get("id")
+
+                # Database güncelle
+                if post_id:
+                    update_post(
+                        post_id,
+                        status="published",
+                        published_at=datetime.now(),
+                        instagram_post_id=ig_result.get("id")
+                    )
+
+                self.log(f"✅ Carousel yayınlandı: {ig_result.get('id', 'N/A')}")
+
+                log_agent_action(
+                    agent_name=self.name,
+                    action="publish_carousel",
+                    input_data={"post_id": post_id, "image_count": len(image_urls)},
+                    output_data=result,
+                    success=True
+                )
+
+                return result
+            else:
+                error = ig_result.get("error", "Unknown error")
+                self.log(f"❌ Carousel hatası: {error}")
+                result["error"] = error
+
+                log_agent_action(
+                    agent_name=self.name,
+                    action="publish_carousel",
+                    input_data={"post_id": post_id},
+                    output_data=result,
+                    success=False,
+                    error_message=error
+                )
+
+                return result
+
+        except ImportError as e:
+            error = f"Instagram helper import error: {str(e)}"
+            self.log(f"❌ {error}")
+            return {"success": False, "error": error}
+
+        except Exception as e:
+            error = str(e)
+            self.log(f"❌ Carousel hatası: {error}")
+
+            log_agent_action(
+                agent_name=self.name,
+                action="publish_carousel",
+                success=False,
+                error_message=error
+            )
+
+            return {"success": False, "error": error}

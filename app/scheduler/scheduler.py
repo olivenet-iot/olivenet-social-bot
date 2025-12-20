@@ -242,5 +242,55 @@ def create_default_scheduler(pipeline) -> ContentScheduler:
         minute=0,
         days=["sunday"]
     ))
-    
+
+    # Metrik senkronizasyonu (02:00 ve 14:00 KKTC - günde 2x)
+    async def sync_metrics():
+        from app.database import get_posts_by_status
+        from app.agents import AnalyticsAgent
+
+        print("[SCHEDULER] 📊 Metrik senkronizasyonu başlatılıyor...")
+        analytics = AnalyticsAgent()
+
+        # Son 7 günün published post'ları
+        cutoff = datetime.now() - timedelta(days=7)
+        posts = get_posts_by_status('published')
+        recent_posts = [p for p in posts if p.get('published_at') and
+                       datetime.fromisoformat(str(p['published_at']).replace('Z', '')) > cutoff]
+
+        synced = 0
+        errors = 0
+
+        for post in recent_posts:
+            try:
+                result = await analytics.fetch_metrics({
+                    "post_id": post.get("id"),
+                    "facebook_post_id": post.get("facebook_post_id"),
+                    "instagram_post_id": post.get("instagram_post_id")
+                })
+                if result.get("success"):
+                    synced += 1
+                else:
+                    errors += 1
+                await asyncio.sleep(2)  # Rate limit
+            except Exception as e:
+                print(f"[SCHEDULER] Metrik hatası post {post.get('id')}: {e}")
+                errors += 1
+
+        print(f"[SCHEDULER] ✅ Metrik senkronizasyonu tamamlandı: {synced} başarılı, {errors} hata")
+        return {"synced": synced, "errors": errors, "total": len(recent_posts)}
+
+    scheduler.add_task(ScheduledTask(
+        name="metrics_sync_morning",
+        callback=sync_metrics,
+        hour=2,
+        minute=0
+    ))
+
+    scheduler.add_task(ScheduledTask(
+        name="metrics_sync_afternoon",
+        callback=sync_metrics,
+        hour=14,
+        minute=0
+    ))
+
     return scheduler

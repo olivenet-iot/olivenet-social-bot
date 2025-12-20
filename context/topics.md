@@ -147,3 +147,36 @@ ThingsBoard, ChirpStack ve diğer IoT yönetim platformları.
 1. KKTC işletme sahipleri (sera, fabrika, otel)
 2. IoT/LoRaWAN profesyoneller
 3. Sürdürülebilirlik yöneticileri
+
+---
+
+## 🎠 CAROUSEL UYGUN KONULAR
+
+Carousel formatı için optimize edilmiş, adım adım veya karşılaştırmalı konular.
+
+### Eğitim Serisi (Çarşamba 10:00):
+- "LoRaWAN Nedir? 5 Adımda Öğren"
+- "IoT Sensör Seçimi: 5 Kritik Faktör"
+- "Edge AI Başlangıç Rehberi"
+- "Grafana Dashboard: 5 Adımda Kurulum"
+- "ThingsBoard Widget Türleri"
+
+### Karşılaştırma Serisi:
+- "WiFi vs LoRaWAN vs NB-IoT Karşılaştırma"
+- "Cloud vs Edge: Hangisi Ne Zaman?"
+- "5 Farklı Toprak Nem Sensörü"
+- "PLC vs Mikrodenetleyici: Hangisi Sizin İçin?"
+
+### Showcase Serisi (Cumartesi 14:00):
+- "Sera Otomasyonu Faydaları" (5 slide)
+- "Enerji Tasarrufu İpuçları" (5 slide)
+- "Kestirimci Bakım Avantajları"
+- "Akıllı Tarım Çözümleri"
+- "Endüstriyel IoT Uygulama Örnekleri"
+
+### Carousel Kuralları:
+- Minimum 3, maksimum 7 slide
+- Her slide max 30 kelime
+- İlk slide dikkat çekici hook
+- Son slide CTA içermeli
+- Tutarlı görsel stili (aynı renk paleti)

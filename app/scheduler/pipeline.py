@@ -670,6 +670,18 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             category = plan.get('topic_category', 'egitici')
             visual_type = plan.get('visual_type_suggestion', 'flux')
 
+            # ========== CONTENT TYPE ROUTING ==========
+            # Reels/video içerik için özel pipeline kullan
+            if visual_type in ["reels", "video"]:
+                self.log(f"[ROUTING] Reels pipeline'a yönlendiriliyor: {topic[:50]}...")
+                return await self.run_reels_content(topic=topic)
+
+            # Carousel içerik için özel pipeline kullan
+            if visual_type == "carousel":
+                self.log(f"[ROUTING] Carousel pipeline'a yönlendiriliyor: {topic[:50]}...")
+                return await self.run_carousel_pipeline(topic=topic)
+
+            # ========== STANDART POST FLOW ==========
             # 1. İçerik üret (multiplatform)
             self.log("Aşama 1: İçerik üretiliyor (IG+FB)...")
             content_result = await self.creator.execute({
@@ -1023,6 +1035,202 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
 
             await self.notify_telegram(
                 message=f"❌ *REELS* - Hata\n\n{str(e)}",
+                data={"error": str(e)},
+                buttons=[]
+            )
+
+            return result
+
+    async def run_carousel_pipeline(self, topic: str = None, dry_run: bool = False) -> Dict[str, Any]:
+        """
+        Instagram Carousel içerik üretim pipeline'ı.
+
+        Akış:
+        1. Konu seçimi (opsiyonel)
+        2. Carousel içerik oluşturma (Creator)
+        3. Her slide için görsel üretimi (FLUX)
+        4. Kalite kontrolü (Reviewer)
+        5. Instagram'a paylaşım (Publisher)
+
+        Args:
+            topic: Carousel konusu (None ise Planner'dan al)
+            dry_run: True ise paylaşım yapmadan dur
+
+        Returns:
+            Pipeline sonucu
+        """
+        self.log("🎠 Carousel Pipeline başlatılıyor...")
+        self.state = PipelineState.CREATING_CONTENT
+
+        result = {
+            "success": False,
+            "stages_completed": [],
+            "content_type": "carousel",
+            "dry_run": dry_run
+        }
+
+        try:
+            # ========== AŞAMA 1: Konu Seçimi ==========
+            if not topic:
+                self.log("[CAROUSEL] Aşama 1: Konu seçiliyor...")
+                topic_result = await self.planner.execute({
+                    "action": "suggest_topic",
+                    "content_type": "carousel",
+                    "category": "egitici"
+                })
+                topic = topic_result.get("topic", "LoRaWAN Temel Kavramlar")
+                result["topic_suggestion"] = topic_result
+
+            result["topic"] = topic
+            result["stages_completed"].append("topic_selection")
+            self.log(f"[CAROUSEL] Konu: {topic}")
+
+            # ========== AŞAMA 2: Carousel İçerik Oluştur ==========
+            self.log("[CAROUSEL] Aşama 2: İçerik oluşturuluyor...")
+
+            carousel_content = await self.creator.execute({
+                "action": "create_carousel_content",
+                "topic": topic,
+                "slide_count": 5,
+                "category": "egitici"
+            })
+
+            if not carousel_content.get("success"):
+                raise Exception(f"Creator error: {carousel_content.get('error')}")
+
+            result["post_id"] = carousel_content.get("post_id")
+            result["caption"] = carousel_content.get("caption")
+            result["slides"] = carousel_content.get("slides")
+            result["hashtags"] = carousel_content.get("hashtags")
+            result["slide_count"] = carousel_content.get("slide_count", 0)
+            result["stages_completed"].append("content_created")
+
+            self.log(f"[CAROUSEL] {result['slide_count']} slide oluşturuldu")
+
+            if dry_run:
+                self.log("[CAROUSEL] Dry-run modu - görsel üretimi atlanıyor")
+                result["success"] = True
+                result["final_state"] = "dry_run_completed"
+                return result
+
+            # ========== AŞAMA 3: Görsel Üretimi ==========
+            self.log("[CAROUSEL] Aşama 3: Görseller üretiliyor...")
+            self.state = PipelineState.CREATING_VISUAL
+
+            from app.flux_helper import generate_flux_image
+            from app.instagram_helper import upload_image_to_cdn
+
+            image_urls = []
+            slides = carousel_content.get("slides", [])
+
+            for i, slide in enumerate(slides):
+                self.log(f"[CAROUSEL] Slide {i+1}/{len(slides)} görsel üretiliyor...")
+
+                # Retry mekanizması
+                for attempt in range(2):
+                    try:
+                        image_result = await generate_flux_image(
+                            slide.get("image_prompt", ""),
+                            aspect_ratio="1:1"  # Carousel için kare
+                        )
+
+                        if image_result.get("success"):
+                            # CDN'e yükle
+                            cdn_url = await upload_image_to_cdn(image_result["image_path"])
+                            if cdn_url:
+                                image_urls.append(cdn_url)
+                                self.log(f"[CAROUSEL] Slide {i+1} OK")
+                                break
+                            else:
+                                self.log(f"[CAROUSEL] Slide {i+1} CDN upload başarısız")
+                        else:
+                            self.log(f"[CAROUSEL] Slide {i+1} görsel üretim hatası, retry...")
+
+                    except Exception as e:
+                        self.log(f"[CAROUSEL] Slide {i+1} hata: {e}")
+                        if attempt == 1:
+                            self.log(f"[CAROUSEL] Slide {i+1} atlanıyor")
+
+            result["image_urls"] = image_urls
+            result["images_generated"] = len(image_urls)
+            result["stages_completed"].append("visuals_created")
+
+            # Minimum 2 görsel gerekli
+            if len(image_urls) < 2:
+                raise Exception(f"Yetersiz görsel üretildi: {len(image_urls)}/2")
+
+            self.log(f"[CAROUSEL] {len(image_urls)} görsel hazır")
+
+            # ========== AŞAMA 4: Kalite Kontrolü ==========
+            self.log("[CAROUSEL] Aşama 4: Kalite kontrolü...")
+            self.state = PipelineState.REVIEWING
+
+            review_result = await self.reviewer.execute({
+                "action": "review_post",
+                "post_text": carousel_content.get("caption", ""),
+                "content_type": "carousel",
+                "slide_count": len(image_urls),
+                "topic": topic
+            })
+
+            score = review_result.get("total_score", 7)
+            result["review_score"] = score
+            result["stages_completed"].append("review")
+
+            self.log(f"[CAROUSEL] Review score: {score}/10")
+
+            if score < 6:
+                self.log("[CAROUSEL] Düşük puan - paylaşım durduruldu")
+                result["error"] = f"Kalite skoru düşük: {score}/10"
+                result["final_state"] = "review_failed"
+                return result
+
+            # ========== AŞAMA 5: Instagram'a Paylaş ==========
+            self.log("[CAROUSEL] Aşama 5: Instagram'a paylaşılıyor...")
+            self.state = PipelineState.PUBLISHING
+
+            publish_result = await self.publisher.execute({
+                "action": "publish_carousel",
+                "post_id": carousel_content.get("post_id"),
+                "caption": carousel_content.get("caption", ""),
+                "image_urls": image_urls,
+                "hashtags": carousel_content.get("hashtags", []),
+                "visual_type": "carousel"
+            })
+
+            if publish_result.get("success"):
+                result["stages_completed"].append("published")
+                result["success"] = True
+                result["instagram_post_id"] = publish_result.get("instagram_post_id")
+
+                self.log("[CAROUSEL] Başarıyla yayınlandı!")
+
+                await self.notify_telegram(
+                    message=f"🎠 *CAROUSEL* - Yayınlandı!\n\n"
+                    f"📝 Konu: {topic[:50]}...\n"
+                    f"📸 Slide sayısı: {len(image_urls)}\n"
+                    f"⭐ Puan: {score}/10\n"
+                    f"📱 Platform: Instagram",
+                    data=publish_result,
+                    buttons=[]
+                )
+            else:
+                raise Exception(f"Publish error: {publish_result.get('error')}")
+
+            self.state = PipelineState.COMPLETED
+            result["final_state"] = self.state.value
+
+            self.log("[CAROUSEL] Pipeline tamamlandı!")
+            return result
+
+        except Exception as e:
+            self.log(f"[CAROUSEL] Pipeline hatası: {str(e)}")
+            self.state = PipelineState.ERROR
+            result["error"] = str(e)
+            result["final_state"] = self.state.value
+
+            await self.notify_telegram(
+                message=f"❌ *CAROUSEL* - Hata\n\n{str(e)}",
                 data={"error": str(e)},
                 buttons=[]
             )
