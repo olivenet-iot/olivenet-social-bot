@@ -31,7 +31,15 @@
 | 📊 İnfografik | HTML → PNG | İyi | Ücretsiz |
 | 📸 Gerçekçi AI | Gemini 2.5 Flash | İyi | Ücretsiz |
 | 🎨 FLUX.2 Pro | Black Forest Labs | Premium | ~$0.03/görsel |
-| 🎬 AI Video | Google Veo 3 | Premium | Kullanım başı |
+| 🎬 AI Video | Sora 2 / Veo 3.1 | Premium | Kullanım başı |
+
+### 🎬 Video/Reels Üretimi (YENİ!)
+| Model | Özellik | Süre |
+|-------|---------|------|
+| **Sora 2** | OpenAI - Yüksek kalite | 4-12 saniye |
+| **Veo 3.1** | Google - Hızlı fallback | 4-8 saniye |
+| **Cloudinary** | Video CDN | - |
+| **ffmpeg** | Instagram format dönüşümü | - |
 
 ### 🚀 Full-Autonomous Mod (YENİ!)
 Sıfır manuel müdahale ile çalışır:
@@ -53,8 +61,19 @@ Sıfır manuel müdahale ile çalışır:
 ```
 
 ### 📱 Dual-Platform Publishing
-- **Facebook**: Graph API ile direkt paylaşım
+- **Facebook**: Graph API ile direkt paylaşım (Photo + Video)
 - **Instagram**: ImgBB CDN üzerinden görsel yükleme → Instagram API
+- **Instagram Reels**: Cloudinary CDN üzerinden video → Reels API
+
+### 🎬 Reels Pipeline
+```
+Planner → Konu seç
+Creator → Caption + Video prompt
+Sora 2 → Video üret (fallback: Veo 3.1)
+ffmpeg → Instagram formatına dönüştür (H.264/AAC)
+Cloudinary → CDN'e yükle
+Publisher → Facebook Video + Instagram Reels
+```
 
 ---
 
@@ -179,7 +198,9 @@ olivenet-social-bot/
 │   ├── instagram_helper.py      # Instagram + CDN yardımcıları
 │   ├── claude_helper.py         # Claude Code CLI
 │   ├── flux_helper.py           # FLUX.2 Pro API
-│   ├── veo_helper.py            # Veo 3 Video API
+│   ├── sora_helper.py           # OpenAI Sora 2 Video API
+│   ├── veo_helper.py            # Google Veo 3.1 Video API
+│   ├── cloudinary_helper.py     # Video CDN upload
 │   ├── gemini_helper.py         # Gemini API
 │   ├── facebook_helper.py       # Facebook Graph API
 │   └── renderer.py              # HTML → PNG

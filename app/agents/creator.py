@@ -22,8 +22,12 @@ class CreatorAgent(BaseAgent):
 
         if action == "create_post":
             return await self.create_post(input_data)
+        elif action == "create_post_multiplatform":
+            return await self.create_post_multiplatform(input_data)
         elif action == "create_visual_prompt":
             return await self.create_visual_prompt(input_data)
+        elif action == "create_reels_prompt":
+            return await self.create_reels_prompt(input_data)
         elif action == "revise_post":
             return await self.revise_post(input_data)
         else:
@@ -120,6 +124,122 @@ Sadece JSON döndür.
                 error_message="JSON parse error"
             )
             return {"error": "JSON parse error", "raw_response": response}
+
+    async def create_post_multiplatform(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Her platform için özel içerik üret (Instagram kısa, Facebook uzun)"""
+        import random
+        self.log("Çoklu platform içeriği oluşturuluyor...")
+
+        topic = input_data.get("topic", "")
+        category = input_data.get("category", "egitici")
+        visual_type = input_data.get("visual_type", "flux")
+
+        company_profile = self.load_context("company-profile.md")
+        content_strategy = self.load_context("content-strategy.md")
+
+        # CTA kararı (her 3 posttan 1'inde)
+        use_cta = random.randint(1, 3) == 1
+        cta_instruction = "Soft CTA ekle: 'DM at' veya 'Bio linki'" if use_cta else "CTA KOYMA - sadece düşündürücü bir soru ile bitir"
+
+        # Instagram içeriği (kısa)
+        ig_prompt = f"""
+## GÖREV: Instagram Post Yaz
+
+### Konu
+{topic}
+
+### Kategori
+{category}
+
+### Şirket Profili
+{company_profile[:1500]}
+
+### INSTAGRAM FORMATI (ÇOK ÖNEMLİ!)
+- MAX 120 KELİME (kesinlikle aşma!)
+- Hook ile başla (şok istatistik, soru, veya cesur iddia)
+- 2-3 cümle ana mesaj
+- Opsiyonel: Max 3 bullet point
+- {cta_instruction}
+- 6-8 hashtag (sabit: #Olivenet #KKTC #IoT + rotasyonlu)
+
+### ÖRNEK FORMAT
+🌱 [Dikkat çekici hook]
+
+[Ana mesaj - kısa ve öz]
+
+- Madde 1
+- Madde 2
+
+[Kapanış sorusu veya soft CTA]
+
+#Olivenet #KKTC #IoT #AkıllıTarım ...
+
+Sadece post metnini yaz, başka açıklama ekleme.
+"""
+
+        ig_response = await self.call_claude(ig_prompt, timeout=60)
+        ig_text = ig_response.strip()
+
+        # Facebook içeriği (uzun)
+        fb_prompt = f"""
+## GÖREV: Facebook Post Yaz
+
+### Konu
+{topic}
+
+### Kategori
+{category}
+
+### Şirket Profili
+{company_profile[:2000]}
+
+### FACEBOOK FORMATI
+- 200-300 kelime (daha detaylı)
+- Problem → Çözüm → Fayda yapısı
+- Profesyonel ama samimi ton
+- Detaylı açıklama ve değer önerisi
+- CTA ile bitir (iletişim bilgisi: info@olivenet.io)
+- 6-8 hashtag
+
+Sadece post metnini yaz, başka açıklama ekleme.
+"""
+
+        fb_response = await self.call_claude(fb_prompt, timeout=60)
+        fb_text = fb_response.strip()
+
+        # Database'e kaydet
+        post_id = create_post(
+            topic=topic,
+            post_text_ig=ig_text,
+            post_text_fb=fb_text,
+            visual_type=visual_type,
+            topic_category=category
+        )
+
+        ig_words = len(ig_text.split())
+        fb_words = len(fb_text.split())
+
+        self.log(f"Post oluşturuldu (ID: {post_id})")
+        self.log(f"IG: {ig_words} kelime, FB: {fb_words} kelime")
+
+        log_agent_action(
+            agent_name=self.name,
+            action="create_post_multiplatform",
+            input_data={"topic": topic, "category": category},
+            output_data={"post_id": post_id, "ig_words": ig_words, "fb_words": fb_words},
+            success=True
+        )
+
+        return {
+            "success": True,
+            "post_id": post_id,
+            "post_text": fb_text,  # Backward compatibility
+            "post_text_ig": ig_text,
+            "post_text_fb": fb_text,
+            "topic": topic,
+            "word_count": fb_words,
+            "ig_word_count": ig_words
+        }
 
     async def create_visual_prompt(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Görsel için prompt oluştur"""
@@ -276,3 +396,108 @@ Sadece JSON döndür.
 
         except json.JSONDecodeError:
             return {"error": "JSON parse error", "raw_response": response}
+
+    async def create_reels_prompt(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Instagram Reels için profesyonel video prompt üret
+        Sora 2 ve Veo 3 formatlarını destekler
+        """
+        self.log("Reels video prompt'u oluşturuluyor...")
+
+        topic = input_data.get("topic", "")
+        category = input_data.get("category", "tanitim")
+        post_text = input_data.get("post_text", "")
+        post_id = input_data.get("post_id")
+
+        # Context yükle
+        reels_guide = self.load_context("reels-prompts.md")
+        company_profile = self.load_context("company-profile.md")
+
+        prompt = f"""
+## GÖREV: Instagram Reels için Profesyonel Video Prompt Oluştur
+
+### Konu
+{topic}
+
+### Kategori
+{category}
+
+### Post Metni (varsa)
+{post_text[:500] if post_text else "Yok"}
+
+### Şirket Bilgisi
+{company_profile[:1500]}
+
+### Profesyonel Prompting Rehberi
+{reels_guide[:3000]}
+
+---
+
+## ÇIKTI FORMATI (JSON)
+```json
+{{
+    "video_prompt_sora": "SORA 2 formatında detaylı İngilizce prompt (sahne + cinematography + lighting + actions + sound)",
+    "video_prompt_veo": "VEO 3 timestamp formatında İngilizce prompt ([00:00-00:02] format)",
+    "complexity": "low|medium|high",
+    "recommended_model": "veo3|sora-2|sora-2-pro",
+    "recommended_duration": 5,
+    "hook_description": "İlk 2 saniyede ne görünecek (Türkçe)",
+    "caption_ig": "Instagram Reels caption (Türkçe, max 80 kelime, emoji'li)",
+    "hashtags": ["Olivenet", "KKTC", "IoT", "..."],
+    "camera_movement": "static|dolly|pan|arc|reveal",
+    "mood": "professional|calm|energetic|inspirational"
+}}
+```
+
+### ÖNEMLİ KURALLAR:
+1. video_prompt_sora ve video_prompt_veo İNGİLİZCE olmalı
+2. 9:16 dikey format belirt (720x1280)
+3. Süre 5-6 saniye hedefle
+4. İlk 2 saniye HOOK olmalı - dikkat çekici
+5. Olivenet renkleri: Yeşil (#2E7D32), Mavi (#38bdf8)
+6. Tek sahne, akıcı hareket
+7. Gerçekçi ve üretilebilir prompt yaz
+
+### COMPLEXITY KURALLARI:
+- LOW: Tek sahne, statik/basit hareket → veo3
+- MEDIUM: Kamera takibi, 2-3 element → sora-2
+- HIGH: Dönüşüm, kompleks hareket → sora-2-pro
+
+Sadece JSON döndür, başka açıklama ekleme.
+"""
+
+        response = await self.call_claude(prompt, timeout=90)
+
+        try:
+            result = json.loads(self._clean_json_response(response))
+
+            # Post'u güncelle
+            if post_id:
+                # Sora prompt'u visual_prompt olarak kaydet
+                video_prompt = result.get("video_prompt_sora") or result.get("video_prompt_veo", "")
+                update_post(post_id, visual_prompt=video_prompt)
+
+            complexity = result.get("complexity", "medium")
+            model = result.get("recommended_model", "veo3")
+
+            self.log(f"Reels prompt oluşturuldu")
+            self.log(f"   Complexity: {complexity}")
+            self.log(f"   Model: {model}")
+            self.log(f"   Duration: {result.get('recommended_duration', 5)}s")
+
+            log_agent_action(
+                agent_name=self.name,
+                action="create_reels_prompt",
+                input_data={"topic": topic, "category": category},
+                output_data={"complexity": complexity, "model": model},
+                success=True
+            )
+
+            return {
+                "success": True,
+                **result
+            }
+
+        except json.JSONDecodeError as e:
+            self.log(f"JSON parse hatası: {e}")
+            return {"success": False, "error": f"JSON parse error: {e}", "raw_response": response[:500]}

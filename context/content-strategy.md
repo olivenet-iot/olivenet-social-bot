@@ -355,3 +355,45 @@ Slide 6: CTA ve iletişim
 - Thread formatı
 - Anlık güncellemeler
 - Sektörel konuşmalara katılım
+
+---
+
+## Instagram Özel Kurallar (ÖNEMLİ!)
+
+### Post Uzunluğu
+- MAX 120 KELİME (kesinlikle aşılmamalı!)
+- Kısa, vurucu, okunabilir içerik
+- Mobil uyumlu paragraflar (2-3 cümle max)
+
+### Hook Çeşitliliği (Rotate Et!)
+1. Şok istatistik: "%35 su tasarrufu mümkün!"
+2. Soru: "Seranızda ne kadar su israf ediyorsunuz?"
+3. Cesur iddia: "Manuel sulama tarih oluyor."
+4. Problem: "Enerji faturaları her ay artıyor..."
+5. Değer: "3 dakikada sera kontrolü."
+
+### CTA Kuralları (Instagram)
+- Her postta CTA KOYMA!
+- 3 posttan 1'inde soft CTA: "DM at", "Bio'daki linke tıkla"
+- Direkt satış yapma, değer sun
+- Engagement odaklı: "Sen ne düşünüyorsun?", "Hangisi sizin için önemli?"
+
+### Hashtag Stratejisi
+Sabit (her post): #Olivenet #KKTC #IoT
+Dönen: #AkıllıTarım #SeraOtomasyonu #EnerjiVerimliliği #DijitalDönüşüm #Teknoloji #Sürdürülebilirlik #AkıllıSera #EndüstriyelIoT
+
+## İçerik Kategorileri (Platform Bazlı)
+
+| Kategori | IG Oran | FB Oran | Açıklama |
+|----------|---------|---------|----------|
+| Eğitici/Bilgi | 40% | 35% | Kısa tips, istatistikler |
+| Behind the scenes | 20% | 15% | Kurulum, ekip, süreç |
+| Değer/Fayda | 25% | 30% | Çözüm odaklı |
+| Soft Satış | 15% | 20% | CTA'lı postlar |
+
+## YAPMAMASI GEREKENLER
+- Her postta CTA koyma
+- Çok uzun yazma (IG için max 120 kelime)
+- Hep aynı hook tipi kullanma
+- Satış baskısı yapma
+- Jargon kullanma

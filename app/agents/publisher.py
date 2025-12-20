@@ -30,9 +30,11 @@ class PublisherAgent(BaseAgent):
     async def publish(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """İçeriği Facebook + Instagram'a yayınla"""
         self.log("İçerik yayınlanıyor...")
-        
+
         post_id = input_data.get("post_id")
         post_text = input_data.get("post_text", "")
+        post_text_ig = input_data.get("post_text_ig") or post_text  # Instagram için kısa metin
+        post_text_fb = input_data.get("post_text_fb") or post_text  # Facebook için uzun metin
         image_path = input_data.get("image_path")
         video_path = input_data.get("video_path")
         platform = input_data.get("platform", "both")  # facebook, instagram, both
@@ -46,20 +48,20 @@ class PublisherAgent(BaseAgent):
         try:
             # ===== FACEBOOK =====
             if platform in ["facebook", "both"]:
-                fb_result = await self._publish_to_facebook(post_text, image_path, video_path)
+                fb_result = await self._publish_to_facebook(post_text_fb, image_path, video_path)
                 result["platforms"]["facebook"] = fb_result
-                
+
                 if fb_result.get("success"):
                     result["facebook_post_id"] = fb_result.get("id")
                     self.log(f"✅ Facebook'a yayınlandı: {fb_result.get('id', 'N/A')}")
                 else:
                     self.log(f"❌ Facebook hatası: {fb_result.get('error', 'N/A')}")
-            
+
             # ===== INSTAGRAM =====
             if platform in ["instagram", "both"]:
-                ig_result = await self._publish_to_instagram(post_text, image_path, video_path)
+                ig_result = await self._publish_to_instagram(post_text_ig, image_path, video_path)
                 result["platforms"]["instagram"] = ig_result
-                
+
                 if ig_result.get("success"):
                     result["instagram_post_id"] = ig_result.get("id")
                     self.log(f"✅ Instagram'a yayınlandı: {ig_result.get('id', 'N/A')}")
@@ -127,32 +129,39 @@ class PublisherAgent(BaseAgent):
             return {"success": False, "error": str(e)}
     
     async def _publish_to_instagram(self, post_text: str, image_path: str = None, video_path: str = None) -> Dict[str, Any]:
-        """Instagram'a paylaş"""
+        """Instagram'a paylaş (Fotoğraf veya Reels)"""
         try:
-            from app.instagram_helper import upload_image_to_cdn, post_photo_to_instagram
-            
-            # Instagram public URL istiyor - önce CDN'e yükle
+            # Video/Reels için
             if video_path and os.path.exists(video_path):
-                # Video için şimdilik desteklenmiyor
-                return {"success": False, "error": "Instagram video henuz desteklenmiyor"}
-            
+                from app.instagram_helper import post_reels_to_instagram
+
+                self.log("Instagram Reels olarak yayınlanıyor...")
+                ig_result = await post_reels_to_instagram(
+                    video_path=video_path,
+                    caption=post_text
+                )
+                return ig_result
+
+            # Fotoğraf için
             elif image_path and os.path.exists(image_path):
+                from app.instagram_helper import upload_image_to_cdn, post_photo_to_instagram
+
                 # Resmi CDN'e yükle (imgbb)
                 cdn_result = await upload_image_to_cdn(image_path)
-                
+
                 if not cdn_result:
                     return {"success": False, "error": "CDN upload failed"}
-                
+
                 image_url = cdn_result
                 self.log(f"CDN URL: {image_url[:50]}...")
-                
+
                 # Instagram'a paylaş
                 ig_result = await post_photo_to_instagram(image_url=image_url, caption=post_text)
                 return ig_result
-            
+
             else:
                 return {"success": False, "error": "No media provided for Instagram"}
-                
+
         except ImportError as e:
             return {"success": False, "error": f"Instagram helper import error: {str(e)}"}
         except Exception as e:

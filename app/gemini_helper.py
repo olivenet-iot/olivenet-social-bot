@@ -14,7 +14,7 @@ from .config import settings
 logger = logging.getLogger(__name__)
 
 
-async def generate_realistic_image(topic: str, post_text: str, output_dir: str = "/opt/olivenet-social/outputs") -> str:
+async def generate_realistic_image(topic: str, post_text: str, output_dir: str = "/opt/olivenet-social-bot/outputs") -> str:
     """
     Generate a realistic image using Gemini 2.5 Flash.
 
@@ -173,7 +173,7 @@ async def test_gemini_connection() -> dict:
         }
 
 
-async def generate_realistic_image_with_feedback(topic: str, post_text: str, feedback: str, output_dir: str = "/opt/olivenet-social/outputs") -> str:
+async def generate_realistic_image_with_feedback(topic: str, post_text: str, feedback: str, output_dir: str = "/opt/olivenet-social-bot/outputs") -> str:
     """
     Generate a realistic image using Gemini with user feedback.
 

@@ -68,7 +68,7 @@ async def generate_post_text(topic: str) -> str:
         Generated post text in Turkish
     """
     prompt = f"""
-/opt/olivenet-social/context/ klasorundeki TUM dosyalari oku:
+/opt/olivenet-social-bot/context/ klasorundeki TUM dosyalari oku:
 - company-profile.md (sirket bilgileri)
 - content-strategy.md (icerik stratejisi)
 - social-media-expert.md (sosyal medya uzmanligi - ONEMLI!)
@@ -148,8 +148,8 @@ async def suggest_topics() -> dict:
         season_themes = "hasat donemi, verim analizi, kis hazirligi"
 
     prompt = f"""
-/opt/olivenet-social/context/social-media-expert.md dosyasini oku.
-/opt/olivenet-social/context/company-profile.md dosyasini oku.
+/opt/olivenet-social-bot/context/social-media-expert.md dosyasini oku.
+/opt/olivenet-social-bot/context/company-profile.md dosyasini oku.
 
 ## GOREV: Sosyal Medya Stratejisti Olarak Konu Oner
 
@@ -227,7 +227,7 @@ async def generate_visual_html(post_text: str, topic: str) -> str:
         logo_img = ""
 
     prompt = f"""
-/opt/olivenet-social/context/visual-guidelines.md dosyasini oku.
+/opt/olivenet-social-bot/context/visual-guidelines.md dosyasini oku.
 
 Bu post icin 1080x1080px sosyal medya gorseli HTML'i olustur:
 
@@ -404,7 +404,7 @@ async def generate_visual_html_with_feedback(post_text: str, topic: str, feedbac
         logo_img = ""
 
     prompt = f"""
-/opt/olivenet-social/context/visual-guidelines.md dosyasini oku.
+/opt/olivenet-social-bot/context/visual-guidelines.md dosyasini oku.
 
 Bu post icin 1080x1080px sosyal medya gorseli HTML'i olustur:
 
@@ -575,8 +575,8 @@ async def generate_flux_prompt(post_text: str, topic: str) -> str:
     short_post = post_text[:400] if len(post_text) > 400 else post_text
 
     prompt = f"""
-/opt/olivenet-social/context/flux-prompting-guide.md dosyasını oku.
-/opt/olivenet-social/context/company-profile.md dosyasını oku.
+/opt/olivenet-social-bot/context/flux-prompting-guide.md dosyasını oku.
+/opt/olivenet-social-bot/context/company-profile.md dosyasını oku.
 
 ## GÖREV: FLUX.2 Pro için Profesyonel Görsel Prompt'u
 

@@ -477,7 +477,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             self.state = PipelineState.CREATING_CONTENT
 
             content_result = await self.creator.execute({
-                "action": "create_post",
+                "action": "create_post_multiplatform",
                 "topic": topic_result.get("topic"),
                 "category": topic_result.get("category"),
                 "suggested_hooks": topic_result.get("suggested_hooks", []),
@@ -490,7 +490,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             self.current_data["content"] = content_result
             result["stages_completed"].append("content_creation")
 
-            self.log(f"[OTONOM] İçerik üretildi ({content_result.get('word_count', 0)} kelime)")
+            self.log(f"[OTONOM] İçerik üretildi (IG: {content_result.get('ig_word_count', 0)}, FB: {content_result.get('word_count', 0)} kelime)")
 
             # ========== AŞAMA 3: Görsel Üretimi ==========
             self.log("[OTONOM] Aşama 3: Görsel üretiliyor...")
@@ -612,6 +612,8 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 "action": "publish",
                 "post_id": content_result.get("post_id"),
                 "post_text": content_result.get("post_text"),
+                "post_text_ig": content_result.get("post_text_ig"),
+                "post_text_fb": content_result.get("post_text_fb"),
                 "image_path": image_path,
                 "video_path": video_path,
                 "platform": "both"  # Facebook + Instagram
@@ -621,8 +623,9 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 result["stages_completed"].append("published")
                 result["success"] = True
                 result["facebook_post_id"] = publish_result.get("facebook_post_id")
+                result["instagram_post_id"] = publish_result.get("instagram_post_id")
 
-                self.log(f"[OTONOM] Başarıyla yayınlandı! Post ID: {publish_result.get('facebook_post_id')}")
+                self.log(f"[OTONOM] Başarıyla yayınlandı! FB: {publish_result.get('facebook_post_id')}, IG: {publish_result.get('instagram_post_id')}")
 
                 await self.notify_telegram(
                     message=f"🎉 *OTONOM MOD* - Yayinlandi!\n\nKonu: {topic_result.get('topic')}\nPuan: {score}/10\nPost ID: {publish_result.get('facebook_post_id', 'N/A')}",
@@ -667,10 +670,10 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             category = plan.get('topic_category', 'egitici')
             visual_type = plan.get('visual_type_suggestion', 'flux')
 
-            # 1. İçerik üret
-            self.log("Aşama 1: İçerik üretiliyor...")
+            # 1. İçerik üret (multiplatform)
+            self.log("Aşama 1: İçerik üretiliyor (IG+FB)...")
             content_result = await self.creator.execute({
-                "action": "create_post",
+                "action": "create_post_multiplatform",
                 "topic": topic,
                 "category": category,
                 "suggested_hooks": [],
@@ -682,6 +685,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
 
             result["stages_completed"].append("content")
             result["post_id"] = content_result.get("post_id")
+            self.log(f"İçerik: IG {content_result.get('ig_word_count', 0)} kelime, FB {content_result.get('word_count', 0)} kelime")
 
             # 2. Görsel prompt
             self.log("Aşama 2: Görsel prompt oluşturuluyor...")
@@ -761,6 +765,8 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 "action": "publish",
                 "post_id": content_result.get("post_id"),
                 "post_text": content_result.get("post_text"),
+                "post_text_ig": content_result.get("post_text_ig"),
+                "post_text_fb": content_result.get("post_text_fb"),
                 "image_path": image_path,
                 "video_path": video_path,
                 "platform": "both"
@@ -796,4 +802,229 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
         except Exception as e:
             self.log(f"❌ Planlı içerik hatası: {str(e)}")
             result["error"] = str(e)
+            return result
+
+    async def run_reels_content(self, topic: str = None, force_model: str = None) -> Dict[str, Any]:
+        """
+        Instagram Reels içeriği üret ve yayınla
+        Sora 2 Pro → Sora 2 → Veo 3 fallback zinciri ile
+
+        Args:
+            topic: Konu (None ise Planner'dan alınır)
+            force_model: Model zorla ("sora-2", "sora-2-pro", "veo3")
+
+        Returns:
+            Pipeline sonucu
+        """
+        self.log("REELS MOD: Pipeline başlatılıyor...")
+        self.state = PipelineState.PLANNING
+
+        result = {
+            "success": False,
+            "stages_completed": [],
+            "final_state": None,
+            "reels": True
+        }
+
+        try:
+            # ========== AŞAMA 1: Konu Seçimi ==========
+            if topic:
+                topic_data = {
+                    "topic": topic,
+                    "category": "tanitim",
+                    "suggested_visual": "video"
+                }
+                self.log(f"[REELS] Konu verildi: {topic[:50]}...")
+            else:
+                self.log("[REELS] Aşama 1: Konu seçiliyor...")
+                topic_result = await self.planner.execute({"action": "suggest_topic"})
+
+                if "error" in topic_result:
+                    raise Exception(f"Planner error: {topic_result['error']}")
+
+                topic_data = topic_result
+                topic = topic_data.get("topic", "IoT ve akıllı tarım")
+                self.log(f"[REELS] Konu: {topic}")
+
+            self.current_data["topic"] = topic_data
+            result["stages_completed"].append("topic_selection")
+            result["topic"] = topic
+
+            await self.notify_telegram(
+                message=f"🎬 *REELS MOD* - Başlatıldı\n\nKonu: {topic[:80]}...",
+                data=topic_data,
+                buttons=[]
+            )
+
+            # ========== AŞAMA 2: Caption Üretimi ==========
+            self.log("[REELS] Aşama 2: Caption üretiliyor...")
+            self.state = PipelineState.CREATING_CONTENT
+
+            content_result = await self.creator.execute({
+                "action": "create_post_multiplatform",
+                "topic": topic,
+                "category": topic_data.get("category", "tanitim"),
+                "visual_type": "video"
+            })
+
+            if "error" in content_result:
+                raise Exception(f"Creator error: {content_result['error']}")
+
+            self.current_data["content"] = content_result
+            result["stages_completed"].append("caption")
+            result["post_id"] = content_result.get("post_id")
+
+            self.log(f"[REELS] Caption: IG {content_result.get('ig_word_count', 0)} kelime")
+
+            # ========== AŞAMA 3: Video Prompt Üretimi ==========
+            self.log("[REELS] Aşama 3: Video prompt oluşturuluyor...")
+            self.state = PipelineState.CREATING_VISUAL
+
+            reels_prompt_result = await self.creator.execute({
+                "action": "create_reels_prompt",
+                "topic": topic,
+                "category": topic_data.get("category", "tanitim"),
+                "post_text": content_result.get("post_text_ig", ""),
+                "post_id": content_result.get("post_id")
+            })
+
+            if not reels_prompt_result.get("success"):
+                raise Exception(f"Reels prompt error: {reels_prompt_result.get('error', 'Unknown')}")
+
+            self.current_data["reels_prompt"] = reels_prompt_result
+            result["stages_completed"].append("video_prompt")
+
+            # Prompt seçimi - Sora veya Veo
+            video_prompt = reels_prompt_result.get("video_prompt_sora") or reels_prompt_result.get("video_prompt_veo", "")
+            recommended_model = reels_prompt_result.get("recommended_model", "veo3")
+            complexity = reels_prompt_result.get("complexity", "medium")
+
+            self.log(f"[REELS] Prompt hazır")
+            self.log(f"[REELS]   Complexity: {complexity}")
+            self.log(f"[REELS]   Önerilen model: {recommended_model}")
+
+            # ========== AŞAMA 4: Video Üretimi ==========
+            self.log("[REELS] Aşama 4: Video üretiliyor...")
+
+            from app.sora_helper import generate_video_smart
+
+            # Force model veya recommended
+            model_to_use = force_model or recommended_model
+
+            video_result = await generate_video_smart(
+                prompt=video_prompt,
+                topic=topic,
+                force_model=model_to_use
+            )
+
+            if not video_result.get("success"):
+                raise Exception(f"Video generation failed: {video_result.get('error', 'Unknown')}")
+
+            video_path = video_result.get("video_path")
+            model_used = video_result.get("model_used", "unknown")
+            fallback_from = video_result.get("fallback_from")
+
+            self.current_data["video_result"] = video_result
+            result["stages_completed"].append("video_generation")
+            result["model_used"] = model_used
+
+            if fallback_from:
+                self.log(f"[REELS] Video üretildi (fallback: {fallback_from} → {model_used})")
+            else:
+                self.log(f"[REELS] Video üretildi ({model_used})")
+
+            await self.notify_telegram(
+                message=f"🎥 *REELS* - Video Hazır\n\nModel: {model_used}\nComplexity: {complexity}",
+                data={"video_path": video_path},
+                buttons=[]
+            )
+
+            # ========== AŞAMA 5: Kalite Kontrol ==========
+            self.log("[REELS] Aşama 5: Kalite kontrol...")
+            self.state = PipelineState.REVIEWING
+
+            # Caption için review
+            review_result = await self.reviewer.execute({
+                "action": "review_post",
+                "post_text": content_result.get("post_text_ig", ""),
+                "topic": topic,
+                "post_id": content_result.get("post_id")
+            })
+
+            score = review_result.get("total_score", 0)
+            result["review_score"] = score
+            result["stages_completed"].append("review")
+
+            self.log(f"[REELS] Review: {score}/10")
+
+            # Düşük puan ise revizyon
+            if score < 7:
+                self.log("[REELS] Puan düşük, caption revize ediliyor...")
+                revision_result = await self.creator.execute({
+                    "action": "revise_post",
+                    "post_text": content_result.get("post_text_ig", ""),
+                    "feedback": review_result.get("feedback", "Daha kısa ve etkili yaz"),
+                    "post_id": content_result.get("post_id")
+                })
+                content_result["post_text_ig"] = revision_result.get("revised_post", content_result.get("post_text_ig"))
+
+            # ========== AŞAMA 6: Yayınla ==========
+            self.log("[REELS] Aşama 6: Yayınlanıyor...")
+            self.state = PipelineState.PUBLISHING
+
+            publish_result = await self.publisher.execute({
+                "action": "publish",
+                "post_id": content_result.get("post_id"),
+                "post_text": content_result.get("post_text_fb", ""),  # FB için
+                "post_text_ig": content_result.get("post_text_ig", ""),  # IG için
+                "post_text_fb": content_result.get("post_text_fb", ""),
+                "video_path": video_path,
+                "platform": "both"
+            })
+
+            if publish_result.get("success"):
+                result["stages_completed"].append("published")
+                result["success"] = True
+                result["facebook_post_id"] = publish_result.get("facebook_post_id")
+                result["instagram_post_id"] = publish_result.get("instagram_post_id")
+
+                fb_ok = publish_result.get("platforms", {}).get("facebook", {}).get("success", False)
+                ig_ok = publish_result.get("platforms", {}).get("instagram", {}).get("success", False)
+
+                platforms = []
+                if fb_ok: platforms.append("Facebook")
+                if ig_ok: platforms.append("Instagram Reels")
+
+                self.log(f"[REELS] Başarıyla yayınlandı! {', '.join(platforms)}")
+
+                await self.notify_telegram(
+                    message=f"🎉 *REELS* - Yayınlandı!\n\n"
+                    f"📝 Konu: {topic[:50]}...\n"
+                    f"🎥 Model: {model_used}\n"
+                    f"📱 Platform: {', '.join(platforms)}\n"
+                    f"⭐ Puan: {score}/10",
+                    data=publish_result,
+                    buttons=[]
+                )
+            else:
+                raise Exception(f"Publish error: {publish_result.get('error')}")
+
+            self.state = PipelineState.COMPLETED
+            result["final_state"] = self.state.value
+
+            self.log("[REELS] Pipeline tamamlandı!")
+            return result
+
+        except Exception as e:
+            self.log(f"[REELS] Pipeline hatası: {str(e)}")
+            self.state = PipelineState.ERROR
+            result["error"] = str(e)
+            result["final_state"] = self.state.value
+
+            await self.notify_telegram(
+                message=f"❌ *REELS* - Hata\n\n{str(e)}",
+                data={"error": str(e)},
+                buttons=[]
+            )
+
             return result

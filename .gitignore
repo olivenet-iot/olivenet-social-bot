@@ -1,6 +1,7 @@
-# Environment & Secrets
+# Environment
 .env
-*.env
+.env.*
+!.env.example
 
 # Python
 __pycache__/
@@ -9,16 +10,7 @@ __pycache__/
 *.so
 .Python
 venv/
-.venv/
 ENV/
-
-# Outputs (uretilen gorseller/videolar)
-outputs/*.png
-outputs/*.jpg
-outputs/*.html
-outputs/*.mp4
-outputs/*.gif
-!outputs/.gitkeep
 
 # IDE
 .vscode/
@@ -26,18 +18,25 @@ outputs/*.gif
 *.swp
 *.swo
 
+# Outputs
+outputs/
+*.mp4
+*.mp3
+*.wav
+
+# Database
+*.db
+*.sqlite3
+
 # Logs
 *.log
-bot.log
+logs/
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Playwright
-playwright-report/
-test-results/
-session_state.json
-
-# Backup (old system)
-_backup/
+# Temp
+tmp/
+temp/
+*.tmp

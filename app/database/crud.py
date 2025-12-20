@@ -11,19 +11,25 @@ from .models import get_connection
 
 def create_post(
     topic: str,
-    post_text: str,
+    post_text: str = None,
     visual_type: Optional[str] = None,
     scheduled_at: Optional[datetime] = None,
-    platform: str = "facebook"
+    platform: str = "both",
+    post_text_ig: str = None,
+    post_text_fb: str = None,
+    topic_category: str = None
 ) -> int:
-    """Yeni post oluştur"""
+    """Yeni post oluştur - platform-specific text destekli"""
     conn = get_connection()
     cursor = conn.cursor()
 
+    # post_text yoksa post_text_fb kullan
+    final_post_text = post_text or post_text_fb
+
     cursor.execute('''
-        INSERT INTO posts (topic, post_text, visual_type, scheduled_at, platform, status)
-        VALUES (?, ?, ?, ?, ?, 'draft')
-    ''', (topic, post_text, visual_type, scheduled_at, platform))
+        INSERT INTO posts (topic, post_text, visual_type, scheduled_at, platform, status, post_text_ig, post_text_fb)
+        VALUES (?, ?, ?, ?, ?, 'draft', ?, ?)
+    ''', (topic, final_post_text, visual_type, scheduled_at, platform, post_text_ig, post_text_fb))
 
     post_id = cursor.lastrowid
     conn.commit()
@@ -39,7 +45,7 @@ def update_post(post_id: int, **kwargs) -> bool:
         'topic', 'post_text', 'visual_type', 'visual_path', 'visual_prompt',
         'status', 'rejection_reason', 'scheduled_at', 'published_at',
         'facebook_post_id', 'instagram_post_id', 'orchestrator_notes',
-        'reviewer_feedback', 'revision_count'
+        'reviewer_feedback', 'revision_count', 'post_text_ig', 'post_text_fb'
     ]
 
     updates = []

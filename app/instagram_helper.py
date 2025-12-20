@@ -6,11 +6,154 @@ Facebook Business Suite üzerinden Instagram'a içerik paylaşımı
 import os
 import asyncio
 import aiohttp
+import subprocess
 from typing import Dict, Any, Optional, List
+from datetime import datetime
 
 
 # Instagram Graph API URL
 GRAPH_API_URL = "https://graph.facebook.com/v18.0"
+
+# Video conversion output directory
+OUTPUT_DIR = "/opt/olivenet-social-bot/outputs"
+
+
+async def convert_video_for_instagram(input_path: str) -> Dict[str, Any]:
+    """
+    Video'yu Instagram Reels formatina donustur
+
+    Instagram Gereksinimleri:
+    - Codec: H.264 (video), AAC (audio)
+    - Cozunurluk: 720x1280 (9:16)
+    - FPS: 30
+    - Max sure: 90 saniye
+    - Format: MP4
+
+    Args:
+        input_path: Giris video dosyasi
+
+    Returns:
+        {"success": True, "output_path": "...", "converted": True/False}
+    """
+    if not os.path.exists(input_path):
+        return {"success": False, "error": f"Video bulunamadi: {input_path}"}
+
+    print(f"[VIDEO CONVERT] Kaynak: {input_path}")
+
+    # ffmpeg kontrolu
+    try:
+        result = subprocess.run(["which", "ffmpeg"], capture_output=True)
+        if result.returncode != 0:
+            print("[VIDEO CONVERT] ffmpeg yuklu degil!")
+            return {"success": False, "error": "ffmpeg not installed"}
+    except Exception as e:
+        return {"success": False, "error": f"ffmpeg check failed: {e}"}
+
+    # Video bilgilerini al
+    try:
+        probe_cmd = [
+            "ffprobe", "-v", "error",
+            "-select_streams", "v:0",
+            "-show_entries", "stream=codec_name,width,height,r_frame_rate",
+            "-of", "csv=p=0",
+            input_path
+        ]
+        probe_result = subprocess.run(probe_cmd, capture_output=True, text=True)
+        probe_output = probe_result.stdout.strip()
+        print(f"[VIDEO CONVERT] Probe: {probe_output}")
+
+        # Parse: codec,width,height,fps
+        parts = probe_output.split(",")
+        if len(parts) >= 4:
+            codec = parts[0]
+            width = int(parts[1])
+            height = int(parts[2])
+            fps_str = parts[3]
+
+            # fps parse (30/1 -> 30)
+            if "/" in fps_str:
+                num, den = fps_str.split("/")
+                fps = int(num) / int(den) if int(den) > 0 else 30
+            else:
+                fps = float(fps_str)
+
+            print(f"[VIDEO CONVERT] Codec: {codec}, Size: {width}x{height}, FPS: {fps:.1f}")
+
+            # Instagram uyumlu mu kontrol et
+            is_compatible = (
+                codec == "h264" and
+                width == 720 and
+                height == 1280 and
+                abs(fps - 30) < 1
+            )
+
+            if is_compatible:
+                print("[VIDEO CONVERT] Video zaten Instagram uyumlu!")
+                return {
+                    "success": True,
+                    "output_path": input_path,
+                    "converted": False,
+                    "original_codec": codec,
+                    "original_size": f"{width}x{height}"
+                }
+    except Exception as e:
+        print(f"[VIDEO CONVERT] Probe hatasi: {e}")
+        # Hata olsa bile donusturmeye devam et
+
+    # Donusturulmus dosya yolu
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_path = f"{OUTPUT_DIR}/ig_ready_{timestamp}.mp4"
+
+    print(f"[VIDEO CONVERT] Donusturuluyor: {output_path}")
+
+    # ffmpeg komutu
+    ffmpeg_cmd = [
+        "ffmpeg", "-y",
+        "-i", input_path,
+        "-c:v", "libx264",          # H.264 codec
+        "-preset", "medium",         # Encoding hizi/kalite dengesi
+        "-crf", "23",                # Kalite (18-28 arasi, dusuk = daha iyi)
+        "-c:a", "aac",               # AAC audio codec
+        "-b:a", "128k",              # Audio bitrate
+        "-ar", "44100",              # Audio sample rate
+        "-vf", "scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2,setsar=1",
+        "-r", "30",                  # 30 FPS
+        "-movflags", "+faststart",   # Web streaming icin optimize
+        "-t", "90",                  # Max 90 saniye
+        output_path
+    ]
+
+    try:
+        process = subprocess.run(
+            ffmpeg_cmd,
+            capture_output=True,
+            text=True,
+            timeout=300  # 5 dakika timeout
+        )
+
+        if process.returncode != 0:
+            print(f"[VIDEO CONVERT] ffmpeg hatasi: {process.stderr[:500]}")
+            return {"success": False, "error": f"ffmpeg error: {process.stderr[:200]}"}
+
+        if not os.path.exists(output_path):
+            return {"success": False, "error": "Output file not created"}
+
+        file_size = os.path.getsize(output_path) / 1024 / 1024
+        print(f"[VIDEO CONVERT] Basarili! Boyut: {file_size:.2f} MB")
+
+        return {
+            "success": True,
+            "output_path": output_path,
+            "converted": True,
+            "file_size_mb": round(file_size, 2)
+        }
+
+    except subprocess.TimeoutExpired:
+        return {"success": False, "error": "ffmpeg timeout (5 min)"}
+    except Exception as e:
+        print(f"[VIDEO CONVERT] Exception: {e}")
+        return {"success": False, "error": str(e)}
 
 
 async def get_instagram_account_id() -> Optional[str]:
@@ -429,6 +572,106 @@ async def upload_image_to_cdn(local_path: str) -> Optional[str]:
             print(f"[INSTAGRAM] CDN upload error: {e}")
 
     return None
+
+
+async def post_reels_to_instagram(
+    video_path: str,
+    caption: str = "",
+    max_retries: int = 3,
+    skip_conversion: bool = False
+) -> Dict[str, Any]:
+    """
+    Lokal video dosyasını Instagram Reels olarak paylaş
+
+    Args:
+        video_path: Lokal video dosyası yolu
+        caption: Reels caption'ı
+        max_retries: Maksimum deneme sayısı
+        skip_conversion: Video dönüşümünü atla
+
+    Returns:
+        Result dictionary with success status, post id, and CDN URL
+
+    Note:
+        - Video önce Instagram formatına dönüştürülür (H.264, AAC, 720x1280)
+        - Sonra Cloudinary'ye yüklenir
+        - Reels için 9:16 aspect ratio
+        - Süre: 3-90 saniye
+    """
+    if not os.path.exists(video_path):
+        return {"success": False, "error": f"Video dosyası bulunamadı: {video_path}"}
+
+    print(f"[INSTAGRAM REELS] Reels paylaşılıyor...")
+    print(f"[INSTAGRAM REELS] Video: {video_path}")
+
+    # 0. Video'yu Instagram formatına dönüştür
+    upload_path = video_path
+    if not skip_conversion:
+        print("[INSTAGRAM REELS] Video Instagram formatına dönüştürülüyor...")
+        convert_result = await convert_video_for_instagram(video_path)
+
+        if not convert_result.get("success"):
+            print(f"[INSTAGRAM REELS] Dönüşüm hatası: {convert_result.get('error')}")
+            # Dönüşüm başarısız olsa bile orijinal video ile devam et
+            print("[INSTAGRAM REELS] Orijinal video ile devam ediliyor...")
+        else:
+            upload_path = convert_result.get("output_path", video_path)
+            if convert_result.get("converted"):
+                print(f"[INSTAGRAM REELS] Dönüştürüldü: {upload_path}")
+            else:
+                print("[INSTAGRAM REELS] Video zaten uyumlu, dönüşüm gerekmedi")
+
+    # 1. Video'yu Cloudinary'ye yükle
+    try:
+        from app.cloudinary_helper import upload_video_to_cloudinary
+
+        cdn_result = await upload_video_to_cloudinary(upload_path)
+
+        if not cdn_result.get("success"):
+            print(f"[INSTAGRAM REELS] CDN yükleme hatası: {cdn_result.get('error')}")
+            return {"success": False, "error": f"CDN upload failed: {cdn_result.get('error')}"}
+
+        video_url = cdn_result.get("url")
+        print(f"[INSTAGRAM REELS] CDN URL: {video_url}")
+
+    except ImportError:
+        print("[INSTAGRAM REELS] cloudinary_helper import edilemedi")
+        return {"success": False, "error": "cloudinary_helper not available"}
+    except Exception as e:
+        print(f"[INSTAGRAM REELS] CDN hata: {e}")
+        return {"success": False, "error": f"CDN error: {str(e)}"}
+
+    # 2. Instagram Reels olarak paylaş
+    for attempt in range(max_retries):
+        try:
+            print(f"[INSTAGRAM REELS] Deneme {attempt + 1}/{max_retries}")
+
+            result = await post_video_to_instagram(
+                video_url=video_url,
+                caption=caption,
+                as_reels=True
+            )
+
+            if result.get("success"):
+                result["cdn_url"] = video_url
+                result["platform"] = "instagram_reels"
+                print(f"[INSTAGRAM REELS] Başarıyla yayınlandı! ID: {result.get('id')}")
+                return result
+
+            # Hata varsa ve retry kaldıysa tekrar dene
+            error = result.get("error", "Unknown error")
+            print(f"[INSTAGRAM REELS] Hata: {error}")
+
+            if attempt < max_retries - 1:
+                print(f"[INSTAGRAM REELS] 15 saniye sonra tekrar deneniyor...")
+                await asyncio.sleep(15)
+
+        except Exception as e:
+            print(f"[INSTAGRAM REELS] Exception: {e}")
+            if attempt < max_retries - 1:
+                await asyncio.sleep(10)
+
+    return {"success": False, "error": "Max retries exceeded", "cdn_url": video_url}
 
 
 # Test fonksiyonu

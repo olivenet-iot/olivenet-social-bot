@@ -120,6 +120,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("🚀 Günlük İçerik (Onaylı)", callback_data="start_daily")],
         [InlineKeyboardButton("🤖 Otonom İçerik (Otomatik)", callback_data="start_autonomous")],
+        [InlineKeyboardButton("🎬 Reels Oluştur", callback_data="create_reels")],
         [InlineKeyboardButton("📅 Haftalık Plan", callback_data="weekly_plan")],
         [InlineKeyboardButton("📊 Strateji Göster", callback_data="show_strategy")],
         [InlineKeyboardButton("📈 Analytics Raporu", callback_data="analytics_report")],
@@ -130,9 +131,10 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(
         "🤖 *Olivenet AI Content System*\n\n"
-        "Iki mod desteklenir:\n"
+        "Modlar:\n"
         "• *Onayali:* Her asamada onay bekler\n"
-        "• *Otonom:* Tam otomatik (min 7/10 puan)\n\n"
+        "• *Otonom:* Tam otomatik (min 7/10 puan)\n"
+        "• *Reels:* Instagram Reels video icerigi\n\n"
         "Ne yapmak istersiniz?",
         parse_mode="Markdown",
         reply_markup=reply_markup
@@ -188,6 +190,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = [
             [InlineKeyboardButton("🚀 Günlük İçerik (Onaylı)", callback_data="start_daily")],
             [InlineKeyboardButton("🤖 Otonom İçerik (Otomatik)", callback_data="start_autonomous")],
+            [InlineKeyboardButton("🎬 Reels Oluştur", callback_data="create_reels")],
             [InlineKeyboardButton("📅 Haftalık Plan", callback_data="weekly_plan")],
             [InlineKeyboardButton("📊 Strateji Göster", callback_data="show_strategy")],
             [InlineKeyboardButton("📈 Analytics Raporu", callback_data="analytics_report")]
@@ -217,6 +220,22 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         # Otonom pipeline'ı arka planda çalıştır
         asyncio.create_task(pipeline.run_autonomous_content(min_score=7))
+
+    # ===== REELS OLUŞTUR =====
+    elif action == "create_reels":
+        await query.edit_message_text(
+            "🎬 *REELS MOD* baslatiliyor...\n\n"
+            "Video icerigi olusturulacak:\n"
+            "• Konu secimi (AI)\n"
+            "• Caption uretimi (IG+FB)\n"
+            "• Video prompt (Sora/Veo format)\n"
+            "• Video uretimi (Sora 2 → Veo 3 fallback)\n"
+            "• Instagram Reels + Facebook Video\n\n"
+            "Bu islem 5-10 dakika surebilir..."
+        )
+
+        # Reels pipeline'ı arka planda çalıştır
+        asyncio.create_task(pipeline.run_reels_content())
 
     # ===== HAFTALIK PLAN =====
     elif action == "weekly_plan":
