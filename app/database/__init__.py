@@ -11,7 +11,13 @@ from .crud import (
     # Calendar
     create_calendar_entry, get_week_calendar, get_todays_calendar, update_calendar_status,
     # Logs
-    log_agent_action, get_agent_logs
+    log_agent_action, get_agent_logs,
+    # Hook Performance
+    update_hook_performance, get_best_performing_hooks,
+    get_hook_performance_by_type, get_hook_recommendations,
+    # A/B Testing
+    log_ab_test_result, update_ab_test_actual_performance,
+    get_ab_test_results, get_ab_test_learnings
 )
 
 # Database'i initialize et

@@ -1,20 +1,155 @@
 """
 Analytics Agent - Performans takip
-Metrikleri toplar ve analiz eder
+Metrikleri toplar, viral score hesaplar ve strateji önerileri sunar
+
+Viral Score Formula:
+- Save Rate x 2 (saves / reach)
+- Share Rate x 3 (shares / reach)
+- Engagement Rate x 1
+- Non-follower Reach Bonus x 1.5
+
+Higher viral score = More likely to go viral
 """
 
 import json
 from datetime import datetime, timedelta
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional, Tuple
 from .base_agent import BaseAgent
 from app.database import (
     get_published_posts, get_analytics_summary,
-    record_analytics, log_agent_action, update_post_analytics
+    record_analytics, log_agent_action, update_post_analytics,
+    get_connection
 )
 from app.insights_helper import get_post_insights, get_instagram_insights, get_instagram_media_insights
 
+
+def calculate_viral_score(
+    reach: int,
+    saves: int,
+    shares: int,
+    engagement_rate: float,
+    non_follower_reach: int = 0
+) -> Tuple[float, Dict[str, float]]:
+    """
+    Viral score hesapla.
+
+    Formula:
+    - Save Rate (saves/reach) x 2
+    - Share Rate (shares/reach) x 3
+    - Engagement Rate x 1
+    - Non-follower Reach % x 1.5 (bonus)
+
+    Returns:
+        Tuple of (viral_score, breakdown_dict)
+    """
+    if reach <= 0:
+        return 0.0, {"save_rate": 0, "share_rate": 0, "engagement": 0, "non_follower_bonus": 0}
+
+    save_rate = (saves / reach) * 100
+    share_rate = (shares / reach) * 100
+    non_follower_pct = (non_follower_reach / reach) * 100 if non_follower_reach > 0 else 0
+
+    breakdown = {
+        "save_rate": round(save_rate, 2),
+        "share_rate": round(share_rate, 2),
+        "engagement": round(engagement_rate, 2),
+        "non_follower_pct": round(non_follower_pct, 2),
+        "non_follower_bonus": round(non_follower_pct * 0.015, 2)  # 1.5% weight
+    }
+
+    viral_score = (
+        save_rate * 2 +
+        share_rate * 3 +
+        engagement_rate * 1 +
+        non_follower_pct * 0.015
+    )
+
+    return round(viral_score, 2), breakdown
+
+
+def get_viral_content_analysis(days: int = 30, min_viral_score: float = 10.0) -> Dict[str, Any]:
+    """
+    Viral potansiyeli yüksek içerikleri analiz et.
+
+    Returns:
+        Dict with viral posts, patterns, and recommendations
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        SELECT
+            id, topic, visual_type,
+            ig_reach, ig_likes, ig_comments, ig_saves, ig_shares,
+            ig_engagement_rate, ig_reach_non_followers,
+            published_at
+        FROM posts
+        WHERE status = 'published'
+          AND published_at > datetime('now', ? || ' days')
+          AND ig_reach > 0
+        ORDER BY ig_engagement_rate DESC
+    ''', (f'-{days}',))
+
+    viral_posts = []
+    all_scores = []
+
+    for row in cursor.fetchall():
+        score, breakdown = calculate_viral_score(
+            reach=row['ig_reach'],
+            saves=row['ig_saves'] or 0,
+            shares=row['ig_shares'] or 0,
+            engagement_rate=row['ig_engagement_rate'] or 0,
+            non_follower_reach=row['ig_reach_non_followers'] or 0
+        )
+
+        post_data = {
+            'id': row['id'],
+            'topic': row['topic'],
+            'visual_type': row['visual_type'],
+            'viral_score': score,
+            'breakdown': breakdown,
+            'reach': row['ig_reach'],
+            'published_at': row['published_at']
+        }
+
+        all_scores.append(score)
+
+        if score >= min_viral_score:
+            viral_posts.append(post_data)
+
+    conn.close()
+
+    # Patterns analizi
+    visual_type_scores = {}
+    for post in viral_posts:
+        vtype = post['visual_type'] or 'unknown'
+        if vtype not in visual_type_scores:
+            visual_type_scores[vtype] = []
+        visual_type_scores[vtype].append(post['viral_score'])
+
+    best_visual_type = None
+    best_avg_score = 0
+    for vtype, scores in visual_type_scores.items():
+        avg = sum(scores) / len(scores) if scores else 0
+        if avg > best_avg_score:
+            best_avg_score = avg
+            best_visual_type = vtype
+
+    return {
+        'total_analyzed': len(all_scores),
+        'viral_posts_count': len(viral_posts),
+        'viral_posts': viral_posts[:10],  # Top 10
+        'avg_viral_score': round(sum(all_scores) / len(all_scores), 2) if all_scores else 0,
+        'max_viral_score': max(all_scores) if all_scores else 0,
+        'best_visual_type': best_visual_type,
+        'patterns': {
+            'visual_type_scores': {k: round(sum(v)/len(v), 2) for k, v in visual_type_scores.items() if v}
+        }
+    }
+
+
 class AnalyticsAgent(BaseAgent):
-    """Performans takip - metrikleri analiz eder"""
+    """Performans takip - metrikleri analiz eder ve viral potansiyeli ölçer"""
 
     def __init__(self):
         super().__init__("analytics")
@@ -31,8 +166,116 @@ class AnalyticsAgent(BaseAgent):
             return await self.analyze_performance()
         elif action == "fetch_metrics":
             return await self.fetch_metrics(input_data)
+        elif action == "viral_analysis":
+            return await self.analyze_viral_potential(input_data)
+        elif action == "calculate_viral_score":
+            return await self.get_post_viral_score(input_data)
         else:
             return {"error": f"Unknown action: {action}"}
+
+    async def analyze_viral_potential(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Viral potansiyel analizi yap"""
+        self.log("Viral potansiyel analizi yapılıyor...")
+
+        days = input_data.get("days", 30)
+        min_score = input_data.get("min_viral_score", 10.0)
+
+        analysis = get_viral_content_analysis(days=days, min_viral_score=min_score)
+
+        # AI ile pattern analizi
+        if analysis['viral_posts']:
+            prompt = f"""
+## GÖREV: Viral İçerik Pattern Analizi
+
+### Viral Postlar (score > {min_score})
+{json.dumps(analysis['viral_posts'][:5], ensure_ascii=False, indent=2)}
+
+### İstatistikler
+- Toplam analiz edilen: {analysis['total_analyzed']}
+- Viral post sayısı: {analysis['viral_posts_count']}
+- Ortalama viral score: {analysis['avg_viral_score']}
+- En iyi visual type: {analysis['best_visual_type']}
+
+---
+
+Bu verileri analiz et ve viral içerik patternleri çıkar.
+
+ÇIKTI FORMATI (JSON):
+```json
+{{
+  "patterns": [
+    "Pattern 1: Açıklama",
+    "Pattern 2: Açıklama"
+  ],
+  "recommendations": [
+    "Viral içerik için öneri 1",
+    "Viral içerik için öneri 2"
+  ],
+  "best_topics": ["Konu 1", "Konu 2"],
+  "optimal_visual_type": "reels|flux|carousel",
+  "hook_recommendations": [
+    "Hook tipi önerisi 1",
+    "Hook tipi önerisi 2"
+  ]
+}}
+```
+
+Sadece JSON döndür.
+"""
+            response = await self.call_claude(prompt, timeout=60)
+            try:
+                ai_analysis = json.loads(self._clean_json_response(response))
+                analysis['ai_insights'] = ai_analysis
+            except json.JSONDecodeError:
+                analysis['ai_insights'] = {"error": "AI analizi başarısız"}
+
+        log_agent_action(
+            agent_name=self.name,
+            action="viral_analysis",
+            input_data={"days": days, "min_score": min_score},
+            output_data={"viral_count": analysis['viral_posts_count']},
+            success=True
+        )
+
+        self.log(f"Viral analiz tamamlandı: {analysis['viral_posts_count']} viral post bulundu")
+        return analysis
+
+    async def get_post_viral_score(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Tek bir post için viral score hesapla"""
+        post_id = input_data.get("post_id")
+
+        if not post_id:
+            return {"error": "post_id gerekli"}
+
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute('''
+            SELECT ig_reach, ig_saves, ig_shares, ig_engagement_rate, ig_reach_non_followers
+            FROM posts WHERE id = ?
+        ''', (post_id,))
+
+        row = cursor.fetchone()
+        conn.close()
+
+        if not row:
+            return {"error": f"Post {post_id} bulunamadı"}
+
+        score, breakdown = calculate_viral_score(
+            reach=row['ig_reach'] or 0,
+            saves=row['ig_saves'] or 0,
+            shares=row['ig_shares'] or 0,
+            engagement_rate=row['ig_engagement_rate'] or 0,
+            non_follower_reach=row['ig_reach_non_followers'] or 0
+        )
+
+        return {
+            "post_id": post_id,
+            "viral_score": score,
+            "breakdown": breakdown,
+            "is_viral": score >= 10.0,
+            "potential": "high" if score >= 15 else "medium" if score >= 8 else "low"
+        }
 
     async def generate_daily_report(self) -> Dict[str, Any]:
         """Günlük performans raporu"""

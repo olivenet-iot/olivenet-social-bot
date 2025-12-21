@@ -1,22 +1,110 @@
 """
 Planner Agent - İçerik planlayıcı
 Konu seçimi, zamanlama ve içerik mix'i yönetir
+
+Performance-aware topic selection:
+- En iyi performans gösteren konuları önceliklendirir
+- Hook type performance tracking
+- Trend context entegrasyonu
 """
 
 import json
 from datetime import datetime, timedelta
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from .base_agent import BaseAgent
 from app.database import (
     get_current_strategy, get_published_posts,
-    log_agent_action
+    log_agent_action, get_connection
 )
+
+
+def get_top_performing_topics(limit: int = 10) -> List[Dict[str, Any]]:
+    """
+    Son 90 günün en iyi performans gösteren konularını getir.
+    Engagement rate, save rate ve share rate'e göre sıralar.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        SELECT
+            topic,
+            visual_type,
+            ig_reach,
+            ig_likes,
+            ig_comments,
+            ig_saves,
+            ig_shares,
+            ig_engagement_rate,
+            ig_reach_non_followers,
+            published_at
+        FROM posts
+        WHERE status = 'published'
+          AND published_at > datetime('now', '-90 days')
+          AND ig_reach > 0
+        ORDER BY ig_engagement_rate DESC
+        LIMIT ?
+    ''', (limit,))
+
+    results = []
+    for row in cursor.fetchall():
+        # Calculate viral score: saves + shares weighted higher
+        save_rate = (row['ig_saves'] / row['ig_reach'] * 100) if row['ig_reach'] else 0
+        share_rate = (row['ig_shares'] / row['ig_reach'] * 100) if row['ig_reach'] else 0
+        non_follower_rate = (row['ig_reach_non_followers'] / row['ig_reach'] * 100) if row['ig_reach'] else 0
+
+        results.append({
+            'topic': row['topic'],
+            'visual_type': row['visual_type'],
+            'engagement_rate': row['ig_engagement_rate'],
+            'save_rate': round(save_rate, 2),
+            'share_rate': round(share_rate, 2),
+            'non_follower_reach_pct': round(non_follower_rate, 2),
+            'reach': row['ig_reach'],
+            'viral_score': round(save_rate * 2 + share_rate * 3 + row['ig_engagement_rate'], 2)
+        })
+
+    conn.close()
+    return results
+
+
+def get_underperforming_topics(limit: int = 5) -> List[str]:
+    """Son 90 günde düşük performans gösteren konuları getir."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        SELECT topic
+        FROM posts
+        WHERE status = 'published'
+          AND published_at > datetime('now', '-90 days')
+          AND ig_engagement_rate < 3
+          AND ig_reach > 0
+        ORDER BY ig_engagement_rate ASC
+        LIMIT ?
+    ''', (limit,))
+
+    results = [row['topic'] for row in cursor.fetchall()]
+    conn.close()
+    return results
+
+
+def get_hook_performance_summary() -> Dict[str, Any]:
+    """Hook type'ların performansını özetle."""
+    # Bu Phase 2.4'te database'e hook_type eklenince aktif olacak
+    return {
+        "best_performing": "question",
+        "avoid": "generic",
+        "note": "Hook tracking Phase 2.4'te aktif olacak"
+    }
+
 
 class PlannerAgent(BaseAgent):
     """İçerik planlayıcı - konu ve zamanlama belirler"""
 
     def __init__(self):
         super().__init__("planner")
+        self.performance_context_enabled = True
 
     async def execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Ana yürütme metodu"""
@@ -31,8 +119,54 @@ class PlannerAgent(BaseAgent):
         else:
             return {"error": f"Unknown action: {action}"}
 
+    def _get_performance_context(self) -> str:
+        """Performance data'yı prompt context'i olarak formatla"""
+        if not self.performance_context_enabled:
+            return ""
+
+        try:
+            top_topics = get_top_performing_topics(limit=10)
+            underperforming = get_underperforming_topics(limit=5)
+            hook_summary = get_hook_performance_summary()
+
+            if not top_topics:
+                return "\n### Performance Data\nHenüz yeterli veri yok.\n"
+
+            context = "\n### PERFORMANCE DATA (BUNU DİKKATE AL!)\n\n"
+            context += "**En İyi Performans Gösteren Konular (son 90 gün):**\n"
+
+            for i, topic in enumerate(top_topics[:5], 1):
+                context += f"{i}. **{topic['topic']}**\n"
+                context += f"   - Engagement: {topic['engagement_rate']}%\n"
+                context += f"   - Save Rate: {topic['save_rate']}%\n"
+                context += f"   - Non-follower reach: {topic['non_follower_reach_pct']}%\n"
+                context += f"   - Viral Score: {topic['viral_score']}\n"
+
+            if underperforming:
+                context += "\n**Kaçınılması Gereken Konular (düşük performans):**\n"
+                for topic in underperforming:
+                    context += f"- {topic}\n"
+
+            context += f"\n**Hook Önerisi:** {hook_summary.get('best_performing', 'question')} tipi hook'lar daha iyi performans gösteriyor.\n"
+
+            return context
+
+        except Exception as e:
+            self.log(f"Performance context hatası: {e}", level="warning")
+            return ""
+
+    def _get_trend_context(self) -> str:
+        """Weekly trends context'ini yükle"""
+        try:
+            trends = self.load_context("weekly-trends.md")
+            if trends:
+                return f"\n### GÜNCEL TRENDLER\n{trends[:2000]}\n"
+            return ""
+        except Exception:
+            return ""
+
     async def suggest_topic(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Tek bir konu öner"""
+        """Tek bir konu öner - Performance-aware"""
         self.log("Konu önerisi oluşturuluyor...")
 
         # Parametreler
@@ -44,6 +178,10 @@ class PlannerAgent(BaseAgent):
         content_strategy = self.load_context("content-strategy.md")
         topics_pool = self.load_context("topics.md")
         strategy = get_current_strategy()
+
+        # Performance ve trend context
+        performance_context = self._get_performance_context()
+        trend_context = self._get_trend_context()
 
         # Son postları al (tekrar önleme)
         recent_posts = get_published_posts(days=14)
@@ -66,6 +204,8 @@ class PlannerAgent(BaseAgent):
 
 ### İçerik Stratejisi
 {content_strategy}
+{performance_context}
+{trend_context}
 
 ### Mevcut Strateji
 - İçerik mix: {strategy.get('content_mix', {})}
@@ -88,10 +228,11 @@ class PlannerAgent(BaseAgent):
 
 Yukarıdaki bilgilere dayanarak bugün için EN UYGUN tek bir konu öner.
 
-Mevsimselliği düşün:
-- Kış: Enerji tasarrufu, ısıtma maliyetleri
-- Yaz: Serinletme, sulama sistemleri
-- Genel: IoT faydaları, teknoloji trendleri
+**ÖNCELİKLER:**
+1. Performance data'daki başarılı konulara benzer konuları tercih et
+2. Trend context'teki güncel konuları değerlendir
+3. Düşük performanslı konulardan kaçın
+4. Mevsimselliği düşün (Kış: Enerji, Yaz: Su/Sulama)
 
 ÇIKTI FORMATI (JSON):
 ```json
@@ -99,8 +240,9 @@ Mevsimselliği düşün:
   "topic": "Konu başlığı (Türkçe)",
   "category": "egitici|tanitim|ipucu|haber|basari_hikayesi",
   "description": "Kısa açıklama",
-  "reasoning": "Neden bu konu ve neden bugün?",
+  "reasoning": "Neden bu konu ve neden bugün? (performance data referansı ver)",
   "suggested_visual": "flux|infographic|gemini|video",
+  "suggested_hook_type": "question|statistic|bold_claim|problem|value|fear|before_after|list|comparison|local",
   "suggested_hooks": [
     "Hook önerisi 1",
     "Hook önerisi 2",
@@ -108,7 +250,9 @@ Mevsimselliği düşün:
   ],
   "hashtags": ["#hashtag1", "#hashtag2"],
   "best_time": "HH:MM",
-  "urgency": "high|medium|low"
+  "urgency": "high|medium|low",
+  "expected_engagement": "low|medium|high",
+  "performance_based": true
 }}
 ```
 

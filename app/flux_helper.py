@@ -8,13 +8,15 @@ import aiohttp
 import os
 from datetime import datetime
 from typing import Optional, Dict, Any
-from dotenv import load_dotenv
 
-# .env dosyasını yükle
-load_dotenv('/opt/olivenet-social-bot/.env')
+from app.config import settings
+from app.utils.logger import get_logger
+
+logger = get_logger("flux")
 
 # API Base URL
 BFL_API_BASE = "https://api.bfl.ai/v1"
+FLUX_API_KEY = settings.flux_api_key or os.getenv("FLUX_API_KEY")
 
 
 async def generate_image_flux(

@@ -32,8 +32,155 @@ class CreatorAgent(BaseAgent):
             return await self.create_carousel_content(input_data)
         elif action == "revise_post":
             return await self.revise_post(input_data)
+        elif action == "create_ab_variants":
+            return await self.create_ab_variants(input_data)
         else:
             return {"error": f"Unknown action: {action}"}
+
+    async def create_ab_variants(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        A/B Testing: Aynı konu için 2 farklı variant oluştur.
+
+        Her variant farklı:
+        - Hook tipi
+        - Ton
+        - CTA yaklaşımı
+
+        Reviewer agent bu iki variant'ı karşılaştırmalı skorlayacak.
+        """
+        self.log("A/B test variantları oluşturuluyor...")
+
+        topic = input_data.get("topic", "")
+        category = input_data.get("category", "egitici")
+        visual_type = input_data.get("visual_type", "flux")
+        platform = input_data.get("platform", "instagram")  # instagram veya facebook
+
+        company_profile = self.load_context("company-profile.md")
+        content_strategy = self.load_context("content-strategy.md")
+
+        # 10 hook type'dan 2 farklı seç
+        hook_types = [
+            ("statistic", "İstatistik/rakam ile başla"),
+            ("question", "Merak uyandıran soru ile başla"),
+            ("bold_claim", "Cesur/tartışmalı bir iddia ile başla"),
+            ("problem", "Problem/acı noktası ile başla"),
+            ("value", "Somut fayda/değer ile başla"),
+            ("fear", "Korku/FOMO unsuru ile başla"),
+            ("before_after", "Öncesi-sonrası karşılaştırması ile başla"),
+            ("list", "Sayısal liste ile başla (3 yol, 5 ipucu gibi)"),
+            ("comparison", "Karşılaştırma ile başla (A vs B)"),
+            ("local", "KKTC/yerel referans ile başla")
+        ]
+
+        # Rastgele 2 farklı hook type seç
+        import random
+        selected_hooks = random.sample(hook_types, 2)
+
+        max_words = 120 if platform == "instagram" else 300
+
+        prompt = f"""
+## GÖREV: A/B Test İçin 2 Variant Oluştur
+
+### Şirket Profili
+{company_profile[:1500]}
+
+### İçerik Stratejisi Özeti
+{content_strategy[:1500]}
+
+### Konu
+- Konu: {topic}
+- Kategori: {category}
+- Platform: {platform}
+- Max kelime: {max_words}
+
+---
+
+## A/B TEST KURALLARI:
+
+**VARIANT A:**
+- Hook tipi: {selected_hooks[0][0]} - {selected_hooks[0][1]}
+- Ton: Profesyonel, bilgilendirici
+- CTA: Yumuşak (soru sorma formatı)
+
+**VARIANT B:**
+- Hook tipi: {selected_hooks[1][0]} - {selected_hooks[1][1]}
+- Ton: Samimi, konuşma dili
+- CTA: Doğrudan (DM at, bio linki)
+
+Her iki variant da:
+1. Aynı ana mesajı iletmeli
+2. Marka değerlerine uygun olmalı
+3. Platform kurallarına uymalı (Instagram: max {max_words} kelime)
+4. Emoji kullanımı dengeli (3-5)
+5. Hashtag'ler aynı olabilir
+
+ÇIKTI FORMATI (JSON):
+```json
+{{
+  "variant_a": {{
+    "post_text": "Variant A metni...",
+    "hook_type": "{selected_hooks[0][0]}",
+    "hook_text": "İlk cümle",
+    "tone": "professional",
+    "cta_type": "soft",
+    "word_count": 95,
+    "emoji_count": 4,
+    "key_differentiator": "Bu variant neden farklı?"
+  }},
+  "variant_b": {{
+    "post_text": "Variant B metni...",
+    "hook_type": "{selected_hooks[1][0]}",
+    "hook_text": "İlk cümle",
+    "tone": "friendly",
+    "cta_type": "direct",
+    "word_count": 88,
+    "emoji_count": 5,
+    "key_differentiator": "Bu variant neden farklı?"
+  }},
+  "shared": {{
+    "topic": "{topic}",
+    "hashtags": ["#Olivenet", "#KKTC", "#IoT", "..."],
+    "core_message": "Her iki variant'ın ortak ana mesajı"
+  }},
+  "ab_test_hypothesis": "Bu A/B testle neyi öğrenmeyi hedefliyoruz?"
+}}
+```
+
+Sadece JSON döndür.
+"""
+
+        response = await self.call_claude(prompt, timeout=120)
+
+        try:
+            result = json.loads(self._clean_json_response(response))
+
+            # Metadata ekle
+            result["metadata"] = {
+                "created_at": datetime.now().isoformat(),
+                "platform": platform,
+                "visual_type": visual_type,
+                "selected_hook_types": [h[0] for h in selected_hooks]
+            }
+
+            log_agent_action(
+                agent_name=self.name,
+                action="create_ab_variants",
+                input_data={"topic": topic, "platform": platform},
+                output_data={"variants_created": 2, "hook_types": [h[0] for h in selected_hooks]},
+                success=True
+            )
+
+            self.log(f"A/B variantları oluşturuldu: {selected_hooks[0][0]} vs {selected_hooks[1][0]}")
+            return result
+
+        except json.JSONDecodeError:
+            log_agent_action(
+                agent_name=self.name,
+                action="create_ab_variants",
+                success=False,
+                error_message="JSON parse error"
+            )
+            return {"error": "JSON parse error", "raw_response": response}
 
     async def create_post(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Post metni oluştur"""

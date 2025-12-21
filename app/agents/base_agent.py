@@ -8,14 +8,20 @@ import re
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional
 from pathlib import Path
+from datetime import datetime
+
+from app.config import settings
+from app.utils.logger import AgentLoggerAdapter, PerformanceTimer
+
 
 class BaseAgent(ABC):
     """Tüm agent'lar için temel sınıf"""
 
     def __init__(self, name: str):
         self.name = name
-        self.persona_path = Path(f"/opt/olivenet-social-bot/context/agent-personas/{name}.md")
-        self.context_dir = Path("/opt/olivenet-social-bot/context")
+        self.persona_path = settings.get_persona_file(name)
+        self.context_dir = settings.context_dir
+        self.logger = AgentLoggerAdapter(name)
 
     def load_persona(self) -> str:
         """Agent persona'sını yükle"""
@@ -154,6 +160,17 @@ class BaseAgent(ABC):
         """Agent'ın ana görevi - her agent implement etmeli"""
         pass
 
-    def log(self, message: str):
-        """Basit loglama"""
-        print(f"[{self.name.upper()}] {message}")
+    def log(self, message: str, level: str = "info"):
+        """Structured logging"""
+        if level == "debug":
+            self.logger.debug(message)
+        elif level == "warning":
+            self.logger.warning(message)
+        elif level == "error":
+            self.logger.error(message)
+        else:
+            self.logger.info(message)
+
+    def log_action(self, action: str, message: str, **kwargs):
+        """Log an agent action with structured data"""
+        self.logger.log_action(action, message, **kwargs)

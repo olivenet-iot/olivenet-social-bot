@@ -8,16 +8,15 @@ import httpx
 import asyncio
 from datetime import datetime
 from typing import Dict, Any
-from dotenv import load_dotenv
-import logging
 
-logger = logging.getLogger(__name__)
+from app.config import settings
+from app.utils.logger import get_logger
 
-load_dotenv('/opt/olivenet-social-bot/.env')
+logger = get_logger("sora")
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_API_KEY = settings.openai_api_key or os.getenv("OPENAI_API_KEY")
 OPENAI_API_URL = "https://api.openai.com/v1"
-OUTPUT_DIR = "/opt/olivenet-social-bot/outputs"
+OUTPUT_DIR = str(settings.outputs_dir)
 
 
 async def generate_video_sora(

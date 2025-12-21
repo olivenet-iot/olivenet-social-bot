@@ -1236,3 +1236,343 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             )
 
             return result
+
+    async def run_ab_content(self, topic: str = None, enable_ab: bool = True) -> Dict[str, Any]:
+        """
+        A/B Testing Pipeline - İki caption varyantı üret, karşılaştır, kazananı yayınla.
+
+        Akış:
+        1. Konu seçimi
+        2. A/B Variant üretimi (Creator.create_ab_variants)
+        3. Karşılaştırmalı değerlendirme (Reviewer.compare_ab_variants)
+        4. Kazanan variant ile görsel üretimi
+        5. Yayınlama
+        6. A/B sonuç loglama
+
+        Args:
+            topic: Konu (None ise Planner'dan al)
+            enable_ab: False ise normal flow (A/B atlama)
+
+        Returns:
+            Pipeline sonucu
+        """
+        self.log("A/B TEST MOD: Pipeline başlatılıyor...")
+        self.state = PipelineState.PLANNING
+
+        result = {
+            "success": False,
+            "stages_completed": [],
+            "ab_test": enable_ab,
+            "final_state": None
+        }
+
+        try:
+            # ========== AŞAMA 1: Konu Seçimi ==========
+            if topic:
+                topic_data = {
+                    "topic": topic,
+                    "category": "egitici",
+                    "suggested_visual": "flux"
+                }
+                self.log(f"[A/B] Konu verildi: {topic[:50]}...")
+            else:
+                self.log("[A/B] Aşama 1: Konu seçiliyor...")
+                topic_result = await self.planner.execute({"action": "suggest_topic"})
+
+                if "error" in topic_result:
+                    raise Exception(f"Planner error: {topic_result['error']}")
+
+                topic_data = topic_result
+                topic = topic_data.get("topic", "IoT ve akıllı tarım")
+
+            self.current_data["topic"] = topic_data
+            result["stages_completed"].append("topic_selection")
+            result["topic"] = topic
+
+            self.log(f"[A/B] Konu: {topic}")
+
+            # ========== AŞAMA 2: A/B Variant Üretimi ==========
+            if enable_ab:
+                self.log("[A/B] Aşama 2: İki variant üretiliyor...")
+                self.state = PipelineState.CREATING_CONTENT
+
+                ab_result = await self.creator.execute({
+                    "action": "create_ab_variants",
+                    "topic": topic,
+                    "category": topic_data.get("category", "egitici"),
+                    "visual_type": topic_data.get("suggested_visual", "flux"),
+                    "platform": "instagram"
+                })
+
+                if not ab_result.get("success"):
+                    raise Exception(f"A/B creation error: {ab_result.get('error')}")
+
+                variant_a = ab_result.get("variant_a", {})
+                variant_b = ab_result.get("variant_b", {})
+                post_id = ab_result.get("post_id")
+
+                self.current_data["ab_variants"] = ab_result
+                result["stages_completed"].append("ab_variants_created")
+                result["variant_a_hook"] = variant_a.get("hook_type")
+                result["variant_b_hook"] = variant_b.get("hook_type")
+
+                self.log(f"[A/B] Variant A: {variant_a.get('hook_type')} hook")
+                self.log(f"[A/B] Variant B: {variant_b.get('hook_type')} hook")
+
+                await self.notify_telegram(
+                    message=f"🔬 *A/B TEST* - Variantlar Hazır\n\n"
+                    f"📝 Konu: {topic[:50]}...\n"
+                    f"🅰️ Variant A: {variant_a.get('hook_type')} hook\n"
+                    f"🅱️ Variant B: {variant_b.get('hook_type')} hook",
+                    data=ab_result,
+                    buttons=[]
+                )
+
+                # ========== AŞAMA 3: Karşılaştırmalı Değerlendirme ==========
+                self.log("[A/B] Aşama 3: Variantlar karşılaştırılıyor...")
+                self.state = PipelineState.REVIEWING
+
+                comparison_result = await self.reviewer.execute({
+                    "action": "compare_ab_variants",
+                    "variant_a": variant_a,
+                    "variant_b": variant_b,
+                    "topic": topic,
+                    "platform": "instagram"
+                })
+
+                if "error" in comparison_result:
+                    raise Exception(f"Comparison error: {comparison_result['error']}")
+
+                winner = comparison_result.get("winner", "A")
+                margin = comparison_result.get("margin", 0)
+                confidence = comparison_result.get("confidence", "medium")
+                winning_variant = comparison_result.get("winning_variant", {})
+                reasoning = comparison_result.get("reasoning", "")
+                learning = comparison_result.get("learning", "")
+
+                self.current_data["comparison"] = comparison_result
+                result["stages_completed"].append("ab_comparison")
+                result["ab_winner"] = winner
+                result["ab_margin"] = margin
+                result["ab_confidence"] = confidence
+
+                self.log(f"[A/B] Kazanan: Variant {winner} (fark: {margin}, güven: {confidence})")
+
+                await self.notify_telegram(
+                    message=f"🏆 *A/B TEST* - Kazanan Belirlendi\n\n"
+                    f"🥇 Kazanan: Variant {winner}\n"
+                    f"📊 Fark: {margin}\n"
+                    f"🎯 Güven: {confidence}\n\n"
+                    f"💡 Öğrenim: {learning[:100]}...",
+                    data=comparison_result,
+                    buttons=[]
+                )
+
+                # Kazanan variant'ı kullan
+                post_text = winning_variant.get("post_text", "")
+                hook_type = winning_variant.get("hook_type", "")
+                tone = winning_variant.get("tone", "")
+
+                # A/B sonucu kaydet
+                from app.database import log_ab_test_result, update_post
+
+                variant_a_score = comparison_result.get("variant_a_scores", {}).get("total", 0)
+                variant_b_score = comparison_result.get("variant_b_scores", {}).get("total", 0)
+
+                ab_test_id = log_ab_test_result(
+                    topic=topic,
+                    platform="instagram",
+                    variant_a={
+                        "hook_type": variant_a.get("hook_type"),
+                        "tone": variant_a.get("tone"),
+                        "score": variant_a_score,
+                        "text": variant_a.get("post_text", "")[:500]
+                    },
+                    variant_b={
+                        "hook_type": variant_b.get("hook_type"),
+                        "tone": variant_b.get("tone"),
+                        "score": variant_b_score,
+                        "text": variant_b.get("post_text", "")[:500]
+                    },
+                    winner=winner,
+                    margin=margin,
+                    confidence=confidence,
+                    reasoning=reasoning,
+                    learning=learning,
+                    post_id=post_id
+                )
+
+                result["ab_test_id"] = ab_test_id
+                result["stages_completed"].append("ab_logged")
+
+                # Post'u güncelle
+                if post_id:
+                    update_post(
+                        post_id,
+                        post_text=post_text,
+                        hook_type=hook_type,
+                        tone=tone,
+                        ab_test_id=ab_test_id,
+                        is_ab_winner=True
+                    )
+
+            else:
+                # Normal içerik üretimi (A/B yok)
+                self.log("[A/B] A/B devre dışı, normal içerik üretiliyor...")
+                self.state = PipelineState.CREATING_CONTENT
+
+                content_result = await self.creator.execute({
+                    "action": "create_post_multiplatform",
+                    "topic": topic,
+                    "category": topic_data.get("category", "egitici"),
+                    "visual_type": topic_data.get("suggested_visual", "flux")
+                })
+
+                if "error" in content_result:
+                    raise Exception(f"Creator error: {content_result['error']}")
+
+                post_text = content_result.get("post_text_ig", content_result.get("post_text", ""))
+                post_id = content_result.get("post_id")
+                hook_type = None
+                tone = None
+
+                result["stages_completed"].append("content_created")
+
+            result["post_id"] = post_id
+
+            # ========== AŞAMA 4: Görsel Üretimi ==========
+            self.log("[A/B] Aşama 4: Görsel üretiliyor...")
+            self.state = PipelineState.CREATING_VISUAL
+
+            visual_type = topic_data.get("suggested_visual", "flux")
+
+            visual_prompt_result = await self.creator.execute({
+                "action": "create_visual_prompt",
+                "post_text": post_text,
+                "topic": topic,
+                "visual_type": visual_type,
+                "post_id": post_id
+            })
+
+            if "error" in visual_prompt_result:
+                raise Exception(f"Visual prompt error: {visual_prompt_result['error']}")
+
+            result["stages_completed"].append("visual_prompt")
+
+            # Görsel üret
+            image_path = None
+            video_path = None
+
+            if visual_type == "flux":
+                from app.flux_helper import generate_image_flux
+                visual_result = await generate_image_flux(
+                    prompt=visual_prompt_result.get("visual_prompt"),
+                    width=1024,
+                    height=1024
+                )
+                if visual_result.get("success"):
+                    image_path = visual_result.get("image_path")
+
+            elif visual_type == "video":
+                from app.veo_helper import generate_video_with_retry
+                visual_result = await generate_video_with_retry(
+                    prompt=visual_prompt_result.get("visual_prompt")
+                )
+                if visual_result.get("success"):
+                    video_path = visual_result.get("video_path")
+
+            if not image_path and not video_path:
+                raise Exception("Görsel üretilemedi")
+
+            result["stages_completed"].append("visual_created")
+            self.log(f"[A/B] Görsel hazır: {image_path or video_path}")
+
+            # ========== AŞAMA 5: Final Review (opsiyonel) ==========
+            if enable_ab:
+                # A/B'de zaten review yapıldı, winning score'u kullan
+                score = comparison_result.get(f"variant_{winner.lower()}_scores", {}).get("total", 7)
+            else:
+                # Normal review
+                self.log("[A/B] Aşama 5: Kalite kontrol...")
+                review_result = await self.reviewer.execute({
+                    "action": "review_post",
+                    "post_text": post_text,
+                    "topic": topic,
+                    "post_id": post_id
+                })
+                score = review_result.get("total_score", 0)
+
+            result["review_score"] = score
+            result["stages_completed"].append("review")
+            self.log(f"[A/B] Final score: {score}/10")
+
+            if score < 6:
+                self.log("[A/B] Puan çok düşük, yayınlanmıyor")
+                result["error"] = f"Review puanı düşük: {score}/10"
+                return result
+
+            # ========== AŞAMA 6: Yayınla ==========
+            self.log("[A/B] Aşama 6: Yayınlanıyor...")
+            self.state = PipelineState.PUBLISHING
+
+            publish_result = await self.publisher.execute({
+                "action": "publish",
+                "post_id": post_id,
+                "post_text": post_text,
+                "post_text_ig": post_text,
+                "image_path": image_path,
+                "video_path": video_path,
+                "platform": "both"
+            })
+
+            if publish_result.get("success"):
+                result["stages_completed"].append("published")
+                result["success"] = True
+                result["facebook_post_id"] = publish_result.get("facebook_post_id")
+                result["instagram_post_id"] = publish_result.get("instagram_post_id")
+
+                self.log("[A/B] Başarıyla yayınlandı!")
+
+                # Hook performance güncelle
+                if hook_type:
+                    from app.database import update_hook_performance
+                    update_hook_performance(
+                        hook_type=hook_type,
+                        topic_category=topic_data.get("category", "egitici"),
+                        platform="instagram",
+                        reach=0,  # Sonradan güncellenecek
+                        engagement=0,
+                        engagement_rate=0
+                    )
+
+                await self.notify_telegram(
+                    message=f"🎉 *A/B TEST* - Yayınlandı!\n\n"
+                    f"📝 Konu: {topic[:50]}...\n"
+                    f"🏆 Kazanan: Variant {winner if enable_ab else 'N/A'}\n"
+                    f"🪝 Hook: {hook_type or 'N/A'}\n"
+                    f"⭐ Puan: {score}/10",
+                    data=publish_result,
+                    buttons=[]
+                )
+            else:
+                raise Exception(f"Publish error: {publish_result.get('error')}")
+
+            self.state = PipelineState.COMPLETED
+            result["final_state"] = self.state.value
+
+            self.log("[A/B] Pipeline tamamlandı!")
+            return result
+
+        except Exception as e:
+            self.log(f"[A/B] Pipeline hatası: {str(e)}")
+            self.state = PipelineState.ERROR
+            result["error"] = str(e)
+            result["final_state"] = self.state.value
+
+            await self.notify_telegram(
+                message=f"❌ *A/B TEST* - Hata\n\n{str(e)}",
+                data={"error": str(e)},
+                buttons=[]
+            )
+
+            return result

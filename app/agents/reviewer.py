@@ -25,8 +25,163 @@ class ReviewerAgent(BaseAgent):
             return await self.review_visual(input_data)
         elif action == "final_approval":
             return await self.final_approval(input_data)
+        elif action == "compare_ab_variants":
+            return await self.compare_ab_variants(input_data)
         else:
             return {"error": f"Unknown action: {action}"}
+
+    async def compare_ab_variants(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        A/B Test: İki variant'ı karşılaştırmalı skorla ve kazananı seç.
+
+        Input:
+            variant_a: Dict with post_text, hook_type, etc.
+            variant_b: Dict with post_text, hook_type, etc.
+            topic: str
+            platform: str
+
+        Output:
+            winner: "A" or "B"
+            scores: Detailed scores for both
+            reasoning: Why the winner was chosen
+        """
+        self.log("A/B variantları karşılaştırılıyor...")
+
+        variant_a = input_data.get("variant_a", {})
+        variant_b = input_data.get("variant_b", {})
+        topic = input_data.get("topic", "")
+        platform = input_data.get("platform", "instagram")
+
+        company_profile = self.load_context("company-profile.md")
+        content_strategy = self.load_context("content-strategy.md")
+
+        prompt = f"""
+## GÖREV: A/B Test Karşılaştırması
+
+### Şirket Profili
+{company_profile[:1000]}
+
+### İçerik Stratejisi Özeti
+{content_strategy[:1000]}
+
+### Konu: {topic}
+### Platform: {platform}
+
+---
+
+## VARIANT A
+**Hook Type:** {variant_a.get('hook_type', 'unknown')}
+**Ton:** {variant_a.get('tone', 'unknown')}
+**Metin:**
+{variant_a.get('post_text', 'N/A')}
+
+---
+
+## VARIANT B
+**Hook Type:** {variant_b.get('hook_type', 'unknown')}
+**Ton:** {variant_b.get('tone', 'unknown')}
+**Metin:**
+{variant_b.get('post_text', 'N/A')}
+
+---
+
+## DEĞERLENDİRME KRİTERLERİ (Her kriter 1-10)
+
+1. **Hook Etkisi** - İlk cümle dikkat çekiyor mu?
+2. **Değer Önerisi** - Okuyucuya ne fayda sağlıyor?
+3. **Marka Uyumu** - Olivenet tonu ve kimliğine uyuyor mu?
+4. **Netlik** - Mesaj anlaşılır mı?
+5. **Engagement Potansiyeli** - Etkileşim alır mı? (yorum, save, share)
+6. **Platform Uyumu** - {platform} için uygun mu?
+
+ÇIKTI FORMATI (JSON):
+```json
+{{
+  "variant_a_scores": {{
+    "hook_score": 8,
+    "value_score": 7,
+    "brand_score": 8,
+    "clarity_score": 9,
+    "engagement_potential": 7,
+    "platform_fit": 8,
+    "total": 7.8
+  }},
+  "variant_b_scores": {{
+    "hook_score": 7,
+    "value_score": 8,
+    "brand_score": 7,
+    "clarity_score": 8,
+    "engagement_potential": 9,
+    "platform_fit": 8,
+    "total": 7.8
+  }},
+  "winner": "A",
+  "margin": 0.5,
+  "confidence": "high|medium|low",
+  "reasoning": "Neden bu variant kazandı? Detaylı açıklama...",
+  "variant_a_strengths": ["Güçlü yön 1", "Güçlü yön 2"],
+  "variant_a_weaknesses": ["Zayıf yön 1"],
+  "variant_b_strengths": ["Güçlü yön 1", "Güçlü yön 2"],
+  "variant_b_weaknesses": ["Zayıf yön 1"],
+  "learning": "Bu A/B testten ne öğrendik?",
+  "recommendation": "Gelecek içerikler için öneri"
+}}
+```
+
+Sadece JSON döndür.
+"""
+
+        response = await self.call_claude(prompt, timeout=120)
+
+        try:
+            result = json.loads(self._clean_json_response(response))
+
+            # Winning variant'ın detaylarını ekle
+            winner = result.get("winner", "A")
+            winning_variant = variant_a if winner == "A" else variant_b
+            losing_variant = variant_b if winner == "A" else variant_a
+
+            result["winning_variant"] = {
+                "post_text": winning_variant.get("post_text"),
+                "hook_type": winning_variant.get("hook_type"),
+                "tone": winning_variant.get("tone")
+            }
+
+            result["test_metadata"] = {
+                "topic": topic,
+                "platform": platform,
+                "variant_a_hook": variant_a.get("hook_type"),
+                "variant_b_hook": variant_b.get("hook_type"),
+                "compared_at": datetime.now().isoformat()
+            }
+
+            log_agent_action(
+                agent_name=self.name,
+                action="compare_ab_variants",
+                input_data={
+                    "topic": topic,
+                    "variant_a_hook": variant_a.get("hook_type"),
+                    "variant_b_hook": variant_b.get("hook_type")
+                },
+                output_data={
+                    "winner": winner,
+                    "margin": result.get("margin"),
+                    "confidence": result.get("confidence")
+                },
+                success=True
+            )
+
+            self.log(f"A/B karşılaştırma tamamlandı: Kazanan={winner}, Fark={result.get('margin', 0)}")
+            return result
+
+        except json.JSONDecodeError:
+            log_agent_action(
+                agent_name=self.name,
+                action="compare_ab_variants",
+                success=False,
+                error_message="JSON parse error"
+            )
+            return {"error": "JSON parse error", "raw_response": response}
 
     async def review_post(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Post metnini denetle"""

@@ -8,13 +8,15 @@ import httpx
 import asyncio
 from datetime import datetime, timedelta
 from typing import Dict, Any, List
-from dotenv import load_dotenv
 
-load_dotenv('/opt/olivenet-social-bot/.env')
+from app.config import settings
+from app.utils.logger import get_logger
 
-FACEBOOK_ACCESS_TOKEN = os.getenv("FACEBOOK_ACCESS_TOKEN")
-FACEBOOK_PAGE_ID = os.getenv("FACEBOOK_PAGE_ID")
-INSTAGRAM_ACCOUNT_ID = os.getenv("INSTAGRAM_ACCOUNT_ID")
+logger = get_logger("insights")
+
+FACEBOOK_ACCESS_TOKEN = settings.facebook_access_token or os.getenv("FACEBOOK_ACCESS_TOKEN")
+FACEBOOK_PAGE_ID = settings.facebook_page_id or os.getenv("FACEBOOK_PAGE_ID")
+INSTAGRAM_ACCOUNT_ID = settings.instagram_account_id or os.getenv("INSTAGRAM_ACCOUNT_ID")
 GRAPH_API_URL = "https://graph.facebook.com/v21.0"
 
 

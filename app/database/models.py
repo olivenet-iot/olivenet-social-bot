@@ -8,7 +8,12 @@ from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 from pathlib import Path
 
-DB_PATH = Path("/opt/olivenet-social-bot/data/content.db")
+from app.config import settings
+from app.utils.logger import get_logger
+
+logger = get_logger("database")
+
+DB_PATH = settings.database_path
 
 def get_connection():
     """Database bağlantısı al"""
@@ -137,6 +142,77 @@ def init_database():
         )
     ''')
 
+    # Hook Performance tablosu - Hook type performans takibi
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS hook_performance (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+            -- Hook bilgisi
+            hook_type TEXT NOT NULL,  -- question, statistic, bold_claim, problem, value, fear, before_after, list, comparison, local
+            topic_category TEXT,
+            platform TEXT,  -- instagram, facebook, both
+
+            -- Performance metrikleri (aggregated)
+            usage_count INTEGER DEFAULT 0,
+            total_reach INTEGER DEFAULT 0,
+            total_engagement INTEGER DEFAULT 0,
+            total_saves INTEGER DEFAULT 0,
+            total_shares INTEGER DEFAULT 0,
+            avg_engagement_rate REAL DEFAULT 0,
+            avg_save_rate REAL DEFAULT 0,
+            avg_share_rate REAL DEFAULT 0,
+            avg_non_follower_pct REAL DEFAULT 0,
+
+            -- Viral score
+            viral_score REAL DEFAULT 0,
+
+            -- Son güncelleme
+            last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+            UNIQUE(hook_type, topic_category, platform)
+        )
+    ''')
+
+    # A/B Test Results tablosu - A/B test sonuçları
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS ab_test_results (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+            -- Test bilgisi
+            post_id INTEGER,
+            topic TEXT,
+            platform TEXT,
+
+            -- Variant A
+            variant_a_hook_type TEXT,
+            variant_a_tone TEXT,
+            variant_a_score REAL,
+            variant_a_text TEXT,
+
+            -- Variant B
+            variant_b_hook_type TEXT,
+            variant_b_tone TEXT,
+            variant_b_score REAL,
+            variant_b_text TEXT,
+
+            -- Sonuç
+            winner TEXT,  -- A veya B
+            margin REAL,  -- Skor farkı
+            confidence TEXT,  -- high, medium, low
+            reasoning TEXT,
+            learning TEXT,
+
+            -- Post-publish performance (sonradan güncellenir)
+            actual_engagement_rate REAL,
+            actual_save_rate REAL,
+            prediction_accurate BOOLEAN,
+
+            FOREIGN KEY (post_id) REFERENCES posts(id)
+        )
+    ''')
+
     conn.commit()
 
     # Analytics kolonlarını posts tablosuna ekle (migration)
@@ -160,7 +236,14 @@ def init_database():
         "ALTER TABLE posts ADD COLUMN ig_avg_watch_time REAL DEFAULT 0",
         "ALTER TABLE posts ADD COLUMN ig_total_watch_time INTEGER DEFAULT 0",
         "ALTER TABLE posts ADD COLUMN ig_reach_followers INTEGER DEFAULT 0",
-        "ALTER TABLE posts ADD COLUMN ig_reach_non_followers INTEGER DEFAULT 0"
+        "ALTER TABLE posts ADD COLUMN ig_reach_non_followers INTEGER DEFAULT 0",
+        # Hook tracking
+        "ALTER TABLE posts ADD COLUMN hook_type TEXT",
+        "ALTER TABLE posts ADD COLUMN hook_text TEXT",
+        "ALTER TABLE posts ADD COLUMN tone TEXT",
+        # A/B testing
+        "ALTER TABLE posts ADD COLUMN ab_test_id INTEGER",
+        "ALTER TABLE posts ADD COLUMN is_ab_winner BOOLEAN"
     ]
 
     for stmt in alter_statements:

@@ -10,12 +10,16 @@ import subprocess
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 
+from app.config import settings
+from app.utils.logger import get_logger
+
+logger = get_logger("instagram")
 
 # Instagram Graph API URL
 GRAPH_API_URL = "https://graph.facebook.com/v18.0"
 
 # Video conversion output directory
-OUTPUT_DIR = "/opt/olivenet-social-bot/outputs"
+OUTPUT_DIR = str(settings.outputs_dir)
 
 
 async def convert_video_for_instagram(input_path: str) -> Dict[str, Any]:

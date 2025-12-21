@@ -1,14 +1,63 @@
 """
 Olivenet Social Media Bot - Configuration
+
+Centralized configuration with auto-detected paths.
+All paths are derived from BASE_DIR which can be overridden via OLIVENET_BASE_DIR env var.
 """
 import os
 from pathlib import Path
 from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
+from pydantic import Field, field_validator
+from typing import Optional
 
-# .env dosyasını manuel olarak yükle
-load_dotenv("/opt/olivenet-social-bot/.env")
-from pydantic import Field
+
+def detect_base_dir() -> Path:
+    """
+    Auto-detect the base directory for the project.
+    Priority:
+    1. OLIVENET_BASE_DIR environment variable
+    2. /opt/olivenet-social-bot (production)
+    3. Parent of this file's directory (development)
+    """
+    # Check env var first
+    env_base = os.environ.get("OLIVENET_BASE_DIR")
+    if env_base:
+        return Path(env_base)
+
+    # Check production path
+    prod_path = Path("/opt/olivenet-social-bot")
+    if prod_path.exists():
+        return prod_path
+
+    # Development: go up from app/config.py to project root
+    current_file = Path(__file__).resolve()
+    dev_path = current_file.parent.parent
+    if (dev_path / "context").exists():
+        return dev_path
+
+    # Fallback to home directory path
+    home_path = Path.home() / "olivenet-social-bot"
+    if home_path.exists():
+        return home_path
+
+    # Ultimate fallback
+    return prod_path
+
+
+# Detect base directory before loading .env
+BASE_DIR = detect_base_dir()
+
+# Load .env from detected base directory
+_env_path = BASE_DIR / ".env"
+if _env_path.exists():
+    load_dotenv(_env_path)
+else:
+    # Try alternate locations
+    for alt_path in [Path.home() / "olivenet-social-bot" / ".env", Path("/opt/olivenet-social-bot/.env")]:
+        if alt_path.exists():
+            load_dotenv(alt_path)
+            break
 
 
 class Settings(BaseSettings):
@@ -22,24 +71,85 @@ class Settings(BaseSettings):
     facebook_page_id: str = Field(default="", description="Facebook Page ID")
     facebook_access_token: str = Field(default="", description="Facebook Page Access Token")
 
+    # Instagram Settings
+    instagram_account_id: str = Field(default="", description="Instagram Business Account ID")
+
     # Gemini AI Settings
     gemini_api_key: str = Field(default="", description="Gemini API Key for realistic image generation")
 
     # Replicate AI Settings
     replicate_api_token: str = Field(default="", description="Replicate API Token for Flux image generation")
 
+    # OpenAI Settings (Sora)
+    openai_api_key: str = Field(default="", description="OpenAI API Key for Sora video generation")
+
+    # Cloudinary Settings
+    cloudinary_cloud_name: str = Field(default="", description="Cloudinary cloud name")
+    cloudinary_api_key: str = Field(default="", description="Cloudinary API key")
+    cloudinary_api_secret: str = Field(default="", description="Cloudinary API secret")
+
+    # imgbb Settings
+    imgbb_api_key: str = Field(default="", description="imgbb API key for image CDN")
+
+    # FLUX Settings
+    flux_api_key: str = Field(default="", description="FLUX API key")
+
     # Claude Code Settings
     claude_timeout_post: int = Field(default=60, description="Timeout for post generation (seconds)")
     claude_timeout_visual: int = Field(default=90, description="Timeout for visual generation (seconds)")
+    claude_timeout_video: int = Field(default=120, description="Timeout for video prompt generation (seconds)")
 
-    # Paths
-    base_dir: Path = Field(default=Path("/opt/olivenet-social-bot"))
-    context_dir: Path = Field(default=Path("/opt/olivenet-social-bot/context"))
-    templates_dir: Path = Field(default=Path("/opt/olivenet-social-bot/templates"))
-    outputs_dir: Path = Field(default=Path("/opt/olivenet-social-bot/outputs"))
+    # API Timeouts
+    api_timeout_default: int = Field(default=30, description="Default API timeout (seconds)")
+    api_timeout_video: int = Field(default=300, description="Video API timeout (seconds)")
+    api_timeout_insights: int = Field(default=60, description="Insights API timeout (seconds)")
+
+    # Rate Limiting
+    rate_limit_delay: float = Field(default=0.3, description="Delay between API calls (seconds)")
+    rate_limit_carousel: float = Field(default=2.0, description="Delay between carousel items (seconds)")
+
+    # Content Settings
+    max_instagram_words: int = Field(default=120, description="Max words for Instagram posts")
+    max_facebook_words: int = Field(default=300, description="Max words for Facebook posts")
+    min_review_score: float = Field(default=7.0, description="Minimum score to approve content")
+
+    # Paths - All derived from BASE_DIR
+    base_dir: Path = Field(default=BASE_DIR)
+
+    @property
+    def context_dir(self) -> Path:
+        return self.base_dir / "context"
+
+    @property
+    def templates_dir(self) -> Path:
+        return self.base_dir / "templates"
+
+    @property
+    def outputs_dir(self) -> Path:
+        return self.base_dir / "outputs"
+
+    @property
+    def logs_dir(self) -> Path:
+        return self.base_dir / "logs"
+
+    @property
+    def data_dir(self) -> Path:
+        return self.base_dir / "data"
+
+    @property
+    def database_path(self) -> Path:
+        return self.data_dir / "content.db"
+
+    @property
+    def agent_personas_dir(self) -> Path:
+        return self.context_dir / "agent-personas"
+
+    @property
+    def env_path(self) -> Path:
+        return self.base_dir / ".env"
 
     model_config = {
-        "env_file": "/opt/olivenet-social-bot/.env",
+        "env_file": str(BASE_DIR / ".env"),
         "env_file_encoding": "utf-8",
         "extra": "ignore"
     }
@@ -49,7 +159,29 @@ class Settings(BaseSettings):
         self.outputs_dir.mkdir(parents=True, exist_ok=True)
         self.context_dir.mkdir(parents=True, exist_ok=True)
         self.templates_dir.mkdir(parents=True, exist_ok=True)
+        self.logs_dir.mkdir(parents=True, exist_ok=True)
+        self.data_dir.mkdir(parents=True, exist_ok=True)
+
+    def get_context_file(self, filename: str) -> Path:
+        """Get full path to a context file."""
+        return self.context_dir / filename
+
+    def get_persona_file(self, agent_name: str) -> Path:
+        """Get full path to an agent persona file."""
+        return self.agent_personas_dir / f"{agent_name}.md"
+
+    def get_output_file(self, filename: str) -> Path:
+        """Get full path to an output file."""
+        return self.outputs_dir / filename
 
 
 # Global settings instance
 settings = Settings()
+
+# Convenience exports
+CONTEXT_DIR = settings.context_dir
+TEMPLATES_DIR = settings.templates_dir
+OUTPUTS_DIR = settings.outputs_dir
+LOGS_DIR = settings.logs_dir
+DATA_DIR = settings.data_dir
+DATABASE_PATH = settings.database_path

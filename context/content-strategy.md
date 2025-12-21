@@ -366,11 +366,96 @@ Slide 6: CTA ve iletişim
 - Mobil uyumlu paragraflar (2-3 cümle max)
 
 ### Hook Çeşitliliği (Rotate Et!)
-1. Şok istatistik: "%35 su tasarrufu mümkün!"
-2. Soru: "Seranızda ne kadar su israf ediyorsunuz?"
-3. Cesur iddia: "Manuel sulama tarih oluyor."
-4. Problem: "Enerji faturaları her ay artıyor..."
-5. Değer: "3 dakikada sera kontrolü."
+
+**10 VIRAL HOOK TEMPLATE - Her postta farklı bir tane kullan!**
+
+#### 1. ŞOK İSTATİSTİK HOOK
+**Format:** [Yüzde/Rakam] + [Şaşırtıcı sonuç]
+**Örnekler:**
+- "%35 su tasarrufu mümkün!"
+- "%70 fabrika enerji israf ediyor!"
+- "3 yılda kendini amorti eden yatırım"
+- "Günde 500 litre su tasarrufu sağlıyoruz"
+
+#### 2. SORU HOOK (Curiosity Gap)
+**Format:** [Merak uyandıran soru] + ?
+**Örnekler:**
+- "Seranızda ne kadar su israf ediyorsunuz?"
+- "Su faturanız neden bu kadar yüksek biliyor musunuz?"
+- "Makineniz arıza vermeden önce uyarı verse?"
+- "KKTC'de suyunuz ne zaman bitecek?"
+
+#### 3. CESUR İDDİA HOOK
+**Format:** [Tartışmalı/güçlü statement]
+**Örnekler:**
+- "Manuel sulama tarih oluyor."
+- "Sensörsüz sera yönetimi imkansız."
+- "Enerji izlemesiz fabrika 2025'te yok."
+- "Akıllı olmayan tarım, tarım değil."
+
+#### 4. PROBLEM-AGİTATION HOOK
+**Format:** [Problem] + [Acı noktası]
+**Örnekler:**
+- "Enerji faturaları her ay artıyor..."
+- "Her gün bozulan pompalar, kaybolan zaman..."
+- "KKTC'de su kıtlığı artıyor, çözüm yok mu?"
+- "Seranız susuzluktan mı ölüyor, aşırı sulamadan mı?"
+
+#### 5. DEĞER/FAYDA HOOK
+**Format:** [Somut fayda] + [Kısa süre/kolay]
+**Örnekler:**
+- "3 dakikada sera kontrolü."
+- "Cebinizden fabrikayı yönetin."
+- "Tek tıkla haftalık rapor."
+- "1 sensör, 1000 litre tasarruf."
+
+#### 6. KORKU/FOMO HOOK
+**Format:** [Korku unsuru] + [Aciliyet]
+**Örnekler:**
+- "Suyunuz bitiyor mu? KKTC'de acil önlem şart."
+- "Rakipleriniz çoktan geçti, siz hala manuel mi?"
+- "Bu yaz su kesintileri artacak. Hazır mısınız?"
+- "Plansız duruş maliyeti: Günde 5000€"
+
+#### 7. BEFORE/AFTER HOOK
+**Format:** [Öncesi] → [Sonrası]
+**Örnekler:**
+- "Manuel sulama → Akıllı sulama: %35 tasarruf"
+- "Reaktif bakım → Kestirimci bakım: %70 daha az duruş"
+- "Tahmin → Veri: Artık enerji harcamanızı biliyorsunuz"
+- "Karanlıkta yönetim → Dashboard: Her şey gözlerinizin önünde"
+
+#### 8. SAYISAL LİSTE HOOK
+**Format:** [X] + [Konu] + [Sonuç]
+**Örnekler:**
+- "3 adımda sera otomasyonu"
+- "5 soru: IoT size uygun mu?"
+- "7 işaret: Makineniz arıza verecek"
+- "4 yol: Enerji faturanızı %30 düşürün"
+
+#### 9. KARŞILAŞTIRMA HOOK
+**Format:** [A] vs [B] - [Winner]
+**Örnekler:**
+- "WiFi vs LoRaWAN: Tarımda hangisi kazanır?"
+- "Manuel vs Otomatik sulama: Rakamlarla karşılaştırma"
+- "Bulut vs Edge: IoT projeniz için hangisi?"
+- "Reaktif vs Kestirimci: Bakım stratejiniz hangisi?"
+
+#### 10. SEKTÖR ÖZEL / LOKAL HOOK
+**Format:** [KKTC/Sektör özel] + [Bağlam]
+**Örnekler:**
+- "KKTC'de su kıtlığına karşı yerel çözüm"
+- "Ada'nın enerji sorununa teknoloji cevabı"
+- "Kıbrıs seralarında devrim"
+- "Yerli IoT, yerli destek, yerli çözüm"
+
+---
+
+**HOOK ROTATION KURALI:**
+- Ardışık iki postta aynı hook tipi KULLANMA
+- Haftalık en az 5 farklı hook tipi dön
+- En iyi performans gösteren hook'ları analytics'ten takip et
+- A/B test: Aynı konu, farklı hook
 
 ### CTA Kuralları (Instagram)
 - Her postta CTA KOYMA!

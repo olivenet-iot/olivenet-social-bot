@@ -5,27 +5,29 @@ Generates realistic AI images using Gemini's image generation model.
 import aiohttp
 import asyncio
 import base64
-import logging
 import os
 from datetime import datetime
 
 from .config import settings
+from .utils.logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger("gemini")
 
 
-async def generate_realistic_image(topic: str, post_text: str, output_dir: str = "/opt/olivenet-social-bot/outputs") -> str:
+async def generate_realistic_image(topic: str, post_text: str, output_dir: str = None) -> str:
     """
     Generate a realistic image using Gemini 2.5 Flash.
 
     Args:
         topic: Topic in Turkish
         post_text: Post text in Turkish
-        output_dir: Output directory for the image
+        output_dir: Output directory for the image (defaults to settings.outputs_dir)
 
     Returns:
         Path to the generated image file
     """
+    if output_dir is None:
+        output_dir = str(settings.outputs_dir)
     # Create English prompt using Claude Code
     english_prompt = await create_image_prompt(topic, post_text)
 

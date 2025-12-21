@@ -10,7 +10,8 @@ from app.database import (
     get_current_strategy, update_strategy,
     get_published_posts, get_analytics_summary,
     create_calendar_entry, get_week_calendar,
-    log_agent_action
+    log_agent_action, get_best_performing_hooks,
+    get_ab_test_learnings, get_connection
 )
 
 class OrchestratorAgent(BaseAgent):
@@ -52,6 +53,10 @@ class OrchestratorAgent(BaseAgent):
             return await self.daily_check()
         elif action == "update_strategy":
             return await self.analyze_and_update_strategy()
+        elif action == "optimize_non_follower_reach":
+            return await self.optimize_non_follower_reach()
+        elif action == "get_optimization_insights":
+            return await self.get_optimization_insights()
         else:
             return {"error": f"Unknown action: {action}"}
 
@@ -294,3 +299,277 @@ Sadece JSON döndür.
 
         except json.JSONDecodeError:
             return {"error": "JSON parse error", "raw_response": response}
+
+    def _get_non_follower_reach_data(self) -> Dict[str, Any]:
+        """Non-follower reach verilerini al"""
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        # Content type bazında non-follower reach analizi
+        cursor.execute('''
+            SELECT
+                visual_type,
+                COUNT(*) as post_count,
+                AVG(ig_reach) as avg_reach,
+                AVG(ig_reach_non_followers) as avg_non_follower_reach,
+                AVG(CASE WHEN ig_reach > 0
+                    THEN (ig_reach_non_followers * 100.0 / ig_reach)
+                    ELSE 0 END) as avg_non_follower_pct,
+                AVG(ig_engagement_rate) as avg_engagement,
+                AVG(ig_saves) as avg_saves,
+                AVG(ig_shares) as avg_shares
+            FROM posts
+            WHERE status = 'published'
+              AND published_at > datetime('now', '-90 days')
+              AND ig_reach > 0
+            GROUP BY visual_type
+            ORDER BY avg_non_follower_pct DESC
+        ''')
+
+        content_type_stats = []
+        for row in cursor.fetchall():
+            content_type_stats.append({
+                'type': row['visual_type'],
+                'count': row['post_count'],
+                'avg_reach': round(row['avg_reach'] or 0, 0),
+                'avg_non_follower_reach': round(row['avg_non_follower_reach'] or 0, 0),
+                'non_follower_pct': round(row['avg_non_follower_pct'] or 0, 2),
+                'avg_engagement': round(row['avg_engagement'] or 0, 2),
+                'avg_saves': round(row['avg_saves'] or 0, 0),
+                'avg_shares': round(row['avg_shares'] or 0, 0)
+            })
+
+        # Hook type bazında non-follower reach analizi
+        cursor.execute('''
+            SELECT
+                hook_type,
+                COUNT(*) as post_count,
+                AVG(CASE WHEN ig_reach > 0
+                    THEN (ig_reach_non_followers * 100.0 / ig_reach)
+                    ELSE 0 END) as avg_non_follower_pct,
+                AVG(ig_engagement_rate) as avg_engagement
+            FROM posts
+            WHERE status = 'published'
+              AND published_at > datetime('now', '-90 days')
+              AND ig_reach > 0
+              AND hook_type IS NOT NULL
+            GROUP BY hook_type
+            HAVING post_count >= 2
+            ORDER BY avg_non_follower_pct DESC
+        ''')
+
+        hook_stats = []
+        for row in cursor.fetchall():
+            hook_stats.append({
+                'hook_type': row['hook_type'],
+                'count': row['post_count'],
+                'non_follower_pct': round(row['avg_non_follower_pct'] or 0, 2),
+                'avg_engagement': round(row['avg_engagement'] or 0, 2)
+            })
+
+        # Posting time bazında analiz
+        cursor.execute('''
+            SELECT
+                strftime('%H', published_at) as hour,
+                COUNT(*) as post_count,
+                AVG(CASE WHEN ig_reach > 0
+                    THEN (ig_reach_non_followers * 100.0 / ig_reach)
+                    ELSE 0 END) as avg_non_follower_pct
+            FROM posts
+            WHERE status = 'published'
+              AND published_at > datetime('now', '-90 days')
+              AND ig_reach > 0
+            GROUP BY hour
+            HAVING post_count >= 2
+            ORDER BY avg_non_follower_pct DESC
+        ''')
+
+        time_stats = []
+        for row in cursor.fetchall():
+            time_stats.append({
+                'hour': row['hour'],
+                'count': row['post_count'],
+                'non_follower_pct': round(row['avg_non_follower_pct'] or 0, 2)
+            })
+
+        conn.close()
+
+        return {
+            'content_types': content_type_stats,
+            'hooks': hook_stats,
+            'posting_times': time_stats
+        }
+
+    async def optimize_non_follower_reach(self) -> Dict[str, Any]:
+        """Non-follower reach optimizasyonu için analiz ve öneriler"""
+        self.log("Non-follower reach optimizasyonu analiz ediliyor...")
+
+        # Veri topla
+        reach_data = self._get_non_follower_reach_data()
+        hook_performance = get_best_performing_hooks(limit=5)
+        ab_learnings = get_ab_test_learnings()
+
+        prompt = f"""
+## GÖREV: Non-Follower Reach Optimizasyonu
+
+### Instagram Algoritma Bilgisi
+Non-follower reach için kritik faktörler:
+1. İlk 30 dakikada yüksek engagement
+2. Kaydetme (save) ve paylaşma (share) oranları
+3. Reels için watch time ve tamamlama oranı
+4. Explore page uygunluğu
+
+### Mevcut Performance Verileri
+
+**Content Type Bazında:**
+{json.dumps(reach_data['content_types'], ensure_ascii=False, indent=2)}
+
+**Hook Type Bazında:**
+{json.dumps(reach_data['hooks'], ensure_ascii=False, indent=2)}
+
+**Posting Time Bazında:**
+{json.dumps(reach_data['posting_times'], ensure_ascii=False, indent=2)}
+
+**En İyi Performans Gösteren Hook'lar:**
+{json.dumps(hook_performance, ensure_ascii=False, indent=2)}
+
+**A/B Test Öğrenimleri:**
+{json.dumps(ab_learnings, ensure_ascii=False, indent=2)}
+
+---
+
+Bu verileri analiz et ve non-follower reach'i artırmak için öneriler sun.
+
+ÇIKTI FORMATI (JSON):
+```json
+{{
+  "analysis": {{
+    "best_content_type": "video/carousel/flux",
+    "best_hook_types": ["hook1", "hook2"],
+    "best_posting_times": ["10:00", "19:00"],
+    "current_non_follower_avg": 15.5,
+    "top_performers_avg": 35.2
+  }},
+  "optimizations": [
+    {{
+      "area": "content_type",
+      "current": "post ağırlıklı",
+      "recommended": "Reels ağırlığını %40'a çıkar",
+      "expected_impact": "+20% non-follower reach",
+      "priority": "high"
+    }},
+    {{
+      "area": "hooks",
+      "current": "karışık hook kullanımı",
+      "recommended": "Soru ve istatistik hook'larını önceliklendir",
+      "expected_impact": "+15% engagement",
+      "priority": "medium"
+    }}
+  ],
+  "reels_strategy": {{
+    "optimal_length": "15-30 saniye",
+    "hook_timing": "İlk 3 saniyede hook",
+    "recommended_hooks": ["question", "statistic", "before_after"],
+    "cta_placement": "Son 3 saniye",
+    "hashtag_strategy": "15-20 mixed (5 branded + 10 niche + 5 trending)"
+  }},
+  "weekly_mix_recommendation": {{
+    "reels": 5,
+    "carousel": 2,
+    "post": 5,
+    "reels_ratio_change": "+1 (önceki: 4)"
+  }},
+  "immediate_actions": [
+    "Aksiyon 1",
+    "Aksiyon 2"
+  ]
+}}
+```
+
+Sadece JSON döndür.
+"""
+
+        response = await self.call_claude(prompt, timeout=120)
+
+        try:
+            result = json.loads(self._clean_json_response(response))
+
+            # Sonuçları logla
+            log_agent_action(
+                agent_name=self.name,
+                action="optimize_non_follower_reach",
+                input_data={"reach_data_summary": {
+                    "content_types_count": len(reach_data['content_types']),
+                    "hooks_count": len(reach_data['hooks'])
+                }},
+                output_data=result,
+                success=True
+            )
+
+            self.log(f"Non-follower reach optimizasyonu tamamlandı: {len(result.get('optimizations', []))} öneri")
+            return result
+
+        except json.JSONDecodeError:
+            log_agent_action(
+                agent_name=self.name,
+                action="optimize_non_follower_reach",
+                success=False,
+                error_message="JSON parse error"
+            )
+            return {"error": "JSON parse error", "raw_response": response}
+
+    async def get_optimization_insights(self) -> Dict[str, Any]:
+        """Quick insights - AI çağrısı yapmadan mevcut datadan özetler"""
+        self.log("Optimization insights toplanıyor...")
+
+        reach_data = self._get_non_follower_reach_data()
+        hook_performance = get_best_performing_hooks(limit=5)
+        ab_learnings = get_ab_test_learnings()
+
+        # En iyi content type
+        best_content = max(reach_data['content_types'],
+                          key=lambda x: x['non_follower_pct']) if reach_data['content_types'] else None
+
+        # En iyi hook
+        best_hook = max(reach_data['hooks'],
+                       key=lambda x: x['non_follower_pct']) if reach_data['hooks'] else None
+
+        # En iyi saat
+        best_time = max(reach_data['posting_times'],
+                       key=lambda x: x['non_follower_pct']) if reach_data['posting_times'] else None
+
+        insights = {
+            "summary": {
+                "best_content_type": best_content['type'] if best_content else "N/A",
+                "best_content_non_follower_pct": best_content['non_follower_pct'] if best_content else 0,
+                "best_hook_type": best_hook['hook_type'] if best_hook else "N/A",
+                "best_hook_non_follower_pct": best_hook['non_follower_pct'] if best_hook else 0,
+                "best_posting_hour": f"{best_time['hour']}:00" if best_time else "N/A",
+            },
+            "top_hooks": [h['hook_type'] for h in hook_performance[:3]] if hook_performance else [],
+            "ab_test_insights": {
+                "total_tests": ab_learnings.get('total_tests', 0),
+                "prediction_accuracy": ab_learnings.get('prediction_accuracy', 0),
+                "top_winning_hooks": ab_learnings.get('top_hooks', [])
+            },
+            "recommendations": []
+        }
+
+        # Quick recommendations
+        if best_content and best_content['type'] in ['video', 'reels']:
+            insights['recommendations'].append(
+                f"Reels/Video içerikleri %{best_content['non_follower_pct']:.1f} non-follower reach sağlıyor - artır"
+            )
+
+        if best_hook:
+            insights['recommendations'].append(
+                f"'{best_hook['hook_type']}' hook tipi en iyi performansı gösteriyor - önceliklendir"
+            )
+
+        if best_time:
+            insights['recommendations'].append(
+                f"{best_time['hour']}:00 en iyi non-follower reach saati - bu saatte Reels paylaş"
+            )
+
+        self.log(f"Insights hazır: {len(insights['recommendations'])} öneri")
+        return insights

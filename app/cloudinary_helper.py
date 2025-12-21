@@ -5,18 +5,17 @@ Instagram Reels icin public URL gerekli
 
 import os
 from typing import Dict, Any
-from dotenv import load_dotenv
 import asyncio
 from datetime import datetime
-import logging
 
-logger = logging.getLogger(__name__)
+from app.config import settings
+from app.utils.logger import get_logger
 
-load_dotenv('/opt/olivenet-social-bot/.env')
+logger = get_logger("cloudinary")
 
-CLOUDINARY_CLOUD_NAME = os.getenv("CLOUDINARY_CLOUD_NAME")
-CLOUDINARY_API_KEY = os.getenv("CLOUDINARY_API_KEY")
-CLOUDINARY_API_SECRET = os.getenv("CLOUDINARY_API_SECRET")
+CLOUDINARY_CLOUD_NAME = settings.cloudinary_cloud_name or os.getenv("CLOUDINARY_CLOUD_NAME")
+CLOUDINARY_API_KEY = settings.cloudinary_api_key or os.getenv("CLOUDINARY_API_KEY")
+CLOUDINARY_API_SECRET = settings.cloudinary_api_secret or os.getenv("CLOUDINARY_API_SECRET")
 
 # Cloudinary'yi configure et
 _configured = False

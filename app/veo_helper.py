@@ -9,12 +9,14 @@ import asyncio
 import time
 from datetime import datetime
 from typing import Dict, Any
-from dotenv import load_dotenv
 
-load_dotenv('/opt/olivenet-social-bot/.env')
+from app.config import settings
+from app.utils.logger import get_logger
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-OUTPUT_DIR = "/opt/olivenet-social-bot/outputs"
+logger = get_logger("veo")
+
+GEMINI_API_KEY = settings.gemini_api_key or os.getenv("GEMINI_API_KEY")
+OUTPUT_DIR = str(settings.outputs_dir)
 
 # Google GenAI client
 _client = None
