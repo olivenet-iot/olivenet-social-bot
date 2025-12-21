@@ -20,7 +20,10 @@ from .crud import (
     log_ab_test_result, update_ab_test_actual_performance,
     get_ab_test_results, get_ab_test_learnings,
     # Approval Audit Trail
-    log_approval_decision, get_approval_history, get_approval_stats
+    log_approval_decision, get_approval_history, get_approval_stats,
+    # Telegram Bot Helpers
+    get_todays_summary, get_weekly_progress, get_next_scheduled,
+    get_best_performing_content, get_next_schedule_slot
 )
 
 # Database'i initialize et

@@ -337,7 +337,8 @@ Sadece JSON döndür.
         response = await self.call_claude(prompt, timeout=90)
 
         try:
-            result = json.loads(self._clean_json_response(response))
+            # call_claude zaten _clean_json_response çağırıyor, tekrar çağırmaya gerek yok
+            result = json.loads(response)
 
             log_agent_action(
                 agent_name=self.name,
@@ -350,14 +351,27 @@ Sadece JSON döndür.
             self.log(f"Konu önerildi: {result.get('topic', 'N/A')}")
             return result
 
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as e:
+            # Debug: Raw response'u logla
+            self.log(f"JSON parse error: {str(e)}", level="error")
+            self.log(f"Raw response (first 500 chars): {response[:500]}", level="error")
+
+            # Son şans: Belki hala code block var, tekrar temizle
+            cleaned = self._clean_json_response(response)
+            try:
+                result = json.loads(cleaned)
+                self.log("JSON recovered after second cleaning")
+                return result
+            except json.JSONDecodeError:
+                pass
+
             log_agent_action(
                 agent_name=self.name,
                 action="suggest_topic",
                 success=False,
-                error_message="JSON parse error"
+                error_message=f"JSON parse error: {str(e)}"
             )
-            return {"error": "JSON parse error", "raw_response": response}
+            return {"error": "JSON parse error", "raw_response": response[:1000], "parse_error": str(e)}
 
     async def suggest_week_topics(self) -> Dict[str, Any]:
         """Haftalık konu planı oluştur"""
@@ -447,7 +461,7 @@ Sadece JSON döndür.
         response = await self.call_claude(prompt, timeout=120)
 
         try:
-            result = json.loads(self._clean_json_response(response))
+            result = json.loads(response)
 
             log_agent_action(
                 agent_name=self.name,
@@ -459,8 +473,20 @@ Sadece JSON döndür.
             self.log(f"Haftalık plan oluşturuldu: {len(result.get('week_topics', []))} konu")
             return result
 
-        except json.JSONDecodeError:
-            return {"error": "JSON parse error", "raw_response": response}
+        except json.JSONDecodeError as e:
+            self.log(f"JSON parse error (week_topics): {str(e)}", level="error")
+            self.log(f"Raw response (first 500 chars): {response[:500]}", level="error")
+
+            # Son şans: tekrar temizle
+            cleaned = self._clean_json_response(response)
+            try:
+                result = json.loads(cleaned)
+                self.log("JSON recovered after second cleaning")
+                return result
+            except json.JSONDecodeError:
+                pass
+
+            return {"error": "JSON parse error", "raw_response": response[:1000], "parse_error": str(e)}
 
     async def analyze_trends(self) -> Dict[str, Any]:
         """Sektör trendlerini analiz et"""
@@ -507,6 +533,16 @@ Sadece JSON döndür.
         response = await self.call_claude(prompt, timeout=90)
 
         try:
-            return json.loads(self._clean_json_response(response))
-        except json.JSONDecodeError:
-            return {"error": "JSON parse error", "raw_response": response}
+            return json.loads(response)
+        except json.JSONDecodeError as e:
+            self.log(f"JSON parse error (analyze_trends): {str(e)}", level="error")
+            self.log(f"Raw response (first 500 chars): {response[:500]}", level="error")
+
+            # Son şans: tekrar temizle
+            cleaned = self._clean_json_response(response)
+            try:
+                return json.loads(cleaned)
+            except json.JSONDecodeError:
+                pass
+
+            return {"error": "JSON parse error", "raw_response": response[:1000], "parse_error": str(e)}

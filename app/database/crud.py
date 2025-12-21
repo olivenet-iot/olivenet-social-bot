@@ -1009,3 +1009,258 @@ def get_approval_stats(days: int = 30) -> Dict[str, Any]:
         'mode_breakdown': mode_counts,
         'period_days': days
     }
+
+
+# ============ TELEGRAM BOT HELPER FUNCTIONS ============
+
+def get_todays_summary() -> Dict[str, int]:
+    """
+    Bugünün içerik özeti - yayınlanan, bekleyen, başarısız post sayıları.
+
+    Returns:
+        Dict with keys: published, scheduled, failed, draft
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    # Bugünün başlangıcı
+    today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+    cursor.execute('''
+        SELECT
+            status,
+            COUNT(*) as count
+        FROM posts
+        WHERE (
+            (status = 'published' AND DATE(published_at) = DATE('now'))
+            OR (status = 'scheduled' AND DATE(scheduled_at) = DATE('now'))
+            OR (status = 'failed' AND DATE(created_at) = DATE('now'))
+            OR (status = 'draft' AND DATE(created_at) = DATE('now'))
+        )
+        GROUP BY status
+    ''')
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    result = {'published': 0, 'scheduled': 0, 'failed': 0, 'draft': 0}
+    for row in rows:
+        if row['status'] in result:
+            result[row['status']] = row['count']
+
+    return result
+
+
+def get_weekly_progress() -> Dict[str, Any]:
+    """
+    Bu haftanın içerik ilerleme durumu - hedeflere göre.
+
+    Returns:
+        Dict with keys: total, reels, carousel, post (actual counts)
+        and targets: reels_target, carousel_target, post_target
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    # Bu haftanın başlangıcı (Pazartesi)
+    today = datetime.now()
+    week_start = today - timedelta(days=today.weekday())
+    week_start = week_start.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    cursor.execute('''
+        SELECT
+            visual_type,
+            COUNT(*) as count
+        FROM posts
+        WHERE status = 'published'
+          AND published_at >= ?
+        GROUP BY visual_type
+    ''', (week_start,))
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    # İçerik tiplerine göre say
+    counts = {'reels': 0, 'carousel': 0, 'post': 0, 'flux': 0}
+    for row in rows:
+        vtype = (row['visual_type'] or 'post').lower()
+        if vtype in counts:
+            counts[vtype] = row['count']
+        elif vtype == 'flux':
+            counts['post'] += row['count']  # flux = post
+
+    # Post ve flux'u birleştir
+    post_count = counts['post'] + counts.get('flux', 0)
+
+    return {
+        'total': sum(counts.values()),
+        'reels': counts['reels'],
+        'carousel': counts['carousel'],
+        'post': post_count,
+        # Config hedefleri (hardcoded - config import döngüsel olabilir)
+        'reels_target': 7,
+        'carousel_target': 2,
+        'post_target': 3,
+        'total_target': 12,
+        'week_start': week_start.strftime('%Y-%m-%d')
+    }
+
+
+def get_next_scheduled() -> Optional[Dict]:
+    """
+    Sıradaki planlanmış içerik.
+
+    Returns:
+        Dict with post details or None if no scheduled content
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    now = datetime.now()
+
+    cursor.execute('''
+        SELECT id, topic, visual_type, status, scheduled_at, platform
+        FROM posts
+        WHERE status IN ('scheduled', 'approved')
+          AND scheduled_at > ?
+        ORDER BY scheduled_at ASC
+        LIMIT 1
+    ''', (now,))
+
+    row = cursor.fetchone()
+    conn.close()
+
+    return dict(row) if row else None
+
+
+def get_best_performing_content(days: int = 7) -> Optional[Dict]:
+    """
+    Belirtilen süre içindeki en iyi performans gösteren içerik.
+
+    Sıralama: ig_engagement_rate > ig_reach > fb_engagement_rate
+
+    Args:
+        days: Kaç gün geriye bakılacak
+
+    Returns:
+        Dict with post details and metrics, or None
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    since = datetime.now() - timedelta(days=days)
+
+    cursor.execute('''
+        SELECT
+            id, topic, visual_type,
+            ig_reach, ig_likes, ig_comments, ig_engagement_rate,
+            ig_saves, ig_shares,
+            fb_reach, fb_likes, fb_comments, fb_engagement_rate,
+            published_at
+        FROM posts
+        WHERE status = 'published'
+          AND published_at > ?
+          AND (ig_reach > 0 OR fb_reach > 0)
+        ORDER BY
+            COALESCE(ig_engagement_rate, 0) DESC,
+            COALESCE(ig_reach, 0) DESC,
+            COALESCE(fb_engagement_rate, 0) DESC
+        LIMIT 1
+    ''', (since,))
+
+    row = cursor.fetchone()
+    conn.close()
+
+    return dict(row) if row else None
+
+
+def get_next_schedule_slot() -> Optional[Dict]:
+    """
+    Config'deki WEEKLY_SCHEDULE'dan sıradaki slot'u bul.
+
+    KKTC saatine göre (UTC+3) şu anki zamandan sonraki ilk slot.
+
+    Returns:
+        {
+            "day": "Pazar",
+            "day_index": 6,
+            "time": "14:00",
+            "type": "reels",
+            "platform": "instagram",
+            "minutes_until": 180,
+            "datetime": datetime object
+        }
+        or None if no schedule defined
+    """
+    # Hardcoded schedule (orchestrator.py'den)
+    WEEKLY_SCHEDULE = [
+        {"day": 0, "day_name": "Pazartesi", "time": "10:00", "type": "reels", "platform": "instagram"},
+        {"day": 0, "day_name": "Pazartesi", "time": "19:00", "type": "post", "platform": "both"},
+        {"day": 1, "day_name": "Salı", "time": "10:00", "type": "reels", "platform": "instagram"},
+        {"day": 1, "day_name": "Salı", "time": "19:00", "type": "carousel", "platform": "instagram"},
+        {"day": 2, "day_name": "Çarşamba", "time": "10:00", "type": "reels", "platform": "instagram"},
+        {"day": 2, "day_name": "Çarşamba", "time": "19:00", "type": "post", "platform": "both"},
+        {"day": 3, "day_name": "Perşembe", "time": "10:00", "type": "reels", "platform": "instagram"},
+        {"day": 3, "day_name": "Perşembe", "time": "19:00", "type": "reels", "platform": "instagram"},
+        {"day": 4, "day_name": "Cuma", "time": "10:00", "type": "reels", "platform": "instagram"},
+        {"day": 4, "day_name": "Cuma", "time": "19:00", "type": "post", "platform": "both"},
+        {"day": 5, "day_name": "Cumartesi", "time": "14:00", "type": "carousel", "platform": "instagram"},
+        {"day": 6, "day_name": "Pazar", "time": "14:00", "type": "reels", "platform": "instagram"},
+    ]
+
+    now = datetime.now()
+    current_weekday = now.weekday()  # 0=Pazartesi, 6=Pazar
+    current_time = now.strftime("%H:%M")
+
+    # Bu haftada kalan slotları bul
+    for slot in WEEKLY_SCHEDULE:
+        slot_day = slot["day"]
+        slot_time = slot["time"]
+
+        # Bugünden sonraki günler veya bugün ama saatten sonra
+        if slot_day > current_weekday:
+            # Gelecek gün
+            days_until = slot_day - current_weekday
+        elif slot_day == current_weekday and slot_time > current_time:
+            # Bugün ama henüz geçmemiş
+            days_until = 0
+        else:
+            continue  # Bu slot geçmiş
+
+        # Slot zamanını hesapla
+        slot_hour, slot_minute = map(int, slot_time.split(":"))
+        slot_datetime = now.replace(hour=slot_hour, minute=slot_minute, second=0, microsecond=0)
+        slot_datetime += timedelta(days=days_until)
+
+        # Kalan dakikayı hesapla
+        minutes_until = int((slot_datetime - now).total_seconds() / 60)
+
+        return {
+            "day": slot["day_name"],
+            "day_index": slot_day,
+            "time": slot_time,
+            "type": slot["type"],
+            "platform": slot["platform"],
+            "minutes_until": minutes_until,
+            "datetime": slot_datetime
+        }
+
+    # Bu haftada slot kalmadı, gelecek haftanın ilk slotunu al
+    first_slot = WEEKLY_SCHEDULE[0]
+    days_until = 7 - current_weekday + first_slot["day"]
+
+    slot_hour, slot_minute = map(int, first_slot["time"].split(":"))
+    slot_datetime = now.replace(hour=slot_hour, minute=slot_minute, second=0, microsecond=0)
+    slot_datetime += timedelta(days=days_until)
+
+    minutes_until = int((slot_datetime - now).total_seconds() / 60)
+
+    return {
+        "day": first_slot["day_name"],
+        "day_index": first_slot["day"],
+        "time": first_slot["time"],
+        "type": first_slot["type"],
+        "platform": first_slot["platform"],
+        "minutes_until": minutes_until,
+        "datetime": slot_datetime
+    }
