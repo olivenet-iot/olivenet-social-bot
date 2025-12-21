@@ -1,6 +1,8 @@
 """
 Telegram Bot - Pipeline Entegrasyonu
 Semi-autonomous mod için onay akışı
+
+Authorization: Sadece admin kullanıcılar işlem yapabilir.
 """
 
 import asyncio
@@ -14,13 +16,36 @@ from telegram.ext import (
 from telegram.request import HTTPXRequest
 from telegram.error import NetworkError, TimedOut, RetryAfter
 from app.scheduler import ContentPipeline, ContentScheduler, create_default_scheduler
-from app.database import get_current_strategy, get_analytics_summary
+from app.database import get_current_strategy, get_analytics_summary, log_approval_decision
+from app.config import settings
 
 # Global değişkenler
 pipeline: ContentPipeline = None
 scheduler: ContentScheduler = None
 admin_chat_id: int = None
 pending_input: dict = {}  # Kullanıcıdan beklenen input
+
+
+# ============ AUTHORIZATION ============
+
+def is_admin(user_id: int) -> bool:
+    """
+    Kullanıcının admin olup olmadığını kontrol et.
+    Admin listesi: settings.admin_user_ids
+    """
+    return user_id in settings.admin_user_ids
+
+
+async def send_unauthorized_message(query):
+    """Yetkisiz kullanıcıya mesaj gönder."""
+    await query.answer("⛔ Bu işlem için yetkiniz yok!", show_alert=True)
+    await query.edit_message_text(
+        "⛔ *Yetkisiz Erişim*\n\n"
+        "Bu bot sadece yetkili kullanıcılar tarafından kullanılabilir.\n"
+        f"Kullanıcı ID'niz: `{query.from_user.id}`\n\n"
+        "Erişim için sistem yöneticisiyle iletişime geçin.",
+        parse_mode="Markdown"
+    )
 
 async def telegram_notify(message: str, data: dict = None, buttons: list = None):
     """Pipeline'dan Telegram'a bildirim - retry mekanizması ile"""
@@ -206,12 +231,18 @@ async def cmd_manual(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ============ CALLBACK HANDLER'LAR ============
 
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Tüm callback'leri yönet"""
+    """Tüm callback'leri yönet - Authorization kontrolü ile"""
     global pipeline, scheduler, pending_input
 
     query = update.callback_query
-    await query.answer()
+    user_id = query.from_user.id
 
+    # ===== AUTHORIZATION CHECK =====
+    if not is_admin(user_id):
+        await send_unauthorized_message(query)
+        return
+
+    await query.answer()
     action = query.data
 
     # ===== ANA MENÜ =====
@@ -368,19 +399,62 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif action == "publish_now":
         pipeline.set_approval({"action": "publish_now"})
+        # Audit log
+        try:
+            current_state = pipeline.current_state or {}
+            log_approval_decision(
+                post_id=current_state.get("post_id"),
+                decision="approved",
+                user_id=query.from_user.id,
+                username=query.from_user.username or query.from_user.first_name,
+                topic=current_state.get("topic"),
+                content_type=current_state.get("visual_type", "post"),
+                scheduler_mode="manual",
+                new_status="publishing"
+            )
+        except Exception as e:
+            print(f"Audit log hatası: {e}")
 
     elif action == "schedule":
         await query.edit_message_text("⏰ *Saat girin (HH:MM):*", parse_mode="Markdown")
         pending_input["type"] = "schedule_time"
+        pending_input["user_id"] = query.from_user.id
+        pending_input["username"] = query.from_user.username or query.from_user.first_name
 
     elif action == "cancel":
         pipeline.set_approval({"action": "cancel"})
+        # Audit log
+        try:
+            current_state = pipeline.current_state or {}
+            log_approval_decision(
+                post_id=current_state.get("post_id"),
+                decision="rejected",
+                user_id=query.from_user.id,
+                username=query.from_user.username or query.from_user.first_name,
+                topic=current_state.get("topic"),
+                content_type=current_state.get("visual_type", "post"),
+                reason="User cancelled",
+                scheduler_mode="manual",
+                new_status="rejected"
+            )
+        except Exception as e:
+            print(f"Audit log hatası: {e}")
         await query.edit_message_text("❌ İptal edildi.")
 
 
 async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Metin inputlarını işle"""
+    """Metin inputlarını işle - Authorization kontrolü ile"""
     global pending_input, pipeline
+
+    user_id = update.effective_user.id
+
+    # Authorization check
+    if not is_admin(user_id):
+        await update.message.reply_text(
+            f"⛔ *Yetkisiz Erişim*\n\nKullanıcı ID: `{user_id}`",
+            parse_mode="Markdown"
+        )
+        return
 
     text = update.message.text
 
@@ -391,6 +465,22 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif pending_input.get("type") == "schedule_time":
         pipeline.set_approval({"action": "schedule", "time": text})
+        # Audit log for scheduling
+        try:
+            current_state = pipeline.current_state or {}
+            log_approval_decision(
+                post_id=current_state.get("post_id"),
+                decision="scheduled",
+                user_id=pending_input.get("user_id"),
+                username=pending_input.get("username"),
+                topic=current_state.get("topic"),
+                content_type=current_state.get("visual_type", "post"),
+                reason=f"Scheduled for {text}",
+                scheduler_mode="manual",
+                new_status="scheduled"
+            )
+        except Exception as e:
+            print(f"Audit log hatası: {e}")
         pending_input = {}
         await update.message.reply_text(f"✅ {text} için zamanlandı.")
 

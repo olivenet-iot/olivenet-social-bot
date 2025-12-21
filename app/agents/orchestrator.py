@@ -17,26 +17,28 @@ from app.database import (
 class OrchestratorAgent(BaseAgent):
     """Merkezi koordinatör - tüm süreci yönetir"""
 
-    # Yeni haftalık schedule template (5 Reels + 2 Carousel + 5 Post)
+    # Haftalık schedule template - Organik büyüme optimizasyonu
+    # 7 Reels (58%) + 2 Carousel (17%) + 3 Post (25%) = 12 içerik
+    # Reels ağırlıklı: Non-follower reach 3x daha yüksek
     WEEKLY_SCHEDULE = [
-        # Pazartesi
-        {"day": 0, "day_name": "monday", "time": "10:00", "type": "post", "platform": "both"},
-        {"day": 0, "day_name": "monday", "time": "19:00", "type": "reels", "platform": "instagram"},
-        # Salı
+        # Pazartesi - Hafta başı momentum
+        {"day": 0, "day_name": "monday", "time": "10:00", "type": "reels", "platform": "instagram"},
+        {"day": 0, "day_name": "monday", "time": "19:00", "type": "post", "platform": "both"},
+        # Salı - Yoğun gün
         {"day": 1, "day_name": "tuesday", "time": "10:00", "type": "reels", "platform": "instagram"},
-        {"day": 1, "day_name": "tuesday", "time": "19:00", "type": "post", "platform": "instagram"},
-        # Çarşamba
-        {"day": 2, "day_name": "wednesday", "time": "10:00", "type": "carousel", "platform": "instagram"},
+        {"day": 1, "day_name": "tuesday", "time": "19:00", "type": "carousel", "platform": "instagram"},
+        # Çarşamba - Orta hafta
+        {"day": 2, "day_name": "wednesday", "time": "10:00", "type": "reels", "platform": "instagram"},
         {"day": 2, "day_name": "wednesday", "time": "19:00", "type": "post", "platform": "both"},
-        # Perşembe
-        {"day": 3, "day_name": "thursday", "time": "10:00", "type": "post", "platform": "instagram"},
+        # Perşembe - Etkileşim zirvesi
+        {"day": 3, "day_name": "thursday", "time": "10:00", "type": "reels", "platform": "instagram"},
         {"day": 3, "day_name": "thursday", "time": "19:00", "type": "reels", "platform": "instagram"},
-        # Cuma
+        # Cuma - Hafta sonu öncesi
         {"day": 4, "day_name": "friday", "time": "10:00", "type": "reels", "platform": "instagram"},
         {"day": 4, "day_name": "friday", "time": "19:00", "type": "post", "platform": "both"},
-        # Cumartesi
+        # Cumartesi - Rahat izleme
         {"day": 5, "day_name": "saturday", "time": "14:00", "type": "carousel", "platform": "instagram"},
-        # Pazar
+        # Pazar - Hafta özeti
         {"day": 6, "day_name": "sunday", "time": "14:00", "type": "reels", "platform": "instagram"},
     ]
 
@@ -61,8 +63,8 @@ class OrchestratorAgent(BaseAgent):
             return {"error": f"Unknown action: {action}"}
 
     async def plan_week(self) -> Dict[str, Any]:
-        """Haftalık içerik planı oluştur (12 içerik: 5 Reels + 2 Carousel + 5 Post)"""
-        self.log("Haftalık plan oluşturuluyor (12 içerik)...")
+        """Haftalık içerik planı oluştur (12 içerik: 7 Reels + 2 Carousel + 3 Post)"""
+        self.log("Haftalık plan oluşturuluyor (12 içerik, %58 Reels)...")
 
         # Mevcut stratejiyi al
         strategy = get_current_strategy()
@@ -92,7 +94,7 @@ class OrchestratorAgent(BaseAgent):
 {schedule_json}
 
 ### Mevcut Strateji
-- Haftalık post sayısı: 12 (5 Reels + 2 Carousel + 5 Post)
+- Haftalık içerik: 12 (7 Reels + 2 Carousel + 3 Post = %58 Reels ağırlıklı)
 - En iyi günler: {strategy.get('best_days', [])}
 - En iyi saatler: {strategy.get('best_hours', [])}
 - İçerik mix: {strategy.get('content_mix', {})}
@@ -141,9 +143,9 @@ Her content type için uygun konular seç:
   ],
   "strategy_notes": "Genel notlar",
   "content_distribution": {{
-    "reels": 5,
+    "reels": 7,
     "carousel": 2,
-    "post": 5
+    "post": 3
   }}
 }}
 ```
@@ -284,7 +286,13 @@ Sadece JSON döndür.
 
             # Stratejiyi güncelle
             if "updated_strategy" in result:
-                update_strategy(**result["updated_strategy"])
+                # Best hooks'u da ekle (feedback loop için)
+                best_hooks_data = get_best_performing_hooks(limit=5)
+                best_hooks = [h['hook_type'] for h in best_hooks_data] if best_hooks_data else []
+                result["updated_strategy"]["best_hooks"] = best_hooks
+
+                new_version = update_strategy(**result["updated_strategy"])
+                self.log(f"Strategy v{new_version} güncellendi, best_hooks: {best_hooks[:3]}")
 
             log_agent_action(
                 agent_name=self.name,

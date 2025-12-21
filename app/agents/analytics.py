@@ -21,6 +21,7 @@ from app.database import (
     get_connection
 )
 from app.insights_helper import get_post_insights, get_instagram_insights, get_instagram_media_insights
+from app.config import settings
 
 
 def calculate_viral_score(
@@ -67,13 +68,16 @@ def calculate_viral_score(
     return round(viral_score, 2), breakdown
 
 
-def get_viral_content_analysis(days: int = 30, min_viral_score: float = 10.0) -> Dict[str, Any]:
+def get_viral_content_analysis(days: int = 30, min_viral_score: float = None) -> Dict[str, Any]:
     """
     Viral potansiyeli yüksek içerikleri analiz et.
+    Uses settings.min_viral_score if not specified.
 
     Returns:
         Dict with viral posts, patterns, and recommendations
     """
+    if min_viral_score is None:
+        min_viral_score = settings.min_viral_score
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -273,8 +277,8 @@ Sadece JSON döndür.
             "post_id": post_id,
             "viral_score": score,
             "breakdown": breakdown,
-            "is_viral": score >= 10.0,
-            "potential": "high" if score >= 15 else "medium" if score >= 8 else "low"
+            "is_viral": score >= settings.min_viral_score,
+            "potential": "high" if score >= settings.min_viral_score * 1.5 else "medium" if score >= settings.min_viral_score * 0.8 else "low"
         }
 
     async def generate_daily_report(self) -> Dict[str, Any]:

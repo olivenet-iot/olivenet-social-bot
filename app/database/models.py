@@ -109,6 +109,7 @@ def init_database():
         CREATE TABLE IF NOT EXISTS strategy (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            version INTEGER DEFAULT 1,  -- Feedback loop için version tracking
 
             -- Genel strateji
             posts_per_week INTEGER DEFAULT 5,
@@ -124,7 +125,10 @@ def init_database():
 
             -- Performans baseline
             avg_engagement_rate REAL DEFAULT 0,
-            avg_reach INTEGER DEFAULT 0
+            avg_reach INTEGER DEFAULT 0,
+
+            -- Top performing hooks (feedback loop için)
+            best_hooks TEXT  -- JSON: ["question", "statistic", ...]
         )
     ''')
 
@@ -213,6 +217,35 @@ def init_database():
         )
     ''')
 
+    # Approval Audit Trail tablosu - Onay geçmişi
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS approval_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+            -- İçerik bilgisi
+            post_id INTEGER,
+            topic TEXT,
+            content_type TEXT,  -- post, reels, carousel
+
+            -- Karar bilgisi
+            decision TEXT NOT NULL,  -- approved, rejected, scheduled, revised
+            decision_by_user_id INTEGER,
+            decision_by_username TEXT,
+
+            -- Bağlam
+            review_score REAL,
+            reason TEXT,
+            scheduler_mode TEXT,  -- manual, autonomous, scheduled
+
+            -- Metadata
+            previous_status TEXT,
+            new_status TEXT,
+
+            FOREIGN KEY (post_id) REFERENCES posts(id)
+        )
+    ''')
+
     conn.commit()
 
     # Analytics kolonlarını posts tablosuna ekle (migration)
@@ -247,6 +280,18 @@ def init_database():
     ]
 
     for stmt in alter_statements:
+        try:
+            cursor.execute(stmt)
+        except sqlite3.OperationalError:
+            pass  # Kolon zaten var
+
+    # Strategy tablosu için migration
+    strategy_migrations = [
+        "ALTER TABLE strategy ADD COLUMN version INTEGER DEFAULT 1",
+        "ALTER TABLE strategy ADD COLUMN best_hooks TEXT"
+    ]
+
+    for stmt in strategy_migrations:
         try:
             cursor.execute(stmt)
         except sqlite3.OperationalError:

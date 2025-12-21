@@ -14,7 +14,8 @@ from typing import Dict, Any, List, Optional
 from .base_agent import BaseAgent
 from app.database import (
     get_current_strategy, get_published_posts,
-    log_agent_action, get_connection
+    log_agent_action, get_connection, get_strategy_version,
+    get_best_performing_hooks, get_hook_recommendations
 )
 
 
@@ -90,13 +91,49 @@ def get_underperforming_topics(limit: int = 5) -> List[str]:
 
 
 def get_hook_performance_summary() -> Dict[str, Any]:
-    """Hook type'ların performansını özetle."""
-    # Bu Phase 2.4'te database'e hook_type eklenince aktif olacak
-    return {
-        "best_performing": "question",
-        "avoid": "generic",
-        "note": "Hook tracking Phase 2.4'te aktif olacak"
-    }
+    """Hook type'ların performansını özetle - Gerçek verilerden."""
+    try:
+        # Database'den en iyi hook'ları al
+        best_hooks = get_best_performing_hooks(limit=5)
+
+        if not best_hooks:
+            return {
+                "best_performing": "question",
+                "top_hooks": ["question", "statistic", "problem"],
+                "avoid": [],
+                "note": "Henüz yeterli veri yok, default öneriler kullanılıyor"
+            }
+
+        # En iyi performans gösteren hook'ları listele
+        top_hooks = [h['hook_type'] for h in best_hooks]
+
+        # En düşük performans gösterenler için underperforming query
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT hook_type
+            FROM hook_performance
+            WHERE usage_count >= 3 AND viral_score < 5
+            ORDER BY viral_score ASC
+            LIMIT 3
+        ''')
+        avoid_hooks = [row['hook_type'] for row in cursor.fetchall()]
+        conn.close()
+
+        return {
+            "best_performing": top_hooks[0] if top_hooks else "question",
+            "top_hooks": top_hooks,
+            "avoid": avoid_hooks,
+            "data_based": True
+        }
+
+    except Exception as e:
+        return {
+            "best_performing": "question",
+            "top_hooks": ["question", "statistic", "problem"],
+            "avoid": [],
+            "note": f"Hook data error: {str(e)}"
+        }
 
 
 class PlannerAgent(BaseAgent):
@@ -105,6 +142,35 @@ class PlannerAgent(BaseAgent):
     def __init__(self):
         super().__init__("planner")
         self.performance_context_enabled = True
+        # Strategy caching for feedback loop
+        self._cached_strategy = None
+        self._cached_strategy_version = 0
+
+    def _get_strategy_with_cache(self) -> Dict[str, Any]:
+        """
+        Strategy'yi cache'den veya database'den al.
+        Version değişmişse otomatik refresh yapar (feedback loop).
+        """
+        current_version = get_strategy_version()
+
+        if self._cached_strategy is None or current_version != self._cached_strategy_version:
+            if self._cached_strategy_version > 0:
+                self.log(f"Strategy güncellendi (v{self._cached_strategy_version} → v{current_version}), refreshing...")
+            self._cached_strategy = get_current_strategy()
+            self._cached_strategy_version = current_version
+
+        return self._cached_strategy
+
+    def refresh_strategy(self) -> Dict[str, Any]:
+        """
+        Strategy'yi zorla yenile (Orchestrator update sonrası çağrılır).
+        Feedback loop için kritik.
+        """
+        self._cached_strategy = None
+        self._cached_strategy_version = 0
+        strategy = self._get_strategy_with_cache()
+        self.log(f"Strategy refreshed: v{self._cached_strategy_version}")
+        return strategy
 
     async def execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Ana yürütme metodu"""
@@ -177,7 +243,7 @@ class PlannerAgent(BaseAgent):
         company_profile = self.load_context("company-profile.md")
         content_strategy = self.load_context("content-strategy.md")
         topics_pool = self.load_context("topics.md")
-        strategy = get_current_strategy()
+        strategy = self._get_strategy_with_cache()  # Feedback loop: cache'li version kullan
 
         # Performance ve trend context
         performance_context = self._get_performance_context()
@@ -233,6 +299,13 @@ Yukarıdaki bilgilere dayanarak bugün için EN UYGUN tek bir konu öner.
 2. Trend context'teki güncel konuları değerlendir
 3. Düşük performanslı konulardan kaçın
 4. Mevsimselliği düşün (Kış: Enerji, Yaz: Su/Sulama)
+5. **NON-FOLLOWER REACH OPTİMİZASYONU:** Takipçi olmayanlar tarafından keşfedilebilir konular seç
+
+**DISCOVERY-FOCUSED İÇERİK (Non-Follower Reach Artışı İçin):**
+- Reels için: Genel IoT/teknoloji trendleri, problem-çözüm formatı, "X'in Y'si" karşılaştırmaları
+- Hashtag stratejisi: Niche (#SmartFarming) + Broad (#Technology) mix
+- Hook: Merak uyandıran sorular veya şok istatistikler
+- Konu: Endüstri genelinde ilgi çekici, spesifik değil evrensel problemler
 
 ÇIKTI FORMATI (JSON):
 ```json
@@ -249,9 +322,11 @@ Yukarıdaki bilgilere dayanarak bugün için EN UYGUN tek bir konu öner.
     "Hook önerisi 3"
   ],
   "hashtags": ["#hashtag1", "#hashtag2"],
+  "discovery_hashtags": ["#broad_hashtag1", "#trend_hashtag2"],
   "best_time": "HH:MM",
   "urgency": "high|medium|low",
   "expected_engagement": "low|medium|high",
+  "discovery_potential": "low|medium|high",
   "performance_based": true
 }}
 ```
@@ -292,7 +367,7 @@ Sadece JSON döndür.
         content_strategy = self.load_context("content-strategy.md")
         topics_pool = self.load_context("topics.md")
         schedule_strategy = self.load_context("schedule-strategy.md")
-        strategy = get_current_strategy()
+        strategy = self._get_strategy_with_cache()  # Feedback loop: cache'li version kullan
 
         posts_per_week = strategy.get('posts_per_week', 5)
         best_days = strategy.get('best_days', ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'])

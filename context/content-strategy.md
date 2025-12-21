@@ -224,6 +224,28 @@ Akıllı sulama sistemleri ile:
 - "Seranızda bu sorunları yaşıyor musunuz?"
 - "Makinelerinizin ne zaman arıza vereceğini bilmek ister misiniz?"
 
+### 💾 KAYDET (Save) CTA'ları - Viral Potansiyel Artırıcı
+Save rate, algoritma için en önemli sinyal. Her 3-4 posttan 1'inde kullan:
+- "📌 Bu ipuçlarını kaydet, ihtiyacın olduğunda kullan!"
+- "💡 Yer imi ekle, iş yerinde referans olarak kullan"
+- "🔖 Kaydet ve meslektaşlarınla paylaş"
+- "📚 Bu listeyi kaydet, projelerde işine yarar"
+- "⚡ Hızlı erişim için kaydet"
+
+### 📤 PAYLAŞ (Share) CTA'ları - Organik Reach Artırıcı
+- "🔁 Bir sera sahibini etiketle"
+- "💬 Enerji yöneticisi arkadaşına gönder"
+- "📲 Bu bilgiyi ihtiyacı olan biriyle paylaş"
+- "🏭 Fabrika müdürü arkadaşına story'le gönder"
+
+### 📝 Carousel için Save-Optimized Format
+Carousel'larda save rate doğal olarak yüksek, bu şablonu kullan:
+```
+Slide 1: "🔖 KAYDET: [X] Adımda [Y] Rehberi"
+Slide 2-6: İçerik adımları
+Son Slide: "📌 Bu rehberi kaydet!\nProjelerde referans olarak kullan.\n\nSorular için DM at 💬"
+```
+
 ---
 
 ## Post Şablonları
@@ -300,6 +322,50 @@ Slide 6: CTA ve iletişim
 - LinkedIn: 5-7
 - Twitter: 3-5
 - Facebook: 5-7
+
+---
+
+## Non-Follower Reach Optimizasyonu
+
+### Keşfedilebilirlik İçin İçerik Kuralları
+
+**1. Evrensel Problemler Seç**
+- ❌ "Olivenet sera sistemi özellikleri"
+- ✅ "Sera işletmeciliğinde en sık yapılan 5 hata"
+- Neden: Genel problemler daha geniş kitleye ulaşır
+
+**2. Reels Öncelikli Strateji**
+- Non-follower reach Reels'de 3x daha yüksek
+- Haftalık içeriğin %58'i Reels olmalı
+- İlk 3 saniye kritik: Güçlü hook şart
+
+**3. Discovery Hashtag Mix**
+Niche (kesin hit) + Broad (keşif) kombinasyonu:
+```
+Niche: #SmartFarming #IoTTurkey #SeraTeknolojisi
+Broad: #Technology #Innovation #DigitalTransformation #Sustainability
+```
+
+**4. Explore Page İçin Optimize Konular**
+- Problem/Çözüm formatı
+- "X vs Y" karşılaştırmaları
+- Şok istatistikler ("Türkiye'de sulamada %40 israf")
+- "Bunu biliyor muydunuz?" formatı
+- Mini tutorial/how-to
+
+**5. Algorithm Sinyalleri**
+- Erken engagement kritik (ilk 30 dk)
+- Kaydet (save) ve paylaş (share) > like
+- Watch time optimizasyonu (Reels)
+- Caption'da soru sor (yorum tetikle)
+
+### Trending Hashtag Önerileri (Rotasyonlu)
+- #TechTips
+- #FutureTech
+- #SmartSolutions
+- #GreenTech
+- #IndustryInsights
+- #DigitalInnovation
 
 ---
 

@@ -193,34 +193,57 @@ def get_current_strategy() -> Dict:
     if row:
         strategy = dict(row)
         # JSON alanları parse et
-        for field in ['best_days', 'best_hours', 'content_mix', 'visual_mix', 'insights']:
+        for field in ['best_days', 'best_hours', 'content_mix', 'visual_mix', 'insights', 'best_hooks']:
             if strategy.get(field):
-                strategy[field] = json.loads(strategy[field])
+                try:
+                    strategy[field] = json.loads(strategy[field])
+                except (json.JSONDecodeError, TypeError):
+                    pass
         return strategy
     return {}
 
-def update_strategy(**kwargs) -> bool:
-    """Stratejiyi güncelle"""
+
+def get_strategy_version() -> int:
+    """Mevcut strateji version'ını getir (feedback loop için)"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT version FROM strategy ORDER BY updated_at DESC LIMIT 1")
+    row = cursor.fetchone()
+    conn.close()
+    return row['version'] if row and row['version'] else 1
+
+def update_strategy(**kwargs) -> int:
+    """
+    Stratejiyi güncelle ve version'ı increment et.
+    Returns: Yeni version numarası (feedback loop için)
+    """
     conn = get_connection()
     cursor = conn.cursor()
 
     # JSON alanları serialize et
-    for field in ['best_days', 'best_hours', 'content_mix', 'visual_mix', 'insights']:
+    for field in ['best_days', 'best_hours', 'content_mix', 'visual_mix', 'insights', 'best_hooks']:
         if field in kwargs and isinstance(kwargs[field], (dict, list)):
             kwargs[field] = json.dumps(kwargs[field])
 
-    # Mevcut strateji ID'sini al
-    cursor.execute("SELECT id FROM strategy ORDER BY updated_at DESC LIMIT 1")
+    # Mevcut strateji ID ve version'ını al
+    cursor.execute("SELECT id, version FROM strategy ORDER BY updated_at DESC LIMIT 1")
     row = cursor.fetchone()
 
+    new_version = 1
     if row:
         strategy_id = row['id']
+        current_version = row['version'] or 1
+        new_version = current_version + 1
+
         updates = []
         values = []
         for key, value in kwargs.items():
             updates.append(f"{key} = ?")
             values.append(value)
 
+        # Version ve updated_at her zaman güncellenir
+        updates.append("version = ?")
+        values.append(new_version)
         updates.append("updated_at = ?")
         values.append(datetime.now())
         values.append(strategy_id)
@@ -231,7 +254,7 @@ def update_strategy(**kwargs) -> bool:
         conn.commit()
 
     conn.close()
-    return True
+    return new_version
 
 # ============ CONTENT CALENDAR ============
 
@@ -583,6 +606,102 @@ def get_hook_recommendations(topic_category: str = None, platform: str = None) -
     return [row['hook_type'] for row in rows]
 
 
+def get_hook_weights_for_selection(platform: str = None) -> Dict[str, float]:
+    """
+    Hook type'ları için ağırlık değerleri hesapla (weighted random selection için).
+
+    Yüksek viral score = yüksek ağırlık = daha sık seçilme
+    Minimum 3 kullanım gereken hook'lar dahil edilir.
+
+    Returns:
+        Dict[str, float]: hook_type -> weight mapping
+        Example: {"statistic": 0.25, "question": 0.20, ...}
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    query = '''
+        SELECT hook_type,
+               SUM(usage_count) as total_usage,
+               AVG(viral_score) as avg_viral_score,
+               AVG(avg_engagement_rate) as avg_engagement
+        FROM hook_performance
+        WHERE usage_count >= 1
+    '''
+    params = []
+
+    if platform:
+        query += " AND platform = ?"
+        params.append(platform)
+
+    query += " GROUP BY hook_type HAVING SUM(usage_count) >= 2"
+
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    conn.close()
+
+    if not rows:
+        # Veri yoksa eşit ağırlıklar döndür
+        default_hooks = [
+            "statistic", "question", "bold_claim", "problem", "value",
+            "fear", "before_after", "list", "comparison", "local"
+        ]
+        return {hook: 1.0 / len(default_hooks) for hook in default_hooks}
+
+    # Viral score'a göre ağırlık hesapla
+    weights = {}
+    total_score = sum(max(row['avg_viral_score'] or 0, 0.1) for row in rows)
+
+    for row in rows:
+        hook_type = row['hook_type']
+        score = max(row['avg_viral_score'] or 0, 0.1)  # Minimum 0.1
+        weights[hook_type] = score / total_score if total_score > 0 else 0.1
+
+    # Eksik hook'ları düşük ağırlıkla ekle
+    all_hooks = [
+        "statistic", "question", "bold_claim", "problem", "value",
+        "fear", "before_after", "list", "comparison", "local"
+    ]
+
+    for hook in all_hooks:
+        if hook not in weights:
+            weights[hook] = 0.05  # Yeni/denenmemiş hook'lara düşük ağırlık
+
+    # Normalize et
+    total = sum(weights.values())
+    if total > 0:
+        weights = {k: v / total for k, v in weights.items()}
+
+    return weights
+
+
+def get_underperforming_hooks(threshold_viral: float = 5.0) -> List[str]:
+    """
+    Düşük performans gösteren hook type'larını getir (kaçınılması gereken).
+
+    Args:
+        threshold_viral: Bu değerin altında viral score olan hook'lar
+
+    Returns:
+        List[str]: Düşük performanslı hook type listesi
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        SELECT hook_type, AVG(viral_score) as avg_viral
+        FROM hook_performance
+        WHERE usage_count >= 3
+        GROUP BY hook_type
+        HAVING avg_viral < ?
+    ''', (threshold_viral,))
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    return [row['hook_type'] for row in rows]
+
+
 # ============ A/B TEST RESULTS ============
 
 def log_ab_test_result(
@@ -734,4 +853,159 @@ def get_ab_test_learnings() -> Dict:
         'total_tests': sum(s['tested'] for s in hook_stats.values()) // 2,
         'prediction_accuracy': round(accuracy, 2),
         'top_hooks': [h for h, _ in best_hooks[:3]]
+    }
+
+
+# ============ APPROVAL AUDIT TRAIL ============
+
+def log_approval_decision(
+    post_id: int,
+    decision: str,  # approved, rejected, scheduled, revised
+    user_id: int = None,
+    username: str = None,
+    topic: str = None,
+    content_type: str = None,
+    review_score: float = None,
+    reason: str = None,
+    scheduler_mode: str = "manual",  # manual, autonomous, scheduled
+    previous_status: str = None,
+    new_status: str = None
+) -> int:
+    """
+    Onay kararını audit trail'e kaydet.
+
+    Args:
+        post_id: İlgili post ID
+        decision: Karar (approved, rejected, scheduled, revised)
+        user_id: Karar veren kullanıcı ID
+        username: Karar veren kullanıcı adı
+        topic: Post konusu
+        content_type: İçerik tipi (post, reels, carousel)
+        review_score: Reviewer puanı
+        reason: Red veya revizyon nedeni
+        scheduler_mode: Zamanlama modu
+        previous_status: Önceki durum
+        new_status: Yeni durum
+
+    Returns:
+        Oluşturulan log ID
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        INSERT INTO approval_logs (
+            post_id, topic, content_type,
+            decision, decision_by_user_id, decision_by_username,
+            review_score, reason, scheduler_mode,
+            previous_status, new_status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        post_id, topic, content_type,
+        decision, user_id, username,
+        review_score, reason, scheduler_mode,
+        previous_status, new_status
+    ))
+
+    log_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+
+    return log_id
+
+
+def get_approval_history(post_id: int = None, days: int = 30, limit: int = 50) -> List[Dict]:
+    """
+    Onay geçmişini getir.
+
+    Args:
+        post_id: Belirli bir post için (opsiyonel)
+        days: Son kaç gün
+        limit: Maksimum kayıt sayısı
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    if post_id:
+        cursor.execute('''
+            SELECT * FROM approval_logs
+            WHERE post_id = ?
+            ORDER BY created_at DESC
+            LIMIT ?
+        ''', (post_id, limit))
+    else:
+        cursor.execute('''
+            SELECT * FROM approval_logs
+            WHERE created_at > datetime('now', ? || ' days')
+            ORDER BY created_at DESC
+            LIMIT ?
+        ''', (f'-{days}', limit))
+
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+
+def get_approval_stats(days: int = 30) -> Dict[str, Any]:
+    """
+    Onay istatistiklerini getir.
+
+    Returns:
+        Approval/rejection rates, top approvers, common rejection reasons
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    # Genel istatistikler
+    cursor.execute('''
+        SELECT
+            decision,
+            COUNT(*) as count
+        FROM approval_logs
+        WHERE created_at > datetime('now', ? || ' days')
+        GROUP BY decision
+    ''', (f'-{days}',))
+
+    decision_counts = {row['decision']: row['count'] for row in cursor.fetchall()}
+
+    # Kullanıcı bazında onay sayıları
+    cursor.execute('''
+        SELECT
+            decision_by_username,
+            COUNT(*) as total,
+            SUM(CASE WHEN decision = 'approved' THEN 1 ELSE 0 END) as approved,
+            SUM(CASE WHEN decision = 'rejected' THEN 1 ELSE 0 END) as rejected
+        FROM approval_logs
+        WHERE created_at > datetime('now', ? || ' days')
+          AND decision_by_username IS NOT NULL
+        GROUP BY decision_by_username
+        ORDER BY total DESC
+        LIMIT 10
+    ''', (f'-{days}',))
+
+    user_stats = [dict(row) for row in cursor.fetchall()]
+
+    # Mod bazında dağılım
+    cursor.execute('''
+        SELECT
+            scheduler_mode,
+            COUNT(*) as count
+        FROM approval_logs
+        WHERE created_at > datetime('now', ? || ' days')
+        GROUP BY scheduler_mode
+    ''', (f'-{days}',))
+
+    mode_counts = {row['scheduler_mode']: row['count'] for row in cursor.fetchall()}
+
+    conn.close()
+
+    total = sum(decision_counts.values())
+    return {
+        'total_decisions': total,
+        'decision_breakdown': decision_counts,
+        'approval_rate': round(decision_counts.get('approved', 0) / total * 100, 2) if total > 0 else 0,
+        'rejection_rate': round(decision_counts.get('rejected', 0) / total * 100, 2) if total > 0 else 0,
+        'user_stats': user_stats,
+        'mode_breakdown': mode_counts,
+        'period_days': days
     }

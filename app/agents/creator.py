@@ -7,7 +7,11 @@ import json
 from datetime import datetime
 from typing import Dict, Any, Optional
 from .base_agent import BaseAgent
-from app.database import create_post, update_post, log_agent_action
+from app.database import (
+    create_post, update_post, log_agent_action,
+    get_hook_weights_for_selection, get_underperforming_hooks
+)
+from app.config import settings
 
 class CreatorAgent(BaseAgent):
     """İçerik üretici - post metni ve görsel üretir"""
@@ -58,23 +62,53 @@ class CreatorAgent(BaseAgent):
         company_profile = self.load_context("company-profile.md")
         content_strategy = self.load_context("content-strategy.md")
 
-        # 10 hook type'dan 2 farklı seç
-        hook_types = [
-            ("statistic", "İstatistik/rakam ile başla"),
-            ("question", "Merak uyandıran soru ile başla"),
-            ("bold_claim", "Cesur/tartışmalı bir iddia ile başla"),
-            ("problem", "Problem/acı noktası ile başla"),
-            ("value", "Somut fayda/değer ile başla"),
-            ("fear", "Korku/FOMO unsuru ile başla"),
-            ("before_after", "Öncesi-sonrası karşılaştırması ile başla"),
-            ("list", "Sayısal liste ile başla (3 yol, 5 ipucu gibi)"),
-            ("comparison", "Karşılaştırma ile başla (A vs B)"),
-            ("local", "KKTC/yerel referans ile başla")
+        # 10 hook type tanımları
+        hook_types = {
+            "statistic": "İstatistik/rakam ile başla",
+            "question": "Merak uyandıran soru ile başla",
+            "bold_claim": "Cesur/tartışmalı bir iddia ile başla",
+            "problem": "Problem/acı noktası ile başla",
+            "value": "Somut fayda/değer ile başla",
+            "fear": "Korku/FOMO unsuru ile başla",
+            "before_after": "Öncesi-sonrası karşılaştırması ile başla",
+            "list": "Sayısal liste ile başla (3 yol, 5 ipucu gibi)",
+            "comparison": "Karşılaştırma ile başla (A vs B)",
+            "local": "KKTC/yerel referans ile başla"
+        }
+
+        # Performance-based weighted selection
+        import random
+        hook_weights = get_hook_weights_for_selection(platform=platform)
+        underperforming = set(get_underperforming_hooks(threshold_viral=settings.hook_underperformance_threshold))
+
+        # Düşük performanslı hook'ları filtrele (ama minimum 5 hook kalsın)
+        available_hooks = [h for h in hook_types.keys() if h not in underperforming]
+        if len(available_hooks) < 5:
+            available_hooks = list(hook_types.keys())
+
+        # Weighted random selection (2 farklı hook)
+        weights = [hook_weights.get(h, 0.05) for h in available_hooks]
+        total_weight = sum(weights)
+        if total_weight > 0:
+            weights = [w / total_weight for w in weights]
+
+        # İlk hook'u seç
+        first_hook = random.choices(available_hooks, weights=weights, k=1)[0]
+
+        # İkinci hook için ilk hook'u çıkar
+        remaining_hooks = [h for h in available_hooks if h != first_hook]
+        remaining_weights = [hook_weights.get(h, 0.05) for h in remaining_hooks]
+        total_remaining = sum(remaining_weights)
+        if total_remaining > 0:
+            remaining_weights = [w / total_remaining for w in remaining_weights]
+        second_hook = random.choices(remaining_hooks, weights=remaining_weights, k=1)[0]
+
+        selected_hooks = [
+            (first_hook, hook_types[first_hook]),
+            (second_hook, hook_types[second_hook])
         ]
 
-        # Rastgele 2 farklı hook type seç
-        import random
-        selected_hooks = random.sample(hook_types, 2)
+        self.log(f"Hook weights: top={first_hook}({hook_weights.get(first_hook, 0):.2f}), second={second_hook}({hook_weights.get(second_hook, 0):.2f})")
 
         max_words = 120 if platform == "instagram" else 300
 
@@ -286,6 +320,16 @@ Sadece JSON döndür.
         company_profile = self.load_context("company-profile.md")
         content_strategy = self.load_context("content-strategy.md")
 
+        # Hook performance verisini al
+        hook_weights = get_hook_weights_for_selection(platform="instagram")
+        top_hooks = sorted(hook_weights.items(), key=lambda x: x[1], reverse=True)[:3]
+        underperforming = get_underperforming_hooks(threshold_viral=settings.hook_underperformance_threshold)
+
+        # Hook önerisi oluştur
+        hook_hint = f"ÖNCELİKLİ HOOK TİPLERİ (performansa göre): {', '.join([h[0] for h in top_hooks])}"
+        if underperforming:
+            hook_hint += f"\nKAÇINILMASI GEREKEN: {', '.join(underperforming[:3])}"
+
         # CTA kararı (her 3 posttan 1'inde)
         use_cta = random.randint(1, 3) == 1
         cta_instruction = "Soft CTA ekle: 'DM at' veya 'Bio linki'" if use_cta else "CTA KOYMA - sadece düşündürücü bir soru ile bitir"
@@ -303,13 +347,21 @@ Sadece JSON döndür.
 ### Şirket Profili
 {company_profile[:1500]}
 
+### HOOK STRATEJİSİ
+{hook_hint}
+
 ### INSTAGRAM FORMATI (ÇOK ÖNEMLİ!)
 - MAX 120 KELİME (kesinlikle aşma!)
-- Hook ile başla (şok istatistik, soru, veya cesur iddia)
+- Hook ile başla (yukarıdaki öncelikli tiplerden birini kullan)
 - 2-3 cümle ana mesaj
 - Opsiyonel: Max 3 bullet point
 - {cta_instruction}
 - 6-8 hashtag (sabit: #Olivenet #KKTC #IoT + rotasyonlu)
+
+### ENGAGEMENT OPTİMİZASYONU
+- Her 3-4 posttan birinde: "📌 Kaydet!" veya "🔖 Yer imi ekle!" ekle
+- Konu uygunsa: "📲 Bu bilgiyi ihtiyacı olan biriyle paylaş" ekle
+- Caption sonunda soru sor (yorum tetikler)
 
 ### ÖRNEK FORMAT
 🌱 [Dikkat çekici hook]
@@ -319,7 +371,7 @@ Sadece JSON döndür.
 - Madde 1
 - Madde 2
 
-[Kapanış sorusu veya soft CTA]
+[Kapanış: Soru veya "📌 Kaydet, lazım olduğunda kullan!"]
 
 #Olivenet #KKTC #IoT #AkıllıTarım ...
 
@@ -704,20 +756,25 @@ Sadece JSON döndür, başka açıklama ekleme.
 Eğitici ve görsel açıdan tutarlı bir carousel oluştur.
 
 ### Slide Yapısı:
-1. **Slide 1 (Hook)**: Dikkat çekici soru veya şok istatistik
+1. **Slide 1 (Hook)**: "🔖 KAYDET: " ile başla + dikkat çekici soru/istatistik
 2. **Slide 2-{slide_count-1} (İçerik)**: Ana bilgiler, adımlar veya karşılaştırmalar
-3. **Slide {slide_count} (CTA)**: Aksiyon çağrısı
+3. **Slide {slide_count} (CTA)**: "📌 Bu rehberi kaydet!" + yumuşak satış CTA
+
+### SAVE-OPTİMİZE İÇERİK (ZORUNLU):
+- İlk slide başlığı "🔖 KAYDET:" ile başlamalı
+- Son slide kaydetmeye teşvik etmeli (📌 emojisi)
+- İçerik referans değeri taşımalı (checklist, adımlar, karşılaştırma)
 
 ### Her Slide İçin:
 - title: Kısa başlık (max 5 kelime)
 - content: Ana metin (max 30 kelime, bullet point'ler tercih edilir)
 - image_prompt: FLUX için İngilizce görsel prompt (tutarlı stil)
 
-### Caption:
+### Caption (SAVE-FOCUSED):
 - Instagram için optimize (max 120 kelime)
 - Hook ile başla
 - Konu özeti
-- CTA ile bitir
+- "📌 Kaydet, ihtiyacın olduğunda kullan!" veya benzeri save CTA ile bitir
 
 ### Hashtag'ler:
 - 6-8 adet

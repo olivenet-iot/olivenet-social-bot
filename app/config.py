@@ -66,6 +66,26 @@ class Settings(BaseSettings):
     # Telegram Settings
     telegram_bot_token: str = Field(..., description="Telegram Bot API Token")
     telegram_admin_chat_id: int = Field(..., description="Admin chat ID for notifications")
+    telegram_admin_user_ids: str = Field(default="", description="Comma-separated list of admin user IDs (empty = use admin_chat_id only)")
+
+    @property
+    def admin_user_ids(self) -> list:
+        """Get list of admin user IDs for authorization."""
+        ids = []
+        # Always include the primary admin chat ID
+        if self.telegram_admin_chat_id:
+            ids.append(self.telegram_admin_chat_id)
+
+        # Add any additional admin IDs from comma-separated list
+        if self.telegram_admin_user_ids:
+            for id_str in self.telegram_admin_user_ids.split(","):
+                try:
+                    user_id = int(id_str.strip())
+                    if user_id not in ids:
+                        ids.append(user_id)
+                except ValueError:
+                    pass
+        return ids
 
     # Facebook Settings
     facebook_page_id: str = Field(default="", description="Facebook Page ID")
@@ -111,7 +131,18 @@ class Settings(BaseSettings):
     # Content Settings
     max_instagram_words: int = Field(default=120, description="Max words for Instagram posts")
     max_facebook_words: int = Field(default=300, description="Max words for Facebook posts")
+
+    # Review & Scoring Thresholds
     min_review_score: float = Field(default=7.0, description="Minimum score to approve content")
+    min_review_score_revise: float = Field(default=5.0, description="Minimum score for revision (below = reject)")
+    min_review_score_autonomous: float = Field(default=7.0, description="Minimum score for autonomous publishing")
+    min_viral_score: float = Field(default=10.0, description="Minimum viral score threshold")
+    hook_underperformance_threshold: float = Field(default=5.0, description="Hook viral score below this = underperforming")
+
+    # Reels/Content Mix
+    reels_weekly_target: int = Field(default=7, description="Target Reels per week (58% of 12)")
+    carousel_weekly_target: int = Field(default=2, description="Target Carousels per week")
+    post_weekly_target: int = Field(default=3, description="Target Posts per week")
 
     # Paths - All derived from BASE_DIR
     base_dir: Path = Field(default=BASE_DIR)
