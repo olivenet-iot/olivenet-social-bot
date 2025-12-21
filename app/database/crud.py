@@ -7,6 +7,15 @@ from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 from .models import get_connection
 
+
+def get_kktc_now() -> datetime:
+    """
+    KKTC saatini al (UTC+2 - Kış saati / UTC+3 - Yaz saati)
+    Şu an yaz saati uygulanmıyor, UTC+2 kullanılıyor.
+    """
+    return datetime.utcnow() + timedelta(hours=2)
+
+
 # ============ POSTS ============
 
 def create_post(
@@ -1178,7 +1187,7 @@ def get_next_schedule_slot() -> Optional[Dict]:
     """
     Config'deki WEEKLY_SCHEDULE'dan sıradaki slot'u bul.
 
-    KKTC saatine göre (UTC+3) şu anki zamandan sonraki ilk slot.
+    KKTC saatine göre (UTC+2) şu anki zamandan sonraki ilk slot.
 
     Returns:
         {
@@ -1208,7 +1217,7 @@ def get_next_schedule_slot() -> Optional[Dict]:
         {"day": 6, "day_name": "Pazar", "time": "14:00", "type": "reels", "platform": "instagram"},
     ]
 
-    now = datetime.now()
+    now = get_kktc_now()  # KKTC timezone kullan
     current_weekday = now.weekday()  # 0=Pazartesi, 6=Pazar
     current_time = now.strftime("%H:%M")
 
@@ -1263,4 +1272,78 @@ def get_next_schedule_slot() -> Optional[Dict]:
         "platform": first_slot["platform"],
         "minutes_until": minutes_until,
         "datetime": slot_datetime
+    }
+
+
+def get_todays_content_by_type(content_type: str) -> List[Dict]:
+    """
+    Bugün oluşturulan belirli tipteki içerikleri getir.
+
+    Args:
+        content_type: 'reels', 'carousel', veya 'post'
+
+    Returns:
+        Bugün oluşturulan içeriklerin listesi
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    now = get_kktc_now()
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    today_end = now.replace(hour=23, minute=59, second=59, microsecond=999999)
+
+    cursor.execute("""
+        SELECT * FROM posts
+        WHERE visual_type = ?
+        AND (
+            (published_at >= ? AND published_at <= ?)
+            OR (created_at >= ? AND created_at <= ? AND status IN ('published', 'scheduled', 'approved'))
+        )
+        ORDER BY created_at DESC
+    """, (content_type, today_start.isoformat(), today_end.isoformat(),
+          today_start.isoformat(), today_end.isoformat()))
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    return [dict(row) for row in rows]
+
+
+def should_run_scheduled_content(content_type: str, scheduled_time: datetime = None) -> Dict[str, Any]:
+    """
+    Bu slot için otomatik içerik oluşturulmalı mı kontrol et.
+
+    Manuel veya daha önce otonom oluşturulan içerik varsa,
+    duplicate üretimi engellemek için False döner.
+
+    Args:
+        content_type: 'reels', 'carousel', veya 'post'
+        scheduled_time: Planlanmış zaman (varsayılan: şimdi)
+
+    Returns:
+        {
+            "should_run": True/False,
+            "reason": "no_existing_content" / "content_already_exists",
+            "existing_posts": [...] (varsa)
+        }
+    """
+    if scheduled_time is None:
+        scheduled_time = get_kktc_now()
+
+    # Bugün bu tipte içerik var mı?
+    todays_content = get_todays_content_by_type(content_type)
+
+    if todays_content:
+        return {
+            "should_run": False,
+            "reason": "content_already_exists",
+            "existing_posts": todays_content,
+            "message": f"Bugün zaten {len(todays_content)} adet {content_type} oluşturuldu."
+        }
+
+    return {
+        "should_run": True,
+        "reason": "no_existing_content",
+        "existing_posts": [],
+        "message": f"Bugün henüz {content_type} oluşturulmadı, devam edilebilir."
     }

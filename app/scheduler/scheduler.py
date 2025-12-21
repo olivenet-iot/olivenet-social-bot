@@ -94,39 +94,50 @@ class ContentScheduler:
     
     async def check_calendar_and_publish(self):
         """Content calendar'ı kontrol et ve zamanı gelen içeriği paylaş"""
-        from app.database import get_todays_calendar, update_calendar_status
-        
+        from app.database import get_todays_calendar, update_calendar_status, should_run_scheduled_content
+
         now = get_kktc_now()
         current_day = now.weekday()  # 0=Monday, 6=Sunday
-        
+
         # Bugünün planlarını al
         todays_plans = get_todays_calendar(current_day)
-        
+
         for plan in todays_plans:
             plan_time = plan.get('scheduled_time', '')
             plan_status = plan.get('status', '')
             plan_id = plan.get('id')
-            
+            content_type = (plan.get('visual_type_suggestion') or 'post').lower()
+
             # Zaten yayınlandıysa atla
             if plan_status == 'published':
                 continue
-            
+
             # Saat kontrolü (±5 dakika tolerans)
             if plan_time:
                 try:
                     plan_hour, plan_min = map(int, str(plan_time).split(':')[:2])
                     now_minutes = now.hour * 60 + now.minute
                     plan_minutes = plan_hour * 60 + plan_min
-                    
+
                     # ±5 dakika içindeyse paylaş
                     if abs(now_minutes - plan_minutes) <= 5:
                         print(f"[SCHEDULER] 📅 Planlı içerik zamanı geldi: {plan_time}")
+                        print(f"[SCHEDULER] Tür: {content_type}")
                         print(f"[SCHEDULER] Konu: {plan.get('topic_suggestion', 'N/A')}")
-                        
+
+                        # Duplicate kontrolü - bugün bu tipte içerik var mı?
+                        check_result = should_run_scheduled_content(content_type)
+
+                        if not check_result['should_run']:
+                            print(f"[SCHEDULER] ⏭️ SKIP: {check_result['message']}")
+                            # Calendar'ı skip olarak işaretle
+                            update_calendar_status(plan_id, 'skipped', None)
+                            continue
+
                         # Otonom içerik üret ve paylaş
                         if self.pipeline:
                             result = await self.pipeline.run_autonomous_content_with_plan(plan)
-                            
+
                             if result.get('success'):
                                 update_calendar_status(plan_id, 'published', result.get('post_id'))
                                 print(f"[SCHEDULER] ✅ Planlı içerik paylaşıldı!")

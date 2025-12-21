@@ -904,29 +904,15 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "🎠 *CAROUSEL MOD* başlatılıyor...\n\n"
             "Kaydırmalı içerik oluşturulacak:\n"
             "• Konu seçimi (carousel optimize)\n"
-            "• Slide metinleri (3-7 slide)\n"
-            "• Her slide için görsel\n"
+            "• Slide metinleri (5 slide)\n"
+            "• Her slide için FLUX görsel\n"
             "• Instagram Carousel post\n\n"
             "⏳ Bu işlem 3-5 dakika sürebilir...",
             parse_mode="Markdown"
         )
 
         # Carousel pipeline'ı arka planda çalıştır
-        # TODO: pipeline.run_carousel_content() implement edilmeli
-        # asyncio.create_task(pipeline.run_carousel_content())
-
-        # Şimdilik bilgi mesajı
-        await asyncio.sleep(1)
-        text = "🎠 *Carousel Pipeline*\n\n"
-        text += "⚠️ Carousel pipeline henüz tam olarak implement edilmedi.\n\n"
-        text += "Şimdilik Günlük İçerik modunu kullanarak\n"
-        text += "carousel tipinde içerik oluşturabilirsiniz."
-
-        keyboard = [
-            [InlineKeyboardButton("📝 Günlük İçerik", callback_data="start_daily")],
-            [InlineKeyboardButton("🏠 Ana Menü", callback_data="main_menu")]
-        ]
-        await query.edit_message_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+        asyncio.create_task(pipeline.run_carousel_pipeline())
 
     # ===== PIPELINE ONAYLARI =====
     elif action == "approve_topic":
