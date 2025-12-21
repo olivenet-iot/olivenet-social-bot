@@ -23,19 +23,19 @@ class OrchestratorAgent(BaseAgent):
     WEEKLY_SCHEDULE = [
         # Pazartesi - Hafta başı momentum
         {"day": 0, "day_name": "monday", "time": "10:00", "type": "reels", "platform": "instagram"},
-        {"day": 0, "day_name": "monday", "time": "19:00", "type": "post", "platform": "both"},
+        {"day": 0, "day_name": "monday", "time": "19:00", "type": "post", "platform": "instagram"},
         # Salı - Yoğun gün
         {"day": 1, "day_name": "tuesday", "time": "10:00", "type": "reels", "platform": "instagram"},
         {"day": 1, "day_name": "tuesday", "time": "19:00", "type": "carousel", "platform": "instagram"},
         # Çarşamba - Orta hafta
         {"day": 2, "day_name": "wednesday", "time": "10:00", "type": "reels", "platform": "instagram"},
-        {"day": 2, "day_name": "wednesday", "time": "19:00", "type": "post", "platform": "both"},
+        {"day": 2, "day_name": "wednesday", "time": "19:00", "type": "post", "platform": "instagram"},
         # Perşembe - Etkileşim zirvesi
         {"day": 3, "day_name": "thursday", "time": "10:00", "type": "reels", "platform": "instagram"},
         {"day": 3, "day_name": "thursday", "time": "19:00", "type": "reels", "platform": "instagram"},
         # Cuma - Hafta sonu öncesi
         {"day": 4, "day_name": "friday", "time": "10:00", "type": "reels", "platform": "instagram"},
-        {"day": 4, "day_name": "friday", "time": "19:00", "type": "post", "platform": "both"},
+        {"day": 4, "day_name": "friday", "time": "19:00", "type": "post", "platform": "instagram"},
         # Cumartesi - Rahat izleme
         {"day": 5, "day_name": "saturday", "time": "14:00", "type": "carousel", "platform": "instagram"},
         # Pazar - Hafta özeti
@@ -123,7 +123,7 @@ Her content type için uygun konular seç:
       "day_of_week": 0,
       "time": "10:00",
       "content_type": "post",
-      "platform": "both",
+      "platform": "instagram",
       "topic_category": "egitici",
       "topic": "Konu başlığı",
       "visual_type": "flux",

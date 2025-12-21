@@ -20,7 +20,7 @@ from app.database import (
     record_analytics, log_agent_action, update_post_analytics,
     get_connection
 )
-from app.insights_helper import get_post_insights, get_instagram_insights, get_instagram_media_insights
+from app.insights_helper import get_instagram_insights, get_instagram_media_insights
 from app.config import settings
 
 
@@ -456,33 +456,17 @@ Sadece JSON döndür.
             return {"error": "JSON parse error", "raw_response": response}
 
     async def fetch_metrics(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Facebook ve Instagram'dan metrikleri çek"""
+        """Instagram'dan metrikleri çek"""
         self.log("Metrikler çekiliyor...")
 
         post_id = input_data.get("post_id")
-        facebook_post_id = input_data.get("facebook_post_id")
         instagram_post_id = input_data.get("instagram_post_id")
 
-        result = {"success": True, "facebook": None, "instagram": None}
+        result = {"success": True, "instagram": None}
         analytics_data = {}
 
         try:
-            # Facebook metrikleri
-            if facebook_post_id:
-                self.log(f"Facebook metrikleri çekiliyor: {facebook_post_id}")
-                fb_insights = await get_post_insights(facebook_post_id)
-                if fb_insights.get("success"):
-                    result["facebook"] = fb_insights
-                    analytics_data.update({
-                        "fb_reach": fb_insights.get("insights", {}).get("post_impressions_unique", 0),
-                        "fb_likes": fb_insights.get("post_data", {}).get("reactions", 0),
-                        "fb_comments": fb_insights.get("post_data", {}).get("comments", 0),
-                        "fb_shares": fb_insights.get("post_data", {}).get("shares", 0),
-                        "fb_engagement_rate": fb_insights.get("engagement_rate", 0)
-                    })
-                    self.log(f"Facebook: reach={analytics_data.get('fb_reach')}, likes={analytics_data.get('fb_likes')}")
-
-            # Instagram metrikleri - yeni detaylı API kullan
+            # Instagram metrikleri
             if instagram_post_id:
                 self.log(f"Instagram metrikleri çekiliyor: {instagram_post_id}")
                 ig_insights = await get_instagram_media_insights(instagram_post_id)
@@ -521,7 +505,7 @@ Sadece JSON döndür.
             log_agent_action(
                 agent_name=self.name,
                 action="fetch_metrics",
-                input_data={"post_id": post_id, "fb_id": facebook_post_id, "ig_id": instagram_post_id},
+                input_data={"post_id": post_id, "ig_id": instagram_post_id},
                 output_data=analytics_data,
                 success=True
             )

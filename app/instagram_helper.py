@@ -1,6 +1,6 @@
 """
 Instagram Helper - Instagram Graph API Entegrasyonu
-Facebook Business Suite üzerinden Instagram'a içerik paylaşımı
+Yeni API: graph.instagram.com v21.0 (Instagram Login)
 """
 
 import os
@@ -15,40 +15,43 @@ from app.utils.logger import get_logger
 
 logger = get_logger("instagram")
 
-# Instagram Graph API URL
-GRAPH_API_URL = "https://graph.facebook.com/v18.0"
+# Instagram Graph API URL (YENİ - graph.instagram.com)
+GRAPH_API_URL = "https://graph.instagram.com/v21.0"
 
 # Video conversion output directory
 OUTPUT_DIR = str(settings.outputs_dir)
 
 
+def get_instagram_credentials() -> Dict[str, str]:
+    """Instagram API credentials'ları al"""
+    return {
+        "access_token": os.getenv("INSTAGRAM_ACCESS_TOKEN", ""),
+        "user_id": os.getenv("INSTAGRAM_USER_ID", ""),
+        "business_id": os.getenv("INSTAGRAM_BUSINESS_ID", "")
+    }
+
+
 async def convert_video_for_instagram(input_path: str) -> Dict[str, Any]:
     """
-    Video'yu Instagram Reels formatina donustur
+    Video'yu Instagram Reels formatına dönüştür
 
     Instagram Gereksinimleri:
     - Codec: H.264 (video), AAC (audio)
-    - Cozunurluk: 720x1280 (9:16)
+    - Çözünürlük: 720x1280 (9:16)
     - FPS: 30
-    - Max sure: 90 saniye
+    - Max süre: 90 saniye
     - Format: MP4
-
-    Args:
-        input_path: Giris video dosyasi
-
-    Returns:
-        {"success": True, "output_path": "...", "converted": True/False}
     """
     if not os.path.exists(input_path):
-        return {"success": False, "error": f"Video bulunamadi: {input_path}"}
+        return {"success": False, "error": f"Video bulunamadı: {input_path}"}
 
     print(f"[VIDEO CONVERT] Kaynak: {input_path}")
 
-    # ffmpeg kontrolu
+    # ffmpeg kontrolü
     try:
         result = subprocess.run(["which", "ffmpeg"], capture_output=True)
         if result.returncode != 0:
-            print("[VIDEO CONVERT] ffmpeg yuklu degil!")
+            print("[VIDEO CONVERT] ffmpeg yüklü değil!")
             return {"success": False, "error": "ffmpeg not installed"}
     except Exception as e:
         return {"success": False, "error": f"ffmpeg check failed: {e}"}
@@ -66,7 +69,6 @@ async def convert_video_for_instagram(input_path: str) -> Dict[str, Any]:
         probe_output = probe_result.stdout.strip()
         print(f"[VIDEO CONVERT] Probe: {probe_output}")
 
-        # Parse: codec,width,height,fps
         parts = probe_output.split(",")
         if len(parts) >= 4:
             codec = parts[0]
@@ -74,7 +76,6 @@ async def convert_video_for_instagram(input_path: str) -> Dict[str, Any]:
             height = int(parts[2])
             fps_str = parts[3]
 
-            # fps parse (30/1 -> 30)
             if "/" in fps_str:
                 num, den = fps_str.split("/")
                 fps = int(num) / int(den) if int(den) > 0 else 30
@@ -83,7 +84,6 @@ async def convert_video_for_instagram(input_path: str) -> Dict[str, Any]:
 
             print(f"[VIDEO CONVERT] Codec: {codec}, Size: {width}x{height}, FPS: {fps:.1f}")
 
-            # Instagram uyumlu mu kontrol et
             is_compatible = (
                 codec == "h264" and
                 width == 720 and
@@ -101,30 +101,28 @@ async def convert_video_for_instagram(input_path: str) -> Dict[str, Any]:
                     "original_size": f"{width}x{height}"
                 }
     except Exception as e:
-        print(f"[VIDEO CONVERT] Probe hatasi: {e}")
-        # Hata olsa bile donusturmeye devam et
+        print(f"[VIDEO CONVERT] Probe hatası: {e}")
 
-    # Donusturulmus dosya yolu
+    # Dönüştürülmüş dosya yolu
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_path = f"{OUTPUT_DIR}/ig_ready_{timestamp}.mp4"
 
-    print(f"[VIDEO CONVERT] Donusturuluyor: {output_path}")
+    print(f"[VIDEO CONVERT] Dönüştürülüyor: {output_path}")
 
-    # ffmpeg komutu
     ffmpeg_cmd = [
         "ffmpeg", "-y",
         "-i", input_path,
-        "-c:v", "libx264",          # H.264 codec
-        "-preset", "medium",         # Encoding hizi/kalite dengesi
-        "-crf", "23",                # Kalite (18-28 arasi, dusuk = daha iyi)
-        "-c:a", "aac",               # AAC audio codec
-        "-b:a", "128k",              # Audio bitrate
-        "-ar", "44100",              # Audio sample rate
+        "-c:v", "libx264",
+        "-preset", "medium",
+        "-crf", "23",
+        "-c:a", "aac",
+        "-b:a", "128k",
+        "-ar", "44100",
         "-vf", "scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2,setsar=1",
-        "-r", "30",                  # 30 FPS
-        "-movflags", "+faststart",   # Web streaming icin optimize
-        "-t", "90",                  # Max 90 saniye
+        "-r", "30",
+        "-movflags", "+faststart",
+        "-t", "90",
         output_path
     ]
 
@@ -133,18 +131,18 @@ async def convert_video_for_instagram(input_path: str) -> Dict[str, Any]:
             ffmpeg_cmd,
             capture_output=True,
             text=True,
-            timeout=300  # 5 dakika timeout
+            timeout=300
         )
 
         if process.returncode != 0:
-            print(f"[VIDEO CONVERT] ffmpeg hatasi: {process.stderr[:500]}")
+            print(f"[VIDEO CONVERT] ffmpeg hatası: {process.stderr[:500]}")
             return {"success": False, "error": f"ffmpeg error: {process.stderr[:200]}"}
 
         if not os.path.exists(output_path):
             return {"success": False, "error": "Output file not created"}
 
         file_size = os.path.getsize(output_path) / 1024 / 1024
-        print(f"[VIDEO CONVERT] Basarili! Boyut: {file_size:.2f} MB")
+        print(f"[VIDEO CONVERT] Başarılı! Boyut: {file_size:.2f} MB")
 
         return {
             "success": True,
@@ -160,24 +158,22 @@ async def convert_video_for_instagram(input_path: str) -> Dict[str, Any]:
         return {"success": False, "error": str(e)}
 
 
-async def get_instagram_account_id() -> Optional[str]:
+async def get_account_info() -> Dict[str, Any]:
     """
-    Facebook Page'e bağlı Instagram Business Account ID'sini al
+    Instagram hesap bilgilerini al
 
     Returns:
-        Instagram Business Account ID veya None
+        {"id": "...", "username": "...", "media_count": N, "followers_count": N}
     """
-    access_token = os.getenv("FACEBOOK_ACCESS_TOKEN")
-    page_id = os.getenv("FACEBOOK_PAGE_ID")
+    creds = get_instagram_credentials()
 
-    if not access_token or not page_id:
-        print("[INSTAGRAM] FACEBOOK_ACCESS_TOKEN veya FACEBOOK_PAGE_ID eksik!")
-        return None
+    if not creds["access_token"] or not creds["user_id"]:
+        return {"success": False, "error": "Instagram credentials eksik"}
 
-    url = f"{GRAPH_API_URL}/{page_id}"
+    url = f"{GRAPH_API_URL}/{creds['user_id']}"
     params = {
-        "fields": "instagram_business_account",
-        "access_token": access_token
+        "fields": "id,username,media_count,followers_count",
+        "access_token": creds["access_token"]
     }
 
     try:
@@ -186,27 +182,18 @@ async def get_instagram_account_id() -> Optional[str]:
                 data = await response.json()
 
                 if "error" in data:
-                    print(f"[INSTAGRAM] API Error: {data['error'].get('message', 'Unknown error')}")
-                    return None
+                    print(f"[INSTAGRAM] API Error: {data['error'].get('message', 'Unknown')}")
+                    return {"success": False, "error": data["error"].get("message")}
 
-                ig_account = data.get("instagram_business_account", {})
-                ig_id = ig_account.get("id")
-
-                if ig_id:
-                    print(f"[INSTAGRAM] Instagram Account ID: {ig_id}")
-                    return ig_id
-                else:
-                    print("[INSTAGRAM] Instagram Business Account bulunamadi!")
-                    print("[INSTAGRAM] Facebook Page'in bir Instagram Business Account'a bagli olmasi gerekiyor.")
-                    return None
+                print(f"[INSTAGRAM] Hesap: @{data.get('username')} | Takipçi: {data.get('followers_count', 0)}")
+                return {"success": True, **data}
 
     except Exception as e:
         print(f"[INSTAGRAM] Connection error: {e}")
-        return None
+        return {"success": False, "error": str(e)}
 
 
 async def create_media_container(
-    ig_account_id: str,
     image_url: Optional[str] = None,
     video_url: Optional[str] = None,
     caption: str = "",
@@ -217,44 +204,41 @@ async def create_media_container(
     Instagram Media Container oluştur (2-aşamalı yükleme için)
 
     Args:
-        ig_account_id: Instagram Business Account ID
-        image_url: Görsel URL'i (public erişilebilir olmalı)
-        video_url: Video URL'i (public erişilebilir olmalı)
+        image_url: Görsel URL'i (public erişilebilir, direkt .jpg/.png)
+        video_url: Video URL'i (public erişilebilir)
         caption: Post caption'ı
-        media_type: IMAGE, VIDEO, veya REELS
-        is_carousel_item: Carousel item mi?
+        media_type: IMAGE, REELS, veya CAROUSEL
+        is_carousel_item: Carousel child item mi?
 
     Returns:
         Container ID veya None
     """
-    access_token = os.getenv("FACEBOOK_ACCESS_TOKEN")
+    creds = get_instagram_credentials()
 
-    if not access_token:
+    if not creds["access_token"] or not creds["user_id"]:
+        print("[INSTAGRAM] Credentials eksik!")
         return None
 
-    url = f"{GRAPH_API_URL}/{ig_account_id}/media"
+    url = f"{GRAPH_API_URL}/{creds['user_id']}/media"
 
     data = {
-        "access_token": access_token
+        "access_token": creds["access_token"]
     }
 
     # Carousel item değilse caption ekle
-    if not is_carousel_item:
+    if not is_carousel_item and caption:
         data["caption"] = caption
 
     # Media type'a göre URL ekle
     if media_type == "IMAGE":
         data["image_url"] = image_url
-    elif media_type == "VIDEO":
-        data["video_url"] = video_url
-        data["media_type"] = "VIDEO"
     elif media_type == "REELS":
         data["video_url"] = video_url
         data["media_type"] = "REELS"
 
     # Carousel item flag
     if is_carousel_item:
-        data["is_carousel_item"] = True
+        data["is_carousel_item"] = "true"
 
     try:
         async with aiohttp.ClientSession() as session:
@@ -262,11 +246,12 @@ async def create_media_container(
                 result = await response.json()
 
                 if "error" in result:
-                    print(f"[INSTAGRAM] Container Error: {result['error'].get('message', 'Unknown error')}")
+                    error_msg = result["error"].get("message", "Unknown error")
+                    print(f"[INSTAGRAM] Container Error: {error_msg}")
                     return None
 
                 container_id = result.get("id")
-                print(f"[INSTAGRAM] Media Container olusturuldu: {container_id}")
+                print(f"[INSTAGRAM] Media Container oluşturuldu: {container_id}")
                 return container_id
 
     except Exception as e:
@@ -274,22 +259,62 @@ async def create_media_container(
         return None
 
 
+async def create_carousel_container(
+    children_ids: List[str],
+    caption: str = ""
+) -> Optional[str]:
+    """
+    Carousel ana container oluştur
+
+    Args:
+        children_ids: Child container ID listesi
+        caption: Post caption'ı
+
+    Returns:
+        Carousel container ID veya None
+    """
+    creds = get_instagram_credentials()
+
+    if not creds["access_token"] or not creds["user_id"]:
+        return None
+
+    url = f"{GRAPH_API_URL}/{creds['user_id']}/media"
+
+    data = {
+        "media_type": "CAROUSEL",
+        "children": ",".join(children_ids),
+        "caption": caption,
+        "access_token": creds["access_token"]
+    }
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, data=data) as response:
+                result = await response.json()
+
+                if "error" in result:
+                    print(f"[INSTAGRAM] Carousel Container Error: {result['error'].get('message')}")
+                    return None
+
+                container_id = result.get("id")
+                print(f"[INSTAGRAM] Carousel Container: {container_id}")
+                return container_id
+
+    except Exception as e:
+        print(f"[INSTAGRAM] Carousel container error: {e}")
+        return None
+
+
 async def check_container_status(container_id: str) -> Dict[str, Any]:
     """
     Media container durumunu kontrol et (video için gerekli)
-
-    Args:
-        container_id: Media container ID
-
-    Returns:
-        Status dictionary
     """
-    access_token = os.getenv("FACEBOOK_ACCESS_TOKEN")
+    creds = get_instagram_credentials()
 
     url = f"{GRAPH_API_URL}/{container_id}"
     params = {
         "fields": "status_code,status",
-        "access_token": access_token
+        "access_token": creds["access_token"]
     }
 
     try:
@@ -300,23 +325,22 @@ async def check_container_status(container_id: str) -> Dict[str, Any]:
         return {"error": str(e)}
 
 
-async def publish_media(ig_account_id: str, container_id: str) -> Dict[str, Any]:
+async def publish_media(container_id: str) -> Dict[str, Any]:
     """
     Media container'ı yayınla
 
     Args:
-        ig_account_id: Instagram Business Account ID
         container_id: Media container ID
 
     Returns:
-        Publish result dictionary
+        {"success": True, "id": "post_id"} veya {"success": False, "error": "..."}
     """
-    access_token = os.getenv("FACEBOOK_ACCESS_TOKEN")
+    creds = get_instagram_credentials()
 
-    url = f"{GRAPH_API_URL}/{ig_account_id}/media_publish"
+    url = f"{GRAPH_API_URL}/{creds['user_id']}/media_publish"
     data = {
         "creation_id": container_id,
-        "access_token": access_token
+        "access_token": creds["access_token"]
     }
 
     try:
@@ -325,11 +349,12 @@ async def publish_media(ig_account_id: str, container_id: str) -> Dict[str, Any]
                 result = await response.json()
 
                 if "error" in result:
-                    print(f"[INSTAGRAM] Publish Error: {result['error'].get('message', 'Unknown error')}")
-                    return {"success": False, "error": result["error"].get("message")}
+                    error_msg = result["error"].get("message", "Unknown error")
+                    print(f"[INSTAGRAM] Publish Error: {error_msg}")
+                    return {"success": False, "error": error_msg}
 
                 post_id = result.get("id")
-                print(f"[INSTAGRAM] Post yayinlandi! ID: {post_id}")
+                print(f"[INSTAGRAM] Post yayınlandı! ID: {post_id}")
                 return {"success": True, "id": post_id}
 
     except Exception as e:
@@ -345,106 +370,88 @@ async def post_photo_to_instagram(
     Instagram'a fotoğraf paylaş
 
     Args:
-        image_url: Görsel URL'i (PUBLIC erişilebilir olmalı!)
+        image_url: Görsel URL'i (PUBLIC, direkt .jpg/.png - redirect yok!)
         caption: Post caption'ı
 
     Returns:
-        Result dictionary with success status and post id
-
-    Note:
-        Instagram Graph API lokal dosya kabul etmez!
-        Görsel önce bir CDN veya public URL'e yüklenmeli.
+        {"success": True, "id": "..."} veya {"success": False, "error": "..."}
     """
-    print(f"[INSTAGRAM] Fotograf paylasiliyor...")
-    print(f"[INSTAGRAM] Image URL: {image_url[:50]}...")
+    print(f"[INSTAGRAM] Fotoğraf paylaşılıyor...")
+    print(f"[INSTAGRAM] Image URL: {image_url[:80]}...")
 
-    # Instagram Account ID al
-    ig_account_id = await get_instagram_account_id()
-    if not ig_account_id:
-        return {"success": False, "error": "Instagram Account ID alinamadi"}
-
-    # Media container oluştur
+    # Adım 1: Container oluştur
     container_id = await create_media_container(
-        ig_account_id=ig_account_id,
         image_url=image_url,
         caption=caption,
         media_type="IMAGE"
     )
 
     if not container_id:
-        return {"success": False, "error": "Media container olusturulamadi"}
+        return {"success": False, "error": "Media container oluşturulamadı"}
 
-    # Biraz bekle (Instagram processing)
+    # Biraz bekle
     await asyncio.sleep(2)
 
-    # Yayınla
-    return await publish_media(ig_account_id, container_id)
+    # Adım 2: Yayınla
+    result = await publish_media(container_id)
+    if result.get("success"):
+        result["platform"] = "instagram"
+    return result
 
 
 async def post_video_to_instagram(
     video_url: str,
-    caption: str = "",
-    as_reels: bool = True
+    caption: str = ""
 ) -> Dict[str, Any]:
     """
-    Instagram'a video/Reels paylaş
+    Instagram'a Reels paylaş
 
     Args:
-        video_url: Video URL'i (PUBLIC erişilebilir olmalı!)
-        caption: Post caption'ı
-        as_reels: Reels olarak mı paylaşılsın? (default: True)
+        video_url: Video URL'i (PUBLIC erişilebilir!)
+        caption: Reels caption'ı
 
     Returns:
-        Result dictionary with success status and post id
-
-    Note:
-        - Video önce bir CDN veya public URL'e yüklenmeli
-        - Reels için 9:16 aspect ratio önerilir
-        - Video max 15 dakika (Reels için 90 saniye)
+        {"success": True, "id": "..."} veya {"success": False, "error": "..."}
     """
-    print(f"[INSTAGRAM] Video paylasiliyor (Reels: {as_reels})...")
+    print(f"[INSTAGRAM] Reels paylaşılıyor...")
 
-    # Instagram Account ID al
-    ig_account_id = await get_instagram_account_id()
-    if not ig_account_id:
-        return {"success": False, "error": "Instagram Account ID alinamadi"}
-
-    # Media container oluştur
-    media_type = "REELS" if as_reels else "VIDEO"
+    # Adım 1: REELS container oluştur
     container_id = await create_media_container(
-        ig_account_id=ig_account_id,
         video_url=video_url,
         caption=caption,
-        media_type=media_type
+        media_type="REELS"
     )
 
     if not container_id:
-        return {"success": False, "error": "Media container olusturulamadi"}
+        return {"success": False, "error": "Media container oluşturulamadı"}
 
-    # Video processing bekle (uzun sürebilir)
-    print("[INSTAGRAM] Video isleniyor, bekleyin...")
+    # Video processing bekle
+    print("[INSTAGRAM] Video işleniyor, bekleyin...")
     max_attempts = 30
     for attempt in range(max_attempts):
-        await asyncio.sleep(10)  # 10 saniye bekle
+        await asyncio.sleep(10)
 
         status = await check_container_status(container_id)
         status_code = status.get("status_code")
 
         if status_code == "FINISHED":
-            print("[INSTAGRAM] Video isleme tamamlandi!")
+            print("[INSTAGRAM] Video işleme tamamlandı!")
             break
         elif status_code == "ERROR":
             error_msg = status.get("status", "Unknown error")
             return {"success": False, "error": f"Video processing error: {error_msg}"}
         elif status_code == "IN_PROGRESS":
-            print(f"[INSTAGRAM] Video isleniyor... ({attempt + 1}/{max_attempts})")
+            print(f"[INSTAGRAM] Video işleniyor... ({attempt + 1}/{max_attempts})")
         else:
             print(f"[INSTAGRAM] Status: {status_code}")
     else:
         return {"success": False, "error": "Video processing timeout"}
 
-    # Yayınla
-    return await publish_media(ig_account_id, container_id)
+    # Adım 2: Yayınla
+    result = await publish_media(container_id)
+    if result.get("success"):
+        result["platform"] = "instagram_reels"
+    return result
 
 
 async def post_carousel_to_instagram(
@@ -452,31 +459,25 @@ async def post_carousel_to_instagram(
     caption: str = ""
 ) -> Dict[str, Any]:
     """
-    Instagram'a carousel (çoklu görsel) paylaş
+    Instagram'a Carousel (çoklu görsel) paylaş
 
     Args:
-        image_urls: Görsel URL listesi (2-10 arası, PUBLIC erişilebilir!)
+        image_urls: Görsel URL listesi (2-10 arası, PUBLIC!)
         caption: Post caption'ı
 
     Returns:
-        Result dictionary with success status and post id
+        {"success": True, "id": "..."} veya {"success": False, "error": "..."}
     """
     if len(image_urls) < 2 or len(image_urls) > 10:
-        return {"success": False, "error": "Carousel 2-10 arasi gorsel icermeli"}
+        return {"success": False, "error": "Carousel 2-10 arası görsel içermeli"}
 
-    print(f"[INSTAGRAM] Carousel paylasiliyor ({len(image_urls)} gorsel)...")
+    print(f"[INSTAGRAM] Carousel paylaşılıyor ({len(image_urls)} görsel)...")
 
-    # Instagram Account ID al
-    ig_account_id = await get_instagram_account_id()
-    if not ig_account_id:
-        return {"success": False, "error": "Instagram Account ID alinamadi"}
-
-    # Her görsel için container oluştur
+    # Adım 1: Her görsel için child container oluştur
     children_ids = []
     for i, image_url in enumerate(image_urls):
-        print(f"[INSTAGRAM] Carousel item {i+1}/{len(image_urls)} olusturuluyor...")
+        print(f"[INSTAGRAM] Carousel item {i+1}/{len(image_urls)} oluşturuluyor...")
         container_id = await create_media_container(
-            ig_account_id=ig_account_id,
             image_url=image_url,
             media_type="IMAGE",
             is_carousel_item=True
@@ -484,50 +485,36 @@ async def post_carousel_to_instagram(
 
         if container_id:
             children_ids.append(container_id)
+            await asyncio.sleep(2)  # Rate limit
         else:
-            print(f"[INSTAGRAM] Item {i+1} olusturulamadi, devam ediliyor...")
+            print(f"[INSTAGRAM] Item {i+1} oluşturulamadı!")
 
     if len(children_ids) < 2:
         return {"success": False, "error": "En az 2 carousel item gerekli"}
 
-    # Ana carousel container oluştur
-    access_token = os.getenv("FACEBOOK_ACCESS_TOKEN")
-    url = f"{GRAPH_API_URL}/{ig_account_id}/media"
+    # Adım 2: Ana carousel container oluştur
+    carousel_container_id = await create_carousel_container(
+        children_ids=children_ids,
+        caption=caption
+    )
 
-    data = {
-        "media_type": "CAROUSEL",
-        "children": ",".join(children_ids),
-        "caption": caption,
-        "access_token": access_token
-    }
+    if not carousel_container_id:
+        return {"success": False, "error": "Carousel container oluşturulamadı"}
 
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, data=data) as response:
-                result = await response.json()
+    # Biraz bekle
+    await asyncio.sleep(3)
 
-                if "error" in result:
-                    return {"success": False, "error": result["error"].get("message")}
-
-                carousel_container_id = result.get("id")
-                print(f"[INSTAGRAM] Carousel container: {carousel_container_id}")
-
-                # Biraz bekle
-                await asyncio.sleep(3)
-
-                # Yayınla
-                return await publish_media(ig_account_id, carousel_container_id)
-
-    except Exception as e:
-        return {"success": False, "error": str(e)}
+    # Adım 3: Yayınla
+    result = await publish_media(carousel_container_id)
+    if result.get("success"):
+        result["platform"] = "instagram_carousel"
+        result["slide_count"] = len(children_ids)
+    return result
 
 
 async def upload_image_to_cdn(local_path: str) -> Optional[str]:
     """
     Lokal görseli CDN'e yükle ve public URL döndür
-
-    Bu fonksiyon placeholder - gerçek implementasyon için
-    bir CDN servisi (AWS S3, Cloudinary, etc.) gerekli
 
     Args:
         local_path: Lokal dosya yolu
@@ -535,17 +522,6 @@ async def upload_image_to_cdn(local_path: str) -> Optional[str]:
     Returns:
         Public URL veya None
     """
-    # TODO: Gerçek CDN implementasyonu
-    # Seçenekler:
-    # 1. AWS S3 + CloudFront
-    # 2. Cloudinary
-    # 3. Imgbb (ücretsiz)
-    # 4. Firebase Storage
-
-    print(f"[INSTAGRAM] CDN upload gerekli: {local_path}")
-    print("[INSTAGRAM] CDN servisi henuz ayarlanmamis!")
-
-    # Imgbb kullanarak upload (ücretsiz, API key gerekli)
     imgbb_key = os.getenv("IMGBB_API_KEY")
 
     if imgbb_key and os.path.exists(local_path):
@@ -567,7 +543,7 @@ async def upload_image_to_cdn(local_path: str) -> Optional[str]:
 
                     if result.get("success"):
                         url = result["data"]["url"]
-                        print(f"[INSTAGRAM] Gorsel yuklendi: {url}")
+                        print(f"[INSTAGRAM] Görsel yüklendi: {url}")
                         return url
                     else:
                         print(f"[INSTAGRAM] Imgbb error: {result}")
@@ -594,13 +570,7 @@ async def post_reels_to_instagram(
         skip_conversion: Video dönüşümünü atla
 
     Returns:
-        Result dictionary with success status, post id, and CDN URL
-
-    Note:
-        - Video önce Instagram formatına dönüştürülür (H.264, AAC, 720x1280)
-        - Sonra Cloudinary'ye yüklenir
-        - Reels için 9:16 aspect ratio
-        - Süre: 3-90 saniye
+        {"success": True, "id": "...", "cdn_url": "..."} veya hata
     """
     if not os.path.exists(video_path):
         return {"success": False, "error": f"Video dosyası bulunamadı: {video_path}"}
@@ -608,7 +578,7 @@ async def post_reels_to_instagram(
     print(f"[INSTAGRAM REELS] Reels paylaşılıyor...")
     print(f"[INSTAGRAM REELS] Video: {video_path}")
 
-    # 0. Video'yu Instagram formatına dönüştür
+    # Video'yu Instagram formatına dönüştür
     upload_path = video_path
     if not skip_conversion:
         print("[INSTAGRAM REELS] Video Instagram formatına dönüştürülüyor...")
@@ -616,53 +586,44 @@ async def post_reels_to_instagram(
 
         if not convert_result.get("success"):
             print(f"[INSTAGRAM REELS] Dönüşüm hatası: {convert_result.get('error')}")
-            # Dönüşüm başarısız olsa bile orijinal video ile devam et
             print("[INSTAGRAM REELS] Orijinal video ile devam ediliyor...")
         else:
             upload_path = convert_result.get("output_path", video_path)
             if convert_result.get("converted"):
                 print(f"[INSTAGRAM REELS] Dönüştürüldü: {upload_path}")
-            else:
-                print("[INSTAGRAM REELS] Video zaten uyumlu, dönüşüm gerekmedi")
 
-    # 1. Video'yu Cloudinary'ye yükle
+    # Video'yu Cloudinary'ye yükle
     try:
         from app.cloudinary_helper import upload_video_to_cloudinary
 
         cdn_result = await upload_video_to_cloudinary(upload_path)
 
         if not cdn_result.get("success"):
-            print(f"[INSTAGRAM REELS] CDN yükleme hatası: {cdn_result.get('error')}")
             return {"success": False, "error": f"CDN upload failed: {cdn_result.get('error')}"}
 
         video_url = cdn_result.get("url")
         print(f"[INSTAGRAM REELS] CDN URL: {video_url}")
 
     except ImportError:
-        print("[INSTAGRAM REELS] cloudinary_helper import edilemedi")
         return {"success": False, "error": "cloudinary_helper not available"}
     except Exception as e:
-        print(f"[INSTAGRAM REELS] CDN hata: {e}")
         return {"success": False, "error": f"CDN error: {str(e)}"}
 
-    # 2. Instagram Reels olarak paylaş
+    # Instagram Reels olarak paylaş
     for attempt in range(max_retries):
         try:
             print(f"[INSTAGRAM REELS] Deneme {attempt + 1}/{max_retries}")
 
             result = await post_video_to_instagram(
                 video_url=video_url,
-                caption=caption,
-                as_reels=True
+                caption=caption
             )
 
             if result.get("success"):
                 result["cdn_url"] = video_url
-                result["platform"] = "instagram_reels"
                 print(f"[INSTAGRAM REELS] Başarıyla yayınlandı! ID: {result.get('id')}")
                 return result
 
-            # Hata varsa ve retry kaldıysa tekrar dene
             error = result.get("error", "Unknown error")
             print(f"[INSTAGRAM REELS] Hata: {error}")
 
@@ -678,24 +639,108 @@ async def post_reels_to_instagram(
     return {"success": False, "error": "Max retries exceeded", "cdn_url": video_url}
 
 
-# Test fonksiyonu
+async def get_media_insights(media_id: str) -> Dict[str, Any]:
+    """
+    Post insights al
+
+    Args:
+        media_id: Instagram post ID
+
+    Returns:
+        Insights dictionary
+    """
+    creds = get_instagram_credentials()
+
+    url = f"{GRAPH_API_URL}/{media_id}/insights"
+    params = {
+        "metric": "impressions,reach,engagement,saved",
+        "access_token": creds["access_token"]
+    }
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, params=params) as response:
+                data = await response.json()
+
+                if "error" in data:
+                    return {"success": False, "error": data["error"].get("message")}
+
+                # Parse insights
+                insights = {}
+                for item in data.get("data", []):
+                    insights[item["name"]] = item["values"][0]["value"]
+
+                return {"success": True, "insights": insights}
+
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+async def get_recent_media(limit: int = 10) -> Dict[str, Any]:
+    """
+    Son paylaşılan medyaları al
+
+    Args:
+        limit: Kaç post alınacak
+
+    Returns:
+        Media listesi
+    """
+    creds = get_instagram_credentials()
+
+    url = f"{GRAPH_API_URL}/{creds['user_id']}/media"
+    params = {
+        "fields": "id,caption,timestamp,media_type,like_count,comments_count",
+        "limit": limit,
+        "access_token": creds["access_token"]
+    }
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, params=params) as response:
+                data = await response.json()
+
+                if "error" in data:
+                    return {"success": False, "error": data["error"].get("message")}
+
+                return {"success": True, "media": data.get("data", [])}
+
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
 async def test_instagram_connection():
     """Instagram bağlantısını test et"""
-    print("\n=== Instagram Baglanti Testi ===\n")
+    print("\n=== Instagram API Bağlantı Testi ===\n")
+    print(f"Endpoint: {GRAPH_API_URL}\n")
 
-    ig_id = await get_instagram_account_id()
+    creds = get_instagram_credentials()
 
-    if ig_id:
-        print(f"\n[OK] Instagram baglamtisi basarili!")
-        print(f"[OK] Account ID: {ig_id}")
+    if not creds["access_token"]:
+        print("[FAIL] INSTAGRAM_ACCESS_TOKEN tanımlı değil!")
+        return False
+
+    if not creds["user_id"]:
+        print("[FAIL] INSTAGRAM_USER_ID tanımlı değil!")
+        return False
+
+    # Hesap bilgisi al
+    result = await get_account_info()
+
+    if result.get("success"):
+        print(f"\n[OK] Instagram bağlantısı başarılı!")
+        print(f"[OK] Username: @{result.get('username')}")
+        print(f"[OK] User ID: {result.get('id')}")
+        print(f"[OK] Followers: {result.get('followers_count', 0)}")
+        print(f"[OK] Posts: {result.get('media_count', 0)}")
         return True
     else:
-        print("\n[FAIL] Instagram baglantisi basarisiz!")
-        print("[INFO] Kontrol edilecekler:")
-        print("  1. FACEBOOK_ACCESS_TOKEN .env'de tanimli mi?")
-        print("  2. FACEBOOK_PAGE_ID .env'de tanimli mi?")
-        print("  3. Facebook Page bir Instagram Business Account'a bagli mi?")
-        print("  4. Access token 'instagram_basic' ve 'instagram_content_publish' izinlerine sahip mi?")
+        print(f"\n[FAIL] Instagram bağlantısı başarısız!")
+        print(f"[ERROR] {result.get('error')}")
+        print("\n[INFO] Kontrol edilecekler:")
+        print("  1. INSTAGRAM_ACCESS_TOKEN .env'de tanımlı mı?")
+        print("  2. INSTAGRAM_USER_ID .env'de tanımlı mı?")
+        print("  3. Access token geçerli mi?")
         return False
 
 

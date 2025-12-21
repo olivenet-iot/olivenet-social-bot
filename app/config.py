@@ -87,12 +87,10 @@ class Settings(BaseSettings):
                     pass
         return ids
 
-    # Facebook Settings
-    facebook_page_id: str = Field(default="", description="Facebook Page ID")
-    facebook_access_token: str = Field(default="", description="Facebook Page Access Token")
-
-    # Instagram Settings
-    instagram_account_id: str = Field(default="", description="Instagram Business Account ID")
+    # Instagram API Settings (graph.instagram.com v21.0)
+    instagram_access_token: str = Field(default="", description="Instagram Access Token")
+    instagram_user_id: str = Field(default="", description="Instagram User ID")
+    instagram_business_id: str = Field(default="", description="Instagram Business Account ID")
 
     # Gemini AI Settings
     gemini_api_key: str = Field(default="", description="Gemini API Key for realistic image generation")
@@ -130,7 +128,6 @@ class Settings(BaseSettings):
 
     # Content Settings
     max_instagram_words: int = Field(default=120, description="Max words for Instagram posts")
-    max_facebook_words: int = Field(default=300, description="Max words for Facebook posts")
 
     # Review & Scoring Thresholds
     min_review_score: float = Field(default=7.0, description="Minimum score to approve content")

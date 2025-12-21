@@ -1204,15 +1204,15 @@ def get_next_schedule_slot() -> Optional[Dict]:
     # Hardcoded schedule (orchestrator.py'den)
     WEEKLY_SCHEDULE = [
         {"day": 0, "day_name": "Pazartesi", "time": "10:00", "type": "reels", "platform": "instagram"},
-        {"day": 0, "day_name": "Pazartesi", "time": "19:00", "type": "post", "platform": "both"},
+        {"day": 0, "day_name": "Pazartesi", "time": "19:00", "type": "post", "platform": "instagram"},
         {"day": 1, "day_name": "Salı", "time": "10:00", "type": "reels", "platform": "instagram"},
         {"day": 1, "day_name": "Salı", "time": "19:00", "type": "carousel", "platform": "instagram"},
         {"day": 2, "day_name": "Çarşamba", "time": "10:00", "type": "reels", "platform": "instagram"},
-        {"day": 2, "day_name": "Çarşamba", "time": "19:00", "type": "post", "platform": "both"},
+        {"day": 2, "day_name": "Çarşamba", "time": "19:00", "type": "post", "platform": "instagram"},
         {"day": 3, "day_name": "Perşembe", "time": "10:00", "type": "reels", "platform": "instagram"},
         {"day": 3, "day_name": "Perşembe", "time": "19:00", "type": "reels", "platform": "instagram"},
         {"day": 4, "day_name": "Cuma", "time": "10:00", "type": "reels", "platform": "instagram"},
-        {"day": 4, "day_name": "Cuma", "time": "19:00", "type": "post", "platform": "both"},
+        {"day": 4, "day_name": "Cuma", "time": "19:00", "type": "post", "platform": "instagram"},
         {"day": 5, "day_name": "Cumartesi", "time": "14:00", "type": "carousel", "platform": "instagram"},
         {"day": 6, "day_name": "Pazar", "time": "14:00", "type": "reels", "platform": "instagram"},
     ]

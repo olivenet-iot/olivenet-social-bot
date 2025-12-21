@@ -388,7 +388,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                     "post_text": content_result.get("post_text"),
                     "image_path": image_path,
                     "video_path": video_path,
-                    "platform": "both"  # Facebook + Instagram
+                    "platform": "instagram"
                 })
 
                 if publish_result.get("success"):
@@ -399,9 +399,9 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                         message=f"""
 🎉 *YAYINLANDI!*
 
-✅ Post başarıyla Facebook'a gönderildi.
+✅ Post başarıyla Instagram'a gönderildi.
 
-📊 Post ID: {publish_result.get('facebook_post_id', 'N/A')}
+📊 Post ID: {publish_result.get('instagram_post_id', 'N/A')}
 """,
                         data=publish_result,
                         buttons=[]
@@ -490,7 +490,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             self.current_data["content"] = content_result
             result["stages_completed"].append("content_creation")
 
-            self.log(f"[OTONOM] İçerik üretildi (IG: {content_result.get('ig_word_count', 0)}, FB: {content_result.get('word_count', 0)} kelime)")
+            self.log(f"[OTONOM] İçerik üretildi ({content_result.get('ig_word_count', 0)} kelime)")
 
             # ========== AŞAMA 3: Görsel Üretimi ==========
             self.log("[OTONOM] Aşama 3: Görsel üretiliyor...")
@@ -613,22 +613,20 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 "post_id": content_result.get("post_id"),
                 "post_text": content_result.get("post_text"),
                 "post_text_ig": content_result.get("post_text_ig"),
-                "post_text_fb": content_result.get("post_text_fb"),
                 "image_path": image_path,
                 "video_path": video_path,
-                "platform": "both"  # Facebook + Instagram
+                "platform": "instagram"
             })
 
             if publish_result.get("success"):
                 result["stages_completed"].append("published")
                 result["success"] = True
-                result["facebook_post_id"] = publish_result.get("facebook_post_id")
                 result["instagram_post_id"] = publish_result.get("instagram_post_id")
 
-                self.log(f"[OTONOM] Başarıyla yayınlandı! FB: {publish_result.get('facebook_post_id')}, IG: {publish_result.get('instagram_post_id')}")
+                self.log(f"[OTONOM] Başarıyla yayınlandı! IG: {publish_result.get('instagram_post_id')}")
 
                 await self.notify_telegram(
-                    message=f"🎉 *OTONOM MOD* - Yayinlandi!\n\nKonu: {topic_result.get('topic')}\nPuan: {score}/10\nPost ID: {publish_result.get('facebook_post_id', 'N/A')}",
+                    message=f"🎉 *OTONOM MOD* - Yayinlandi!\n\nKonu: {topic_result.get('topic')}\nPuan: {score}/10\nIG Post: {publish_result.get('instagram_post_id', 'N/A')}",
                     data=publish_result,
                     buttons=[]
                 )
@@ -683,7 +681,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
 
             # ========== STANDART POST FLOW ==========
             # 1. İçerik üret (multiplatform)
-            self.log("Aşama 1: İçerik üretiliyor (IG+FB)...")
+            self.log("Aşama 1: İçerik üretiliyor...")
             content_result = await self.creator.execute({
                 "action": "create_post_multiplatform",
                 "topic": topic,
@@ -697,7 +695,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
 
             result["stages_completed"].append("content")
             result["post_id"] = content_result.get("post_id")
-            self.log(f"İçerik: IG {content_result.get('ig_word_count', 0)} kelime, FB {content_result.get('word_count', 0)} kelime")
+            self.log(f"İçerik: {content_result.get('ig_word_count', 0)} kelime")
 
             # 2. Görsel prompt
             self.log("Aşama 2: Görsel prompt oluşturuluyor...")
@@ -778,28 +776,20 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 "post_id": content_result.get("post_id"),
                 "post_text": content_result.get("post_text"),
                 "post_text_ig": content_result.get("post_text_ig"),
-                "post_text_fb": content_result.get("post_text_fb"),
                 "image_path": image_path,
                 "video_path": video_path,
-                "platform": "both"
+                "platform": "instagram"
             })
 
             if publish_result.get("success"):
                 result["stages_completed"].append("published")
                 result["success"] = True
 
-                fb_ok = publish_result.get("platforms", {}).get("facebook", {}).get("success", False)
-                ig_ok = publish_result.get("platforms", {}).get("instagram", {}).get("success", False)
-
-                platforms = []
-                if fb_ok: platforms.append("Facebook")
-                if ig_ok: platforms.append("Instagram")
-
                 await self.notify_telegram(
                     message=f"✅ Planlı İçerik Yayınlandı!\n\n"
                     f"📝 Konu: {topic[:50]}...\n"
                     f"🎨 Görsel: {visual_type}\n"
-                    f"📱 Platform: {', '.join(platforms)}\n"
+                    f"📱 Platform: Instagram\n"
                     f"⭐ Puan: {score}/10",
                     data={},
                     buttons=[]
@@ -987,33 +977,24 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             publish_result = await self.publisher.execute({
                 "action": "publish",
                 "post_id": content_result.get("post_id"),
-                "post_text": content_result.get("post_text_fb", ""),  # FB için
-                "post_text_ig": content_result.get("post_text_ig", ""),  # IG için
-                "post_text_fb": content_result.get("post_text_fb", ""),
+                "post_text": content_result.get("post_text_ig", ""),
+                "post_text_ig": content_result.get("post_text_ig", ""),
                 "video_path": video_path,
-                "platform": "both"
+                "platform": "instagram"
             })
 
             if publish_result.get("success"):
                 result["stages_completed"].append("published")
                 result["success"] = True
-                result["facebook_post_id"] = publish_result.get("facebook_post_id")
                 result["instagram_post_id"] = publish_result.get("instagram_post_id")
 
-                fb_ok = publish_result.get("platforms", {}).get("facebook", {}).get("success", False)
-                ig_ok = publish_result.get("platforms", {}).get("instagram", {}).get("success", False)
-
-                platforms = []
-                if fb_ok: platforms.append("Facebook")
-                if ig_ok: platforms.append("Instagram Reels")
-
-                self.log(f"[REELS] Başarıyla yayınlandı! {', '.join(platforms)}")
+                self.log(f"[REELS] Başarıyla yayınlandı! Instagram Reels")
 
                 await self.notify_telegram(
                     message=f"🎉 *REELS* - Yayınlandı!\n\n"
                     f"📝 Konu: {topic[:50]}...\n"
                     f"🎥 Model: {model_used}\n"
-                    f"📱 Platform: {', '.join(platforms)}\n"
+                    f"📱 Platform: Instagram Reels\n"
                     f"⭐ Puan: {score}/10",
                     data=publish_result,
                     buttons=[]
@@ -1522,13 +1503,12 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 "post_text_ig": post_text,
                 "image_path": image_path,
                 "video_path": video_path,
-                "platform": "both"
+                "platform": "instagram"
             })
 
             if publish_result.get("success"):
                 result["stages_completed"].append("published")
                 result["success"] = True
-                result["facebook_post_id"] = publish_result.get("facebook_post_id")
                 result["instagram_post_id"] = publish_result.get("instagram_post_id")
 
                 self.log("[A/B] Başarıyla yayınlandı!")
