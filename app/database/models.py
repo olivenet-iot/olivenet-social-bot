@@ -152,7 +152,15 @@ def init_database():
         "ALTER TABLE posts ADD COLUMN ig_engagement_rate REAL DEFAULT 0",
         "ALTER TABLE posts ADD COLUMN insights_updated_at TIMESTAMP",
         "ALTER TABLE posts ADD COLUMN post_text_ig TEXT",
-        "ALTER TABLE posts ADD COLUMN post_text_fb TEXT"
+        "ALTER TABLE posts ADD COLUMN post_text_fb TEXT",
+        # Instagram Reels/Video metrikleri
+        "ALTER TABLE posts ADD COLUMN ig_saves INTEGER DEFAULT 0",
+        "ALTER TABLE posts ADD COLUMN ig_shares INTEGER DEFAULT 0",
+        "ALTER TABLE posts ADD COLUMN ig_plays INTEGER DEFAULT 0",
+        "ALTER TABLE posts ADD COLUMN ig_avg_watch_time REAL DEFAULT 0",
+        "ALTER TABLE posts ADD COLUMN ig_total_watch_time INTEGER DEFAULT 0",
+        "ALTER TABLE posts ADD COLUMN ig_reach_followers INTEGER DEFAULT 0",
+        "ALTER TABLE posts ADD COLUMN ig_reach_non_followers INTEGER DEFAULT 0"
     ]
 
     for stmt in alter_statements:

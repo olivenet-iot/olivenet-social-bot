@@ -11,6 +11,8 @@ from telegram.ext import (
     Application, CommandHandler, CallbackQueryHandler,
     MessageHandler, filters, ContextTypes
 )
+from telegram.request import HTTPXRequest
+from telegram.error import NetworkError, TimedOut, RetryAfter
 from app.scheduler import ContentPipeline, ContentScheduler, create_default_scheduler
 from app.database import get_current_strategy, get_analytics_summary
 
@@ -21,7 +23,7 @@ admin_chat_id: int = None
 pending_input: dict = {}  # Kullanıcıdan beklenen input
 
 async def telegram_notify(message: str, data: dict = None, buttons: list = None):
-    """Pipeline'dan Telegram'a bildirim"""
+    """Pipeline'dan Telegram'a bildirim - retry mekanizması ile"""
     global admin_chat_id
 
     if not admin_chat_id:
@@ -31,7 +33,17 @@ async def telegram_notify(message: str, data: dict = None, buttons: list = None)
     from telegram import Bot
     import os
 
-    bot = Bot(token=os.getenv("TELEGRAM_BOT_TOKEN"))
+    # Retry ayarları
+    max_retries = 3
+    retry_delay = 5  # saniye
+
+    request = HTTPXRequest(
+        connection_pool_size=4,
+        read_timeout=30.0,
+        write_timeout=30.0,
+        connect_timeout=30.0,
+    )
+    bot = Bot(token=os.getenv("TELEGRAM_BOT_TOKEN"), request=request)
 
     # Keyboard oluştur
     keyboard = []
@@ -92,22 +104,39 @@ async def telegram_notify(message: str, data: dict = None, buttons: list = None)
         except Exception as e:
             print(f"[TELEGRAM] Video send error: {e}")
 
-    # Normal mesaj gönder
-    try:
-        await bot.send_message(
-            chat_id=admin_chat_id,
-            text=message,
-            parse_mode="Markdown",
-            reply_markup=reply_markup
-        )
-    except Exception as e:
-        # Markdown parse hatası - düz metin gönder
-        clean_message = message.replace("*", "").replace("_", "").replace("`", "")
-        await bot.send_message(
-            chat_id=admin_chat_id,
-            text=clean_message,
-            reply_markup=reply_markup
-        )
+    # Normal mesaj gönder - retry ile
+    for attempt in range(max_retries):
+        try:
+            await bot.send_message(
+                chat_id=admin_chat_id,
+                text=message,
+                parse_mode="Markdown",
+                reply_markup=reply_markup
+            )
+            return
+        except (NetworkError, TimedOut) as e:
+            if attempt < max_retries - 1:
+                print(f"[TELEGRAM] Retry {attempt + 1}/{max_retries} - {e}")
+                await asyncio.sleep(retry_delay * (attempt + 1))  # Exponential backoff
+            else:
+                print(f"[TELEGRAM] Mesaj gönderilemedi: {e}")
+        except Exception as e:
+            # Markdown parse hatası - düz metin gönder
+            clean_message = message.replace("*", "").replace("_", "").replace("`", "")
+            try:
+                await bot.send_message(
+                    chat_id=admin_chat_id,
+                    text=clean_message,
+                    reply_markup=reply_markup
+                )
+                return
+            except (NetworkError, TimedOut) as ne:
+                if attempt < max_retries - 1:
+                    print(f"[TELEGRAM] Retry {attempt + 1}/{max_retries} - {ne}")
+                    await asyncio.sleep(retry_delay * (attempt + 1))
+            except Exception as inner_e:
+                print(f"[TELEGRAM] Mesaj gönderilemedi: {inner_e}")
+                return
 
 
 # ============ KOMUTLAR ============
@@ -372,6 +401,21 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # TODO: Manuel topic ile pipeline
 
 
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Network hatalarını gracefully handle et"""
+    error = context.error
+
+    if isinstance(error, NetworkError):
+        print(f"⚠️ Network hatası (retry edilecek): {error}")
+    elif isinstance(error, TimedOut):
+        print(f"⚠️ Timeout hatası (retry edilecek): {error}")
+    elif isinstance(error, RetryAfter):
+        print(f"⚠️ Rate limit - {error.retry_after}s bekle")
+        await asyncio.sleep(error.retry_after)
+    else:
+        print(f"❌ Beklenmeyen hata: {type(error).__name__}: {error}")
+
+
 async def main():
     """Ana fonksiyon"""
     global pipeline, scheduler, admin_chat_id
@@ -389,8 +433,23 @@ async def main():
     # Admin chat ID
     admin_chat_id = int(os.getenv("TELEGRAM_ADMIN_CHAT_ID", "0"))
 
-    # Telegram bot
-    app = Application.builder().token(os.getenv("TELEGRAM_BOT_TOKEN")).build()
+    # HTTPXRequest ile retry/backoff ayarları
+    request = HTTPXRequest(
+        connection_pool_size=8,
+        read_timeout=30.0,
+        write_timeout=30.0,
+        connect_timeout=30.0,
+        pool_timeout=10.0,
+    )
+
+    # Telegram bot - retry mekanizması ile
+    app = (
+        Application.builder()
+        .token(os.getenv("TELEGRAM_BOT_TOKEN"))
+        .request(request)
+        .get_updates_request(request)
+        .build()
+    )
 
     # Handler'lar
     app.add_handler(CommandHandler("start", cmd_start))
@@ -399,18 +458,24 @@ async def main():
     app.add_handler(CallbackQueryHandler(handle_callback))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_input))
 
+    # Error handler ekle
+    app.add_error_handler(error_handler)
+
     print("🤖 Telegram Pipeline Bot başlatılıyor...")
     print(f"📍 Admin Chat ID: {admin_chat_id}")
 
     # Scheduler'ı arka planda başlat
     asyncio.create_task(scheduler.start(check_interval=60))
 
-    # Bot'u başlat
+    # Bot'u başlat - drop_pending_updates ile eski mesajları atla
     await app.initialize()
     await app.start()
-    await app.updater.start_polling()
+    await app.updater.start_polling(
+        drop_pending_updates=True,
+        allowed_updates=Update.ALL_TYPES,
+    )
 
-    print("✅ Bot çalışıyor!")
+    print("✅ Bot çalışıyor! (Retry mekanizması aktif)")
 
     # Sonsuza kadar çalış
     while True:

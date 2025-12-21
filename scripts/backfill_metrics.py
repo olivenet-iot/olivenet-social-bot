@@ -19,13 +19,14 @@ from app.database import get_posts_by_status
 from app.agents import AnalyticsAgent
 
 
-async def backfill_all_metrics(days: int = None, limit: int = None):
+async def backfill_all_metrics(days: int = None, limit: int = None, force: bool = False):
     """
     Tüm published post'lar için metrikleri çek ve DB'ye kaydet.
 
     Args:
         days: Son kaç günün post'larını işle (None = tümü)
         limit: Maksimum kaç post işlensin (None = tümü)
+        force: True ise mevcut metrikleri yoksay, tümünü yeniden çek
     """
     print("=" * 60)
     print("OLIVENET SOCIAL BOT - Metrik Backfill Script")
@@ -41,10 +42,20 @@ async def backfill_all_metrics(days: int = None, limit: int = None):
                  datetime.fromisoformat(str(p['published_at']).replace('Z', '')) > cutoff]
         print(f"[FILTER] Son {days} günün post'ları filtrelendi")
 
-    # fb_reach veya ig_reach NULL olanları filtrele
-    to_update = [p for p in posts if
-                 (p.get('facebook_post_id') or p.get('instagram_post_id')) and
-                 (p.get('fb_reach') is None or p.get('ig_reach') is None)]
+    # Metriği çekilmemiş post'ları filtrele
+    # NOT: DB'de DEFAULT 0 tanımlı, bu yüzden "is None" değil "not" veya "== 0" kullanıyoruz
+    # insights_updated_at NULL ise hiç çekilmemiş demek
+    if force:
+        # Force modda sadece platform ID'si olanları al
+        to_update = [p for p in posts if
+                     p.get('facebook_post_id') or p.get('instagram_post_id')]
+        print("[FORCE] Tüm post'lar yeniden işlenecek")
+    else:
+        to_update = [p for p in posts if
+                     (p.get('facebook_post_id') or p.get('instagram_post_id')) and
+                     (not p.get('insights_updated_at') or  # Hiç çekilmemiş
+                      (p.get('facebook_post_id') and not p.get('fb_reach')) or  # FB var ama reach 0
+                      (p.get('instagram_post_id') and not p.get('ig_reach')))]  # IG var ama reach 0
 
     # Limit uygula
     if limit:
@@ -79,8 +90,19 @@ async def backfill_all_metrics(days: int = None, limit: int = None):
             if result.get("success"):
                 success += 1
                 fb_reach = result.get("facebook", {}).get("insights", {}).get("post_impressions_unique", 0) if result.get("facebook") else 0
-                ig_reach = result.get("instagram", {}).get("reach", 0) if result.get("instagram") else 0
-                print(f"[{i}/{total}] Post {post_id} ({'+'.join(platform_info)}) - OK (FB:{fb_reach}, IG:{ig_reach})")
+                ig_data = result.get("instagram", {}) if result.get("instagram") else {}
+                ig_reach = ig_data.get("reach", 0)
+                ig_type = ig_data.get("media_type", "")
+
+                if ig_type in ["REELS", "VIDEO"]:
+                    # Reels için detaylı çıktı
+                    plays = ig_data.get("plays", 0)
+                    avg_watch = ig_data.get("avg_watch_time_seconds", 0)
+                    saves = ig_data.get("saves", 0)
+                    shares = ig_data.get("shares", 0)
+                    print(f"[{i}/{total}] Post {post_id} ({'+'.join(platform_info)}) - OK (FB:{fb_reach}, IG Reels: reach={ig_reach}, plays={plays}, watch={avg_watch}s, saves={saves}, shares={shares})")
+                else:
+                    print(f"[{i}/{total}] Post {post_id} ({'+'.join(platform_info)}) - OK (FB:{fb_reach}, IG:{ig_reach})")
             else:
                 error_msg = result.get('error', 'Unknown error')
                 errors.append((post_id, error_msg))
@@ -120,10 +142,11 @@ def main():
     parser = argparse.ArgumentParser(description='Olivenet Social Bot - Metrik Backfill')
     parser.add_argument('--days', type=int, help='Son kaç günün post\'larını işle')
     parser.add_argument('--limit', type=int, help='Maksimum kaç post işlensin')
+    parser.add_argument('--force', action='store_true', help='Tüm post\'ları yeniden işle (mevcut metrikleri yoksay)')
 
     args = parser.parse_args()
 
-    asyncio.run(backfill_all_metrics(days=args.days, limit=args.limit))
+    asyncio.run(backfill_all_metrics(days=args.days, limit=args.limit, force=args.force))
 
 
 if __name__ == "__main__":

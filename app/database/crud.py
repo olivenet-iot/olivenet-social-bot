@@ -371,10 +371,20 @@ def update_post_analytics(post_id: int, analytics: dict):
     updates = []
     values = []
 
+    # Desteklenen analytics alanları
+    allowed_fields = [
+        # Facebook
+        'fb_reach', 'fb_likes', 'fb_comments', 'fb_shares', 'fb_engagement_rate',
+        # Instagram temel
+        'ig_reach', 'ig_likes', 'ig_comments', 'ig_engagement_rate',
+        # Instagram Reels/Video
+        'ig_saves', 'ig_shares', 'ig_plays',
+        'ig_avg_watch_time', 'ig_total_watch_time',
+        'ig_reach_followers', 'ig_reach_non_followers'
+    ]
+
     for key, value in analytics.items():
-        if key in ['fb_reach', 'fb_likes', 'fb_comments', 'fb_shares',
-                   'fb_engagement_rate', 'ig_reach', 'ig_likes',
-                   'ig_comments', 'ig_engagement_rate']:
+        if key in allowed_fields:
             updates.append(f"{key} = ?")
             values.append(value)
 

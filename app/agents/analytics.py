@@ -11,7 +11,7 @@ from app.database import (
     get_published_posts, get_analytics_summary,
     record_analytics, log_agent_action, update_post_analytics
 )
-from app.insights_helper import get_post_insights, get_instagram_insights
+from app.insights_helper import get_post_insights, get_instagram_insights, get_instagram_media_insights
 
 class AnalyticsAgent(BaseAgent):
     """Performans takip - metrikleri analiz eder"""
@@ -235,22 +235,36 @@ Sadece JSON döndür.
                     })
                     self.log(f"Facebook: reach={analytics_data.get('fb_reach')}, likes={analytics_data.get('fb_likes')}")
 
-            # Instagram metrikleri
+            # Instagram metrikleri - yeni detaylı API kullan
             if instagram_post_id:
                 self.log(f"Instagram metrikleri çekiliyor: {instagram_post_id}")
-                ig_insights = await get_instagram_insights(limit=25)
-                if ig_insights.get("success") and ig_insights.get("media"):
-                    for media in ig_insights["media"]:
-                        if media.get("id") == instagram_post_id:
-                            result["instagram"] = media
-                            analytics_data.update({
-                                "ig_reach": media.get("reach", 0),
-                                "ig_likes": media.get("like_count", 0),
-                                "ig_comments": media.get("comments_count", 0),
-                                "ig_engagement_rate": media.get("engagement_rate", 0)
-                            })
-                            self.log(f"Instagram: reach={analytics_data.get('ig_reach')}, likes={analytics_data.get('ig_likes')}")
-                            break
+                ig_insights = await get_instagram_media_insights(instagram_post_id)
+                if ig_insights.get("success"):
+                    result["instagram"] = ig_insights
+                    is_reels = ig_insights.get("media_type") in ["REELS", "VIDEO"]
+
+                    # Temel metrikler
+                    analytics_data.update({
+                        "ig_reach": ig_insights.get("reach", 0),
+                        "ig_likes": ig_insights.get("likes", 0),
+                        "ig_comments": ig_insights.get("comments", 0),
+                        "ig_engagement_rate": ig_insights.get("engagement_rate", 0),
+                        "ig_saves": ig_insights.get("saves", 0),
+                        "ig_shares": ig_insights.get("shares", 0)
+                    })
+
+                    # Reels-specific metrikler
+                    if is_reels:
+                        analytics_data.update({
+                            "ig_plays": ig_insights.get("plays", 0),
+                            "ig_avg_watch_time": ig_insights.get("avg_watch_time_seconds", 0),
+                            "ig_total_watch_time": ig_insights.get("total_watch_time_seconds", 0),
+                            "ig_reach_followers": ig_insights.get("reach_followers", 0),
+                            "ig_reach_non_followers": ig_insights.get("reach_non_followers", 0)
+                        })
+                        self.log(f"Instagram Reels: plays={ig_insights.get('plays')}, reach={ig_insights.get('reach')}, avg_watch={ig_insights.get('avg_watch_time_seconds')}s")
+                    else:
+                        self.log(f"Instagram Image: reach={ig_insights.get('reach')}, likes={ig_insights.get('likes')}")
 
             # DB'ye kaydet
             if post_id and analytics_data:
