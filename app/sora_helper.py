@@ -168,7 +168,7 @@ async def generate_video_sora(
 
 def analyze_prompt_complexity(prompt: str, topic: str = "") -> Dict[str, Any]:
     """Prompt karmasikligini analiz et"""
-    combined = f"{prompt.lower()} {topic.lower()}"
+    combined = f"{(prompt or '').lower()} {(topic or '').lower()}"  # None-safe
 
     high_keywords = ["transformation", "morphing", "cinematic", "epic", "dramatic"]
     medium_keywords = ["tracking", "dolly", "movement", "animation", "transition"]

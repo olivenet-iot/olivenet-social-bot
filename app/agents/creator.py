@@ -448,7 +448,7 @@ Sadece post metnini yaz, başka açıklama ekleme.
 
         post_text = input_data.get("post_text", "")
         topic = input_data.get("topic", "")
-        visual_type = input_data.get("visual_type", "flux")
+        visual_type = input_data.get("visual_type") or "flux"  # None-safe
         post_id = input_data.get("post_id")
 
         visual_guidelines = self.load_context("visual-guidelines.md")

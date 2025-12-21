@@ -340,7 +340,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             self.state = PipelineState.AWAITING_FINAL_APPROVAL
 
             score = review_result.get("total_score", 0)
-            decision = review_result.get("decision", "revise")
+            decision = review_result.get("decision") or "revise"  # None-safe
 
             await self.notify_telegram(
                 message=f"""
@@ -587,7 +587,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             result["stages_completed"].append("review")
 
             score = review_result.get("total_score", 0)
-            decision = review_result.get("decision", "revise")
+            decision = review_result.get("decision") or "revise"  # None-safe
             result["review_score"] = score
 
             self.log(f"[OTONOM] Review: {score}/10 - Karar: {decision}")
@@ -1343,9 +1343,9 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 if "error" in comparison_result:
                     raise Exception(f"Comparison error: {comparison_result['error']}")
 
-                winner = comparison_result.get("winner", "A")
+                winner = comparison_result.get("winner") or "A"  # None-safe
                 margin = comparison_result.get("margin", 0)
-                confidence = comparison_result.get("confidence", "medium")
+                confidence = comparison_result.get("confidence") or "medium"  # None-safe
                 winning_variant = comparison_result.get("winning_variant", {})
                 reasoning = comparison_result.get("reasoning", "")
                 learning = comparison_result.get("learning", "")
