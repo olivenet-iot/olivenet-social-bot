@@ -20,7 +20,8 @@ from app.database import (
     get_current_strategy, get_analytics_summary, log_approval_decision,
     get_week_calendar, get_published_posts,
     get_todays_summary, get_weekly_progress, get_next_scheduled,
-    get_best_performing_content, get_next_schedule_slot
+    get_best_performing_content, get_next_schedule_slot,
+    get_recent_prompts, get_top_performing_prompts, get_prompt_style_stats
 )
 from app.config import settings
 
@@ -391,6 +392,67 @@ async def cmd_sync(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     keyboard = [[InlineKeyboardButton("📈 Analytics", callback_data="analytics_report")]]
     await update.message.reply_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+
+
+async def cmd_prompts(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Prompt istatistikleri - /prompts"""
+    global admin_chat_id
+    admin_chat_id = update.effective_chat.id
+
+    # Son 7 günün prompt'ları
+    recent = get_recent_prompts(days=7)
+
+    # Top performers
+    top = get_top_performing_prompts(limit=3)
+
+    # Stil istatistikleri
+    stats = get_prompt_style_stats(days=30)
+
+    message = "📝 *PROMPT İSTATİSTİKLERİ*\n"
+    message += "━━━━━━━━━━━━━━━━━━━\n\n"
+
+    # Özet
+    message += f"📊 *Son 7 gün:* {len(recent)} prompt\n"
+
+    # Tip dağılımı
+    by_type = stats.get('by_type', {})
+    if by_type:
+        type_str = ", ".join([f"{k}: {v}" for k, v in by_type.items()])
+        message += f"📌 *Tip dağılımı:* {type_str}\n"
+
+    # Stil dağılımı
+    by_style = stats.get('by_style', {})
+    if by_style:
+        top_styles = list(by_style.items())[:3]
+        style_str = ", ".join([f"{k}: {v}" for k, v in top_styles])
+        message += f"🎨 *En çok kullanılan stiller:* {style_str}\n"
+
+    message += "\n"
+
+    # Top performers
+    if top:
+        message += "🏆 *En İyi Performans:*\n"
+        for i, p in enumerate(top, 1):
+            style = p.get('prompt_style') or 'N/A'
+            ptype = p.get('prompt_type', 'N/A')
+            reach = p.get('reach', 0)
+            eng = p.get('engagement_rate', 0)
+            saves = p.get('saves', 0)
+
+            message += f"{i}. \\[{ptype}/{style}\\]\n"
+            message += f"   📊 reach:{reach} eng:{eng:.1f}% saves:{saves}\n"
+
+            # Prompt metninin kısa versiyonu
+            prompt_text = p.get('prompt_text', '')
+            if prompt_text:
+                short_text = prompt_text[:50].replace('_', '\\_').replace('*', '\\*')
+                message += f"   _{short_text}..._\n"
+            message += "\n"
+    else:
+        message += "⏳ *Henüz performans verisi yok*\n"
+        message += "_Metrikler çekildikçe burada görünecek._\n"
+
+    await update.message.reply_text(message, parse_mode="Markdown")
 
 
 # ============ CALLBACK HANDLER'LAR ============
@@ -1086,6 +1148,7 @@ async def main():
     app.add_handler(CommandHandler("next", cmd_next))
     app.add_handler(CommandHandler("schedule", cmd_schedule))
     app.add_handler(CommandHandler("sync", cmd_sync))
+    app.add_handler(CommandHandler("prompts", cmd_prompts))
 
     # Handler'lar - Callback ve Mesaj
     app.add_handler(CallbackQueryHandler(handle_callback))

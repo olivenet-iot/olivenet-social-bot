@@ -9,6 +9,8 @@ from datetime import datetime
 from typing import Dict, Any, Optional, Callable
 from enum import Enum
 
+from app.database import save_prompt
+
 class PipelineState(Enum):
     """Pipeline durumları"""
     IDLE = "idle"
@@ -219,6 +221,18 @@ class ContentPipeline:
 
             self.current_data["visual_prompt"] = visual_prompt_result
             result["stages_completed"].append("visual_prompt")
+
+            # Visual prompt'u kaydet
+            visual_prompt = visual_prompt_result.get("visual_prompt", "")
+            if visual_prompt and content_result.get("post_id"):
+                prompt_style = visual_prompt_result.get("style") or visual_type
+                save_prompt(
+                    post_id=content_result.get("post_id"),
+                    prompt_text=visual_prompt,
+                    prompt_type='image',
+                    style=prompt_style
+                )
+                self.log(f"Visual prompt kaydedildi (style: {prompt_style})")
 
             # Görsel üret
             self.log(f"Görsel üretiliyor ({visual_type})...")
@@ -511,6 +525,18 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
 
             self.current_data["visual_prompt"] = visual_prompt_result
             result["stages_completed"].append("visual_prompt")
+
+            # Visual prompt'u kaydet
+            visual_prompt = visual_prompt_result.get("visual_prompt", "")
+            if visual_prompt and content_result.get("post_id"):
+                prompt_style = visual_prompt_result.get("style") or visual_type
+                save_prompt(
+                    post_id=content_result.get("post_id"),
+                    prompt_text=visual_prompt,
+                    prompt_type='image',
+                    style=prompt_style
+                )
+                self.log(f"[OTONOM] Visual prompt kaydedildi (style: {prompt_style})")
 
             # Görsel üret
             self.log(f"[OTONOM] Görsel üretiliyor ({visual_type})...")
@@ -901,6 +927,17 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             recommended_model = reels_prompt_result.get("recommended_model", "veo3")
             complexity = reels_prompt_result.get("complexity", "medium")
 
+            # Video prompt'u kaydet
+            if video_prompt and content_result.get("post_id"):
+                prompt_style = reels_prompt_result.get("camera_movement") or complexity
+                save_prompt(
+                    post_id=content_result.get("post_id"),
+                    prompt_text=video_prompt,
+                    prompt_type='video',
+                    style=prompt_style
+                )
+                self.log(f"[REELS] Prompt kaydedildi (style: {prompt_style})")
+
             self.log(f"[REELS] Prompt hazır")
             self.log(f"[REELS]   Complexity: {complexity}")
             self.log(f"[REELS]   Önerilen model: {recommended_model}")
@@ -1085,6 +1122,20 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             result["hashtags"] = carousel_content.get("hashtags")
             result["slide_count"] = carousel_content.get("slide_count", 0)
             result["stages_completed"].append("content_created")
+
+            # Carousel slide prompt'larını kaydet
+            post_id = carousel_content.get("post_id")
+            if post_id:
+                for i, slide in enumerate(carousel_content.get("slides", [])):
+                    image_prompt = slide.get("image_prompt", "")
+                    if image_prompt:
+                        save_prompt(
+                            post_id=post_id,
+                            prompt_text=image_prompt,
+                            prompt_type='image',
+                            style=f'carousel_slide_{i+1}'
+                        )
+                self.log(f"[CAROUSEL] {len(carousel_content.get('slides', []))} slide prompt'u kaydedildi")
 
             self.log(f"[CAROUSEL] {result['slide_count']} slide oluşturuldu")
 

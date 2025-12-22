@@ -246,6 +246,38 @@ def init_database():
         )
     ''')
 
+    # Prompt History tablosu - Prompt tracking ve performans takibi
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS prompt_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            post_id INTEGER,
+            prompt_type TEXT NOT NULL,  -- 'video' veya 'image'
+            prompt_text TEXT NOT NULL,
+            prompt_style TEXT,  -- 'cinematic', 'documentary', 'pov', 'aerial', vb.
+
+            -- Basit hash (duplicate check için)
+            prompt_hash TEXT,
+
+            -- Performans (sonradan güncellenir)
+            reach INTEGER DEFAULT 0,
+            engagement_rate REAL DEFAULT 0,
+            likes INTEGER DEFAULT 0,
+            saves INTEGER DEFAULT 0,
+            shares INTEGER DEFAULT 0,
+
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            performance_updated_at TIMESTAMP,
+
+            FOREIGN KEY (post_id) REFERENCES posts(id)
+        )
+    ''')
+
+    # Prompt history index'leri
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_prompt_hash ON prompt_history(prompt_hash)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_prompt_style ON prompt_history(prompt_style)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_prompt_type ON prompt_history(prompt_type)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_prompt_created ON prompt_history(created_at)')
+
     conn.commit()
 
     # Analytics kolonlarını posts tablosuna ekle (migration)
@@ -276,7 +308,10 @@ def init_database():
         "ALTER TABLE posts ADD COLUMN tone TEXT",
         # A/B testing
         "ALTER TABLE posts ADD COLUMN ab_test_id INTEGER",
-        "ALTER TABLE posts ADD COLUMN is_ab_winner BOOLEAN"
+        "ALTER TABLE posts ADD COLUMN is_ab_winner BOOLEAN",
+        # Prompt tracking
+        "ALTER TABLE posts ADD COLUMN video_prompt TEXT",
+        "ALTER TABLE posts ADD COLUMN prompt_style TEXT"
     ]
 
     for stmt in alter_statements:

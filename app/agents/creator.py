@@ -9,7 +9,8 @@ from typing import Dict, Any, Optional
 from .base_agent import BaseAgent
 from app.database import (
     create_post, update_post, log_agent_action,
-    get_hook_weights_for_selection, get_underperforming_hooks
+    get_hook_weights_for_selection, get_underperforming_hooks,
+    check_duplicate_prompt
 )
 from app.config import settings
 
@@ -857,3 +858,81 @@ Sadece JSON döndür.
                 error_message=f"JSON parse error: {e}"
             )
             return {"success": False, "error": f"JSON parse error: {e}", "raw_response": response[:500]}
+
+    def _detect_prompt_style(self, prompt: str) -> str:
+        """
+        Prompt'tan stil tespit et (basit keyword matching).
+
+        Args:
+            prompt: Görsel/video prompt metni
+
+        Returns:
+            Tespit edilen stil: 'aerial', 'pov', 'cinematic', 'documentary',
+                               'timelapse', 'closeup', 'macro', 'general'
+        """
+        prompt_lower = prompt.lower()
+
+        # Stil keyword'leri (öncelik sırasına göre)
+        style_keywords = {
+            'aerial': ['aerial', 'drone', 'bird\'s eye', 'overhead', 'from above'],
+            'pov': ['pov', 'point of view', 'first person', 'subjective'],
+            'cinematic': ['cinematic', 'film look', 'movie', 'widescreen', 'anamorphic'],
+            'documentary': ['documentary', 'real world', 'authentic', 'behind the scenes'],
+            'timelapse': ['timelapse', 'time-lapse', 'time lapse', 'hyperlapse'],
+            'closeup': ['close-up', 'closeup', 'close up', 'detail shot', 'macro'],
+            'macro': ['macro', 'extreme close', 'microscopic'],
+            'reveal': ['reveal', 'unveil', 'emergence', 'transition'],
+            'tracking': ['tracking', 'follow', 'dolly', 'steadicam'],
+            'static': ['static', 'tripod', 'locked off', 'still frame']
+        }
+
+        for style, keywords in style_keywords.items():
+            if any(kw in prompt_lower for kw in keywords):
+                return style
+
+        return 'general'
+
+    async def _regenerate_with_different_style(
+        self,
+        topic: str,
+        prompt_type: str,
+        avoid_styles: list,
+        original_context: dict
+    ) -> Optional[str]:
+        """
+        Farklı bir tarzda prompt yeniden oluştur.
+
+        Args:
+            topic: Konu
+            prompt_type: 'video' veya 'image'
+            avoid_styles: Kaçınılması gereken stiller
+            original_context: Orijinal bağlam verileri
+
+        Returns:
+            Yeni prompt veya None
+        """
+        avoid_hint = f"Şu stillerden KAÇIN: {', '.join(avoid_styles)}" if avoid_styles else ""
+
+        if prompt_type == 'video':
+            style_options = ['pov açısı', 'statik çekim', 'timelapse', 'drone çekimi', 'close-up detaylar']
+        else:
+            style_options = ['minimalist', 'documentary', 'abstract', 'studio çekimi', 'dış mekan']
+
+        alternative_prompt = f"""
+Konu: {topic}
+
+ÖNCEKİ PROMPT'LARDAN FARKLI bir görsel yaklaşım kullan.
+{avoid_hint}
+
+Alternatif stil önerileri: {', '.join(style_options)}
+
+Tamamen FARKLI bir görsel/sinematik yaklaşımla İngilizce prompt yaz.
+Sadece prompt'u döndür, başka açıklama ekleme.
+"""
+
+        try:
+            response = await self.call_claude(alternative_prompt, timeout=60)
+            return response.strip() if response else None
+        except Exception as e:
+            self.log(f"Yeniden oluşturma hatası: {e}")
+            return None

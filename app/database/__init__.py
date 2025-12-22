@@ -25,7 +25,11 @@ from .crud import (
     get_todays_summary, get_weekly_progress, get_next_scheduled,
     get_best_performing_content, get_next_schedule_slot,
     # Scheduler Helpers
-    get_kktc_now, get_todays_content_by_type, should_run_scheduled_content
+    get_kktc_now, get_todays_content_by_type, should_run_scheduled_content,
+    # Prompt Tracking
+    get_prompt_hash, save_prompt, check_duplicate_prompt,
+    get_recent_prompts, update_prompt_performance,
+    get_top_performing_prompts, get_prompt_style_stats
 )
 
 # Database'i initialize et

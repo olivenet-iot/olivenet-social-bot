@@ -3,8 +3,10 @@ Database CRUD Operations
 """
 
 import json
+import hashlib
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
+from difflib import SequenceMatcher
 from .models import get_connection
 
 
@@ -1346,4 +1348,321 @@ def should_run_scheduled_content(content_type: str, scheduled_time: datetime = N
         "reason": "no_existing_content",
         "existing_posts": [],
         "message": f"Bugün henüz {content_type} oluşturulmadı, devam edilebilir."
+    }
+
+
+# ============ PROMPT TRACKING ============
+
+def get_prompt_hash(prompt: str) -> str:
+    """
+    Prompt'un kısa hash'ini oluştur (duplicate check için).
+
+    Args:
+        prompt: Prompt metni
+
+    Returns:
+        12 karakterlik MD5 hash
+    """
+    normalized = ' '.join(prompt.lower().split())
+    return hashlib.md5(normalized.encode()).hexdigest()[:12]
+
+
+def save_prompt(
+    post_id: int,
+    prompt_text: str,
+    prompt_type: str,  # 'video' veya 'image'
+    style: str = None
+) -> int:
+    """
+    Prompt'u prompt_history tablosuna kaydet.
+
+    Args:
+        post_id: İlişkili post ID
+        prompt_text: Prompt metni
+        prompt_type: 'video' veya 'image'
+        style: Prompt stili (aerial, cinematic, vb.)
+
+    Returns:
+        Oluşturulan prompt_history ID
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    prompt_hash = get_prompt_hash(prompt_text)
+
+    cursor.execute('''
+        INSERT INTO prompt_history (post_id, prompt_type, prompt_text, prompt_style, prompt_hash)
+        VALUES (?, ?, ?, ?, ?)
+    ''', (post_id, prompt_type, prompt_text, style, prompt_hash))
+
+    prompt_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+
+    return prompt_id
+
+
+def check_duplicate_prompt(
+    prompt: str,
+    days: int = 30,
+    threshold: float = 0.85
+) -> Dict[str, Any]:
+    """
+    Son X gün içinde benzer prompt kullanılmış mı kontrol et.
+
+    Args:
+        prompt: Kontrol edilecek prompt
+        days: Kaç gün geriye bakılacak
+        threshold: Benzerlik eşiği (0-1 arası, varsayılan 0.85 = %85)
+
+    Returns:
+        {
+            "is_duplicate": bool,
+            "similar_prompts": [{"id": 1, "text": "...", "similarity": 90.5, "date": "..."}],
+            "recommendation": "ok" | "too_similar",
+            "message": "..."
+        }
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    # Son X günün prompt'larını al
+    cursor.execute('''
+        SELECT id, prompt_text, created_at, prompt_style
+        FROM prompt_history
+        WHERE created_at > datetime('now', ? || ' days')
+        ORDER BY created_at DESC
+        LIMIT 100
+    ''', (f'-{days}',))
+
+    recent = cursor.fetchall()
+    conn.close()
+
+    similar = []
+    prompt_lower = prompt.lower()
+
+    for row in recent:
+        ratio = SequenceMatcher(None, prompt_lower, row['prompt_text'].lower()).ratio()
+        if ratio >= threshold:
+            text = row['prompt_text']
+            similar.append({
+                "id": row['id'],
+                "text": text[:80] + "..." if len(text) > 80 else text,
+                "similarity": round(ratio * 100, 1),
+                "date": row['created_at'],
+                "style": row['prompt_style']
+            })
+
+    if similar:
+        return {
+            "is_duplicate": True,
+            "similar_prompts": similar,
+            "recommendation": "too_similar",
+            "message": f"{len(similar)} benzer prompt bulundu (son {days} gün)"
+        }
+
+    return {
+        "is_duplicate": False,
+        "similar_prompts": [],
+        "recommendation": "ok",
+        "message": "Benzer prompt bulunamadı"
+    }
+
+
+def get_recent_prompts(
+    days: int = 7,
+    prompt_type: str = None
+) -> List[Dict]:
+    """
+    Son X günün prompt'larını getir.
+
+    Args:
+        days: Kaç gün geriye bakılacak
+        prompt_type: 'video' veya 'image' (opsiyonel filtre)
+
+    Returns:
+        Prompt listesi
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    query = '''
+        SELECT
+            ph.id, ph.post_id, ph.prompt_type, ph.prompt_text, ph.prompt_style,
+            ph.reach, ph.engagement_rate, ph.likes, ph.saves, ph.shares,
+            ph.created_at, ph.performance_updated_at
+        FROM prompt_history ph
+        WHERE ph.created_at > datetime('now', ? || ' days')
+    '''
+    params = [f'-{days}']
+
+    if prompt_type:
+        query += " AND ph.prompt_type = ?"
+        params.append(prompt_type)
+
+    query += " ORDER BY ph.created_at DESC"
+
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    conn.close()
+
+    return [dict(row) for row in rows]
+
+
+def update_prompt_performance(post_id: int, metrics: Dict[str, Any]) -> bool:
+    """
+    Post metrikleri çekildiğinde prompt performansını güncelle.
+
+    Args:
+        post_id: Post ID (bu post'a bağlı prompt'lar güncellenir)
+        metrics: {
+            'reach': int,
+            'engagement_rate': float,
+            'likes': int,
+            'saves': int,
+            'shares': int
+        }
+
+    Returns:
+        Güncelleme başarılı mı
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        UPDATE prompt_history
+        SET
+            reach = ?,
+            engagement_rate = ?,
+            likes = ?,
+            saves = ?,
+            shares = ?,
+            performance_updated_at = datetime('now')
+        WHERE post_id = ?
+    ''', (
+        metrics.get('reach', 0),
+        metrics.get('engagement_rate', 0),
+        metrics.get('likes', 0),
+        metrics.get('saves', 0),
+        metrics.get('shares', 0),
+        post_id
+    ))
+
+    updated = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+
+    return updated
+
+
+def get_top_performing_prompts(
+    limit: int = 5,
+    prompt_type: str = None
+) -> List[Dict]:
+    """
+    En iyi performans gösteren prompt'ları getir.
+
+    Sıralama: viral_score = saves*3 + shares*2 + likes, sonra engagement_rate
+
+    Args:
+        limit: Kaç prompt döndürülecek
+        prompt_type: 'video' veya 'image' (opsiyonel filtre)
+
+    Returns:
+        En iyi performanslı prompt listesi
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    query = '''
+        SELECT
+            prompt_text, prompt_style, prompt_type,
+            reach, engagement_rate, likes, saves, shares,
+            created_at,
+            (saves * 3 + shares * 2 + likes) as viral_score
+        FROM prompt_history
+        WHERE reach > 0
+    '''
+
+    if prompt_type:
+        query += f" AND prompt_type = ?"
+        cursor.execute(query + '''
+            ORDER BY
+                (saves * 3 + shares * 2 + likes) DESC,
+                engagement_rate DESC
+            LIMIT ?
+        ''', (prompt_type, limit))
+    else:
+        cursor.execute(query + '''
+            ORDER BY
+                (saves * 3 + shares * 2 + likes) DESC,
+                engagement_rate DESC
+            LIMIT ?
+        ''', (limit,))
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    return [dict(row) for row in rows]
+
+
+def get_prompt_style_stats(days: int = 30) -> Dict[str, Any]:
+    """
+    Prompt stil dağılımı ve performans istatistikleri.
+
+    Args:
+        days: Kaç gün geriye bakılacak
+
+    Returns:
+        {
+            'total_prompts': int,
+            'by_type': {'video': 10, 'image': 15},
+            'by_style': {'aerial': 5, 'cinematic': 8, ...},
+            'avg_engagement_by_style': {'aerial': 5.2, ...}
+        }
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    # Toplam ve tipe göre
+    cursor.execute('''
+        SELECT
+            prompt_type,
+            COUNT(*) as count
+        FROM prompt_history
+        WHERE created_at > datetime('now', ? || ' days')
+        GROUP BY prompt_type
+    ''', (f'-{days}',))
+
+    by_type = {row['prompt_type']: row['count'] for row in cursor.fetchall()}
+
+    # Stile göre
+    cursor.execute('''
+        SELECT
+            prompt_style,
+            COUNT(*) as count,
+            AVG(engagement_rate) as avg_engagement,
+            AVG(saves) as avg_saves
+        FROM prompt_history
+        WHERE created_at > datetime('now', ? || ' days')
+          AND prompt_style IS NOT NULL
+        GROUP BY prompt_style
+        ORDER BY count DESC
+    ''', (f'-{days}',))
+
+    style_rows = cursor.fetchall()
+    by_style = {row['prompt_style']: row['count'] for row in style_rows}
+    avg_engagement_by_style = {
+        row['prompt_style']: round(row['avg_engagement'] or 0, 2)
+        for row in style_rows
+    }
+
+    conn.close()
+
+    return {
+        'total_prompts': sum(by_type.values()),
+        'by_type': by_type,
+        'by_style': by_style,
+        'avg_engagement_by_style': avg_engagement_by_style,
+        'period_days': days
     }

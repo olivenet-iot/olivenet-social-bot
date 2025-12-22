@@ -18,7 +18,7 @@ from .base_agent import BaseAgent
 from app.database import (
     get_published_posts, get_analytics_summary,
     record_analytics, log_agent_action, update_post_analytics,
-    get_connection
+    get_connection, update_prompt_performance
 )
 from app.insights_helper import get_instagram_insights, get_instagram_media_insights
 from app.config import settings
@@ -501,6 +501,17 @@ Sadece JSON döndür.
             if post_id and analytics_data:
                 update_post_analytics(post_id, analytics_data)
                 self.log(f"Post {post_id} metrikleri DB'ye kaydedildi")
+
+                # Prompt performansını güncelle
+                prompt_metrics = {
+                    'reach': analytics_data.get('ig_reach', 0),
+                    'engagement_rate': analytics_data.get('ig_engagement_rate', 0),
+                    'likes': analytics_data.get('ig_likes', 0),
+                    'saves': analytics_data.get('ig_saves', 0),
+                    'shares': analytics_data.get('ig_shares', 0)
+                }
+                if update_prompt_performance(post_id, prompt_metrics):
+                    self.log(f"Post {post_id} prompt performansı güncellendi")
 
             log_agent_action(
                 agent_name=self.name,
