@@ -1149,7 +1149,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             self.log("[CAROUSEL] Aşama 3: Görseller üretiliyor...")
             self.state = PipelineState.CREATING_VISUAL
 
-            from app.flux_helper import generate_flux_image
+            from app.flux_helper import generate_image_flux
             from app.instagram_helper import upload_image_to_cdn
 
             image_urls = []
@@ -1161,9 +1161,10 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 # Retry mekanizması
                 for attempt in range(2):
                     try:
-                        image_result = await generate_flux_image(
-                            slide.get("image_prompt", ""),
-                            aspect_ratio="1:1"  # Carousel için kare
+                        image_result = await generate_image_flux(
+                            prompt=slide.get("image_prompt", ""),
+                            width=1080,
+                            height=1080
                         )
 
                         if image_result.get("success"):
