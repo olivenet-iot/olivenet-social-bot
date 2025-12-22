@@ -756,10 +756,17 @@ Sadece JSON döndür, başka açıklama ekleme.
 
 Eğitici ve görsel açıdan tutarlı bir carousel oluştur.
 
-### Slide Yapısı:
-1. **Slide 1 (Hook)**: "🔖 KAYDET: " ile başla + dikkat çekici soru/istatistik
-2. **Slide 2-{slide_count-1} (İçerik)**: Ana bilgiler, adımlar veya karşılaştırmalar
-3. **Slide {slide_count} (CTA)**: "📌 Bu rehberi kaydet!" + yumuşak satış CTA
+### Slide Yapısı ve Tipleri:
+1. **Slide 1 (cover)**: "🔖 KAYDET: " ile başla + dikkat çekici soru/istatistik
+2. **Slide 2-{slide_count-1} (content/stats)**: Ana bilgiler, adımlar veya karşılaştırmalar
+3. **Slide {slide_count} (cta)**: "📌 Bu rehberi kaydet!" + yumuşak satış CTA
+
+### SLIDE TİPLERİ (ZORUNLU):
+- **cover**: İlk slide, dikkat çekici hook
+- **content**: Bullet point'ler, numaralı liste
+- **stats**: Büyük rakamlar, istatistikler
+- **comparison**: Yan yana karşılaştırma
+- **cta**: Son slide, kaydet/takip et çağrısı
 
 ### SAVE-OPTİMİZE İÇERİK (ZORUNLU):
 - İlk slide başlığı "🔖 KAYDET:" ile başlamalı
@@ -767,9 +774,9 @@ Eğitici ve görsel açıdan tutarlı bir carousel oluştur.
 - İçerik referans değeri taşımalı (checklist, adımlar, karşılaştırma)
 
 ### Her Slide İçin:
+- slide_type: cover, content, stats, comparison veya cta
 - title: Kısa başlık (max 5 kelime)
 - content: Ana metin (max 30 kelime, bullet point'ler tercih edilir)
-- image_prompt: FLUX için İngilizce görsel prompt (tutarlı stil)
 
 ### Caption (SAVE-FOCUSED):
 - Instagram için optimize (max 120 kelime)
@@ -790,21 +797,35 @@ Eğitici ve görsel açıdan tutarlı bir carousel oluştur.
     "caption": "Instagram caption metni...",
     "slides": [
         {{
-            "title": "Başlık 1",
-            "content": "- Madde 1\\n- Madde 2\\n- Madde 3",
-            "image_prompt": "Professional infographic style, olive green (#4a7c4a) and sky blue (#38bdf8) color scheme, clean modern design, IoT/technology theme, [specific scene description]. 1:1 aspect ratio, high quality."
+            "slide_type": "cover",
+            "title": "🔖 KAYDET: Başlık",
+            "content": "Hook cümlesi veya dikkat çekici istatistik"
         }},
-        ...
+        {{
+            "slide_type": "content",
+            "title": "Adım 1",
+            "content": "- Madde 1\\n- Madde 2\\n- Madde 3"
+        }},
+        {{
+            "slide_type": "stats",
+            "title": "Rakamlarla",
+            "content": "%75 verimlilik artışı\\n%50 maliyet düşüşü"
+        }},
+        {{
+            "slide_type": "cta",
+            "title": "📌 Kaydet!",
+            "content": "Daha fazlası için takip et\\n@olivaborplus"
+        }}
     ],
     "hashtags": ["#Olivenet", "#KKTC", "#IoT", ...]
 }}
 ```
 
 ### ÖNEMLİ:
-1. Her slide'ın image_prompt'u İNGİLİZCE olmalı
-2. Tüm prompt'lar aynı renk paleti kullanmalı (tutarlılık)
+1. Her slide'da slide_type zorunlu (cover, content, stats, comparison, cta)
+2. İlk slide: cover, son slide: cta olmalı
 3. Slides dizisi tam {slide_count} element içermeli
-4. Content Türkçe, image_prompt İngilizce
+4. Title ve content Türkçe olmalı
 
 Sadece JSON döndür.
 """

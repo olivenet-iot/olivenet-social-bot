@@ -5,7 +5,7 @@ Claude Code CLI wrapper for AI-powered content generation.
 import asyncio
 import logging
 import re
-from typing import Optional
+from typing import Optional, Dict
 
 from .config import settings
 
@@ -653,4 +653,131 @@ Sadece prompt'u yaz, başka açıklama yapma.
         result = result[1:-1]
 
     logger.info(f"FLUX prompt generated: {result[:100]}...")
+    return result
+
+
+async def generate_carousel_slide_html(
+    slide_data: Dict,
+    slide_number: int,
+    total_slides: int,
+    topic: str
+) -> str:
+    """
+    Carousel slide için HTML oluştur.
+
+    Args:
+        slide_data: {"title": "...", "content": "...", "slide_type": "cover/content/stats/cta"}
+        slide_number: 1, 2, 3... (1-indexed)
+        total_slides: Toplam slide sayısı
+        topic: Ana konu
+
+    Returns:
+        Complete HTML code for the slide (1080x1080px)
+    """
+    slide_type = slide_data.get("slide_type", "content")
+    title = slide_data.get("title", "")
+    content = slide_data.get("content", "")
+
+    # Logo base64 verisini oku
+    try:
+        from app.logo_data import LOGO_BASE64
+        logo_img = LOGO_BASE64.strip()
+    except Exception:
+        logo_img = ""
+
+    prompt = f"""
+Instagram carousel için profesyonel bir HTML slide tasarla.
+
+## SLIDE BİLGİSİ:
+- Slide {slide_number}/{total_slides}
+- Tip: {slide_type}
+- Başlık: {title}
+- İçerik: {content}
+- Ana Konu: {topic}
+
+## SLIDE TİPLERİNE GÖRE TASARIM:
+
+**cover** (ilk slide):
+- Büyük, dikkat çekici başlık (min 64px)
+- Hook cümlesi
+- Gradient arka plan
+- Minimal, temiz görünüm
+
+**content** (içerik slide'ları):
+- Numaralı liste veya bullet points
+- Her madde için ikon (emoji veya SVG)
+- Net, okunabilir font (min 28px)
+- Hiyerarşik düzen
+
+**stats** (istatistik slide):
+- Büyük rakamlar (80px+)
+- Karşılaştırma görselleri
+- Progress bar veya chart
+- Vurgu renkleriyle highlight
+
+**comparison** (karşılaştırma):
+- Yan yana iki kolon
+- ✓ ve ✗ ikonları
+- Görsel ayrım
+
+**cta** (son slide - call to action):
+- "Kaydet! 🔖" büyük yazı
+- "Takip Et!" mesajı
+- @olivaborplus mention
+- Olivenet logosu ve branding
+
+## TASARIM KURALLARI (ZORUNLU):
+
+1. **BOYUT**: 1080x1080px (Instagram kare)
+
+2. **RENKLER**:
+   - Arka plan: Koyu gradient (#0f172a → #1e293b) veya açık (#f8fafc)
+   - Ana vurgu: #4a7c4a (olive green)
+   - Accent: #38bdf8 (sky blue)
+   - Metin: Koyu arka planda beyaz, açık arka planda #1e293b
+
+3. **FONT** (zorunlu):
+   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+   - Başlık: min 48px, font-weight: 700
+   - İçerik: min 28px, font-weight: 400-500
+   - Slide numarası: 18px, sağ üst köşe
+
+4. **LAYOUT**:
+   - Padding: min 48px her yönde
+   - Slide numarası: Sağ üst köşe ({slide_number}/{total_slides})
+   - Son slide'da sol alt köşeye logo ekle
+
+5. **STİL**:
+   - Modern, clean, profesyonel
+   - Glassmorphism kartlar (opsiyonel)
+   - Soft shadow'lar
+   - Rounded corners (16-24px)
+
+6. **LOGO** (sadece son slide için):
+   ```html
+   <div style="position:absolute;bottom:32px;left:32px;display:flex;align-items:center;gap:12px;">
+     <img src="{{{{logo}}}}" style="width:48px;height:48px;border-radius:8px;">
+     <span style="color:#ffffff;font-size:22px;font-weight:600;">Olivenet</span>
+   </div>
+   ```
+
+## ÇIKTI:
+- Sadece tam HTML kodu döndür
+- <!DOCTYPE html> ile başla
+- Markdown code block (```) KULLANMA
+- Açıklama yazma
+- Tüm CSS inline olmalı
+- HTML içinde {{{{logo}}}} placeholder kullan (sadece son slide)
+"""
+
+    logger.info(f"Generating carousel slide HTML: {slide_number}/{total_slides} ({slide_type})")
+    result = await run_claude_code(prompt, timeout=settings.claude_timeout_visual)
+
+    # Clean up and extract HTML
+    result = extract_html(result)
+
+    # Logo placeholder'ı gerçek base64 ile değiştir (son slide için)
+    if logo_img and "{{logo}}" in result:
+        result = result.replace("{{logo}}", logo_img)
+
     return result

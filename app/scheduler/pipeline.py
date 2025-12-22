@@ -1145,44 +1145,60 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 result["final_state"] = "dry_run_completed"
                 return result
 
-            # ========== AŞAMA 3: Görsel Üretimi ==========
-            self.log("[CAROUSEL] Aşama 3: Görseller üretiliyor...")
+            # ========== AŞAMA 3: Görsel Üretimi (HTML Render) ==========
+            self.log("[CAROUSEL] Aşama 3: Görseller HTML ile üretiliyor...")
             self.state = PipelineState.CREATING_VISUAL
 
-            from app.flux_helper import generate_image_flux
+            from app.claude_helper import generate_carousel_slide_html
+            from app.renderer import render_html_to_png
             from app.instagram_helper import upload_image_to_cdn
+            from datetime import datetime
 
             image_urls = []
             slides = carousel_content.get("slides", [])
+            total_slides = len(slides)
 
             for i, slide in enumerate(slides):
-                self.log(f"[CAROUSEL] Slide {i+1}/{len(slides)} görsel üretiliyor...")
+                slide_num = i + 1
+                self.log(f"[CAROUSEL] Slide {slide_num}/{total_slides} HTML üretiliyor...")
 
                 # Retry mekanizması
                 for attempt in range(2):
                     try:
-                        image_result = await generate_image_flux(
-                            prompt=slide.get("image_prompt", ""),
+                        # HTML oluştur
+                        html_content = await generate_carousel_slide_html(
+                            slide_data=slide,
+                            slide_number=slide_num,
+                            total_slides=total_slides,
+                            topic=topic
+                        )
+
+                        # PNG'ye render et
+                        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                        output_path = f"outputs/carousel_{timestamp}_{slide_num}.png"
+                        image_path = await render_html_to_png(
+                            html_content=html_content,
+                            output_path=output_path,
                             width=1080,
                             height=1080
                         )
 
-                        if image_result.get("success"):
+                        if image_path:
                             # CDN'e yükle
-                            cdn_url = await upload_image_to_cdn(image_result["image_path"])
+                            cdn_url = await upload_image_to_cdn(image_path)
                             if cdn_url:
                                 image_urls.append(cdn_url)
-                                self.log(f"[CAROUSEL] Slide {i+1} OK")
+                                self.log(f"[CAROUSEL] Slide {slide_num} OK")
                                 break
                             else:
-                                self.log(f"[CAROUSEL] Slide {i+1} CDN upload başarısız")
+                                self.log(f"[CAROUSEL] Slide {slide_num} CDN upload başarısız")
                         else:
-                            self.log(f"[CAROUSEL] Slide {i+1} görsel üretim hatası, retry...")
+                            self.log(f"[CAROUSEL] Slide {slide_num} render hatası, retry...")
 
                     except Exception as e:
-                        self.log(f"[CAROUSEL] Slide {i+1} hata: {e}")
+                        self.log(f"[CAROUSEL] Slide {slide_num} hata: {e}")
                         if attempt == 1:
-                            self.log(f"[CAROUSEL] Slide {i+1} atlanıyor")
+                            self.log(f"[CAROUSEL] Slide {slide_num} atlanıyor")
 
             result["image_urls"] = image_urls
             result["images_generated"] = len(image_urls)
