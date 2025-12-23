@@ -1014,6 +1014,16 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception as e:
             print(f"Audit log hatası: {e}")
 
+    elif action == "revise":
+        await query.edit_message_text(
+            "✏️ *Revize için geri bildiriminizi yazın:*\n\n"
+            "Neyi değiştirmemi istersiniz?",
+            parse_mode="Markdown"
+        )
+        pending_input["type"] = "revise_feedback"
+        pending_input["user_id"] = query.from_user.id
+        pending_input["username"] = query.from_user.username or query.from_user.first_name
+
     elif action == "schedule":
         await query.edit_message_text("⏰ *Saat girin (HH:MM):*", parse_mode="Markdown")
         pending_input["type"] = "schedule_time"
@@ -1082,6 +1092,11 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
             print(f"Audit log hatası: {e}")
         pending_input = {}
         await update.message.reply_text(f"✅ {text} için zamanlandı.")
+
+    elif pending_input.get("type") == "revise_feedback":
+        pipeline.set_approval({"action": "revise_content", "feedback": text})
+        pending_input = {}
+        await update.message.reply_text("✅ Revizyon talebi alındı, içerik düzenleniyor...")
 
     elif pending_input.get("type") == "manual_topic":
         # Manuel konu ile pipeline başlat

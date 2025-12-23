@@ -337,28 +337,30 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 self.state = PipelineState.IDLE
                 return {"success": False, "reason": "Kullanıcı iptal etti"}
 
-            # ========== AŞAMA 4: Review ==========
-            self.log("Aşama 4: Kalite kontrol...")
-            self.state = PipelineState.REVIEWING
+            # ========== AŞAMA 4-5: Review + Final Onay Döngüsü ==========
+            while True:
+                self.log("Aşama 4: Kalite kontrol...")
+                self.state = PipelineState.REVIEWING
 
-            review_result = await self.reviewer.execute({
-                "action": "review_post",
-                "post_text": content_result.get("post_text"),
-                "topic": topic_result.get("topic"),
-                "post_id": content_result.get("post_id")
-            })
+                review_result = await self.reviewer.execute({
+                    "action": "review_post",
+                    "post_text": content_result.get("post_text"),
+                    "topic": topic_result.get("topic"),
+                    "post_id": content_result.get("post_id")
+                })
 
-            self.current_data["review"] = review_result
-            result["stages_completed"].append("review")
+                self.current_data["review"] = review_result
+                if "review" not in result["stages_completed"]:
+                    result["stages_completed"].append("review")
 
-            # ========== AŞAMA 5: Final Onay ==========
-            self.state = PipelineState.AWAITING_FINAL_APPROVAL
+                # ========== AŞAMA 5: Final Onay ==========
+                self.state = PipelineState.AWAITING_FINAL_APPROVAL
 
-            score = review_result.get("total_score", 0)
-            decision = review_result.get("decision") or "revise"  # None-safe
+                score = review_result.get("total_score", 0)
+                decision = review_result.get("decision") or "revise"  # None-safe
 
-            await self.notify_telegram(
-                message=f"""
+                await self.notify_telegram(
+                    message=f"""
 ✅ *Final Onay*
 
 📊 *Review Sonucu:*
@@ -377,20 +379,37 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
 ---
 *Post şimdi yayınlansın mı?*
 """,
-                data=review_result,
-                buttons=[
-                    {"text": "🚀 YAYINLA", "callback": "publish_now"},
-                    {"text": "⏰ Zamanla", "callback": "schedule"},
-                    {"text": "✏️ Revize Et", "callback": "revise"},
-                    {"text": "❌ İptal", "callback": "cancel"}
-                ]
-            )
+                    data=review_result,
+                    buttons=[
+                        {"text": "🚀 YAYINLA", "callback": "publish_now"},
+                        {"text": "⏰ Zamanla", "callback": "schedule"},
+                        {"text": "✏️ Revize Et", "callback": "revise"},
+                        {"text": "❌ İptal", "callback": "cancel"}
+                    ]
+                )
 
-            approval = await self.wait_for_approval()
+                approval = await self.wait_for_approval()
 
-            if approval.get("action") == "cancel":
-                self.state = PipelineState.IDLE
-                return {"success": False, "reason": "Kullanıcı iptal etti"}
+                if approval.get("action") == "cancel":
+                    self.state = PipelineState.IDLE
+                    return {"success": False, "reason": "Kullanıcı iptal etti"}
+
+                # Revize talebi
+                if approval.get("action") == "revise_content":
+                    await self.notify_telegram(message="✏️ İçerik revize ediliyor...")
+
+                    revision_result = await self.creator.execute({
+                        "action": "revise_post",
+                        "post_text": content_result.get("post_text"),
+                        "feedback": approval.get("feedback", "İyileştir"),
+                        "post_id": content_result.get("post_id")
+                    })
+                    content_result["post_text"] = revision_result.get("revised_post", content_result["post_text"])
+                    self.log("İçerik revize edildi, tekrar review yapılıyor...")
+                    continue  # Tekrar review yap
+
+                # publish_now veya schedule → döngüden çık
+                break
 
             # ========== AŞAMA 6: Yayınla ==========
             if approval.get("action") in ["publish_now", "schedule"]:
@@ -1209,14 +1228,22 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                         )
 
                         if image_path:
-                            # CDN'e yükle
-                            cdn_url = await upload_image_to_cdn(image_path)
+                            # CDN'e yükle - retry logic ile
+                            cdn_url = None
+                            for upload_attempt in range(3):
+                                cdn_url = await upload_image_to_cdn(image_path)
+                                if cdn_url:
+                                    break
+                                elif upload_attempt < 2:
+                                    self.log(f"[CAROUSEL] Slide {slide_num} CDN upload retry {upload_attempt + 1}...")
+                                    await asyncio.sleep(2)
+
                             if cdn_url:
                                 image_urls.append(cdn_url)
                                 self.log(f"[CAROUSEL] Slide {slide_num} OK")
                                 break
                             else:
-                                self.log(f"[CAROUSEL] Slide {slide_num} CDN upload başarısız")
+                                self.log(f"[CAROUSEL] Slide {slide_num} CDN upload başarısız (3 deneme)")
                         else:
                             self.log(f"[CAROUSEL] Slide {slide_num} render hatası, retry...")
 
@@ -1229,9 +1256,9 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             result["images_generated"] = len(image_urls)
             result["stages_completed"].append("visuals_created")
 
-            # Minimum 2 görsel gerekli
-            if len(image_urls) < 2:
-                raise Exception(f"Yetersiz görsel üretildi: {len(image_urls)}/2")
+            # Minimum 5 görsel gerekli (tüm slide'lar zorunlu)
+            if len(image_urls) < 5:
+                raise Exception(f"Yetersiz görsel üretildi: {len(image_urls)}/5 - Tüm slide'lar gerekli")
 
             self.log(f"[CAROUSEL] {len(image_urls)} görsel hazır")
 

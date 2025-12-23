@@ -47,11 +47,11 @@ OLIVENET_DESIGN = {
         "body_weight": "400",
     },
     "sizes": {
-        "h1": "48px",
-        "h2": "36px",
-        "h3": "24px",
-        "body": "18px",
-        "small": "14px",
+        "h1": "80px",      # Eski: 48px - Mobil okunurluk için artırıldı
+        "h2": "56px",      # Eski: 36px
+        "h3": "40px",      # Eski: 24px
+        "body": "32px",    # Eski: 18px
+        "small": "24px",   # Eski: 14px
     },
     "radius": {
         "base": "10px",
@@ -816,12 +816,23 @@ Instagram carousel için profesyonel bir HTML slide tasarla.
 - sky-400: #38bdf8 (accent)
 - Beyaz: #fafafa, Muted: #a3a3a3
 
-### TİPOGRAFİ:
+### TİPOGRAFİ (MOBİL ODAKLI - 1080x1080px):
+⚠️ Instagram'da insanlar 3 saniyede karar veriyor. BÜYÜK, NET yazılar şart!
+
 - Font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif
-- H1: 48-56px, font-weight: 700
-- H2: 36px, font-weight: 700
-- H3: 24px, font-weight: 600
-- Body: 18-20px, font-weight: 400
+- H1 (Ana başlık): 72-96px, font-weight: 700-800
+- H2 (Alt başlık): 48-64px, font-weight: 700
+- H3: 36-40px, font-weight: 600
+- Liste maddeleri: 36-48px, font-weight: 500
+- Body/Açıklama: 32-36px, font-weight: 400
+- Small (en küçük): 24px minimum
+
+İÇERİK LİMİTLERİ (ZORUNLU):
+- Başlık: Max 40 karakter
+- Her bullet: Max 6-8 kelime
+- Slide başına: Max 3-4 ana nokta
+- PARAGRAF YASAK - sadece kısa maddeler
+- Bol whitespace kullan
 
 ### BORDER RADIUS & SPACING:
 - Card: 16px (rounded-2xl)
@@ -835,10 +846,11 @@ Instagram carousel için profesyonel bir HTML slide tasarla.
 **cover** (Hero Section Stili):
 - Arka plan: linear-gradient(to bottom right, #2d4a2d, #1a2e1a)
 - Grid pattern overlay: linear-gradient(to right, rgba(74,124,74,0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(74,124,74,0.1) 1px, transparent 1px); background-size: 40px 40px
-- Büyük başlık: 56-64px, bold, #fafafa
-- Alt başlık: 24px, #d1e8d1 (olive-100)
+- Büyük başlık: 80-96px, font-weight: 800, #fafafa (MOBİL İÇİN BÜYÜK!)
+- Alt başlık: 40px, #d1e8d1 (olive-100)
 - Dekoratif blur orb: 200px, rgba(94,154,94,0.2), blur(60px)
 - Minimal, temiz görünüm
+- MAX 40 karakter başlık
 
 **content** (Feature Card Stili):
 - Arka plan: #0a0a0a veya gradient
@@ -846,31 +858,35 @@ Instagram carousel için profesyonel bir HTML slide tasarla.
 - Hover efekti: border-color: rgba(74,124,74,0.3)
 - İkon container: 48x48px, background: rgba(74,124,74,0.1), border-radius: 12px
 - İkon rengi: #4a7c4a
-- Title: 20px, font-weight: 600, #fafafa
-- Description: 16px, #a3a3a3
+- Title: 48px, font-weight: 700, #fafafa (MOBİL İÇİN BÜYÜK!)
+- Description/Bullets: 32-36px, #a3a3a3
+- MAX 3 bullet point per slide
+- Her bullet MAX 6-8 kelime
 
 **stats** (Stats Section Stili):
 - Arka plan: #1a2e1a (olive-900)
-- Büyük rakam: 64-80px, font-weight: 700, #ffffff
+- Büyük rakam: 96-120px, font-weight: 700, #ffffff (DEV RAKAMLAR!)
 - Suffix (%, +): aynı boyut, #4a7c4a (olive-500)
-- Label: 16px, #a3d4a3 (olive-200)
+- Label: 24px, #a3d4a3 (olive-200)
 - Grid layout: 2x2 veya tek büyük stat
 - Alt border: 1px solid rgba(255,255,255,0.1)
+- MAX 3 stat per slide
 
 **comparison** (Feature Card Varyasyonu):
 - Yan yana iki kolon
 - Sol kolon: ✗ ikonlu, rgba(239,68,68,0.1) arka plan
 - Sağ kolon: ✓ ikonlu, rgba(74,124,74,0.1) arka plan
 - Border-radius: 16px
+- Başlık: 48px, liste: 36px
 
 **cta** (CTA Banner Stili):
 - Arka plan: linear-gradient(to bottom right, #3a5f3a, #1a2e1a)
 - Grid pattern: rgba(255,255,255,0.03)
 - Glow orb: sağ üst, rgba(94,154,94,0.2), blur(60px)
-- Başlık: 36-48px, bold, #ffffff
-- "Kaydet! 🔖" ve "Takip Et!" CTA butonları
+- Başlık: 64-72px, font-weight: 800, #ffffff (BÜYÜK CTA!)
+- "Kaydet! 🔖" ve "Takip Et!" CTA butonları (48px buton text)
 - Buton: background: #ffffff, color: #1a2e1a, border-radius: 8px, padding: 16px 32px
-- @olivaborplus: #d1e8d1
+- @olivenet.io: 32px, #d1e8d1
 - Logo sol alt köşe
 
 ## TASARIM KURALLARI (ZORUNLU):
@@ -897,13 +913,14 @@ Instagram carousel için profesyonel bir HTML slide tasarla.
 
 ## CRITICAL SPELLING RULES:
 - "Olivenet" - NOT "Ovenet", "Oivenet", "Olivnet", "Oliveneet"
+- "olivenet.io" - NOT "olivarbus", "olivarplus", "olivaborus", "olivaborpus" (küçük harf!)
 - "LoRaWAN" - NOT "Lorawan", "LoraWAN", "Lorwan", "Lowaran"
 - "IoT" - NOT "Iot", "IOT", "lot", "iiot"
 - "KKTC" - NOT "Kktc", "kktc"
 - "SCADA" - NOT "Scada", "scada"
 - "MQTT" - NOT "Mqtt", "mqtt"
 
-Double-check ALL brand names and technical terms before output!
+⚠️ MARKA YAZIMI KRİTİK! Double-check ALL brand names before output!
 
 ## ÇIKTI:
 - Sadece tam HTML kodu döndür

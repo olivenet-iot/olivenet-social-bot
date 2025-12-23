@@ -2,6 +2,7 @@
 HTML content text validation module.
 Detects and fixes typos before rendering.
 """
+import html
 import re
 from typing import Dict, List, Tuple
 from bs4 import BeautifulSoup
@@ -11,7 +12,7 @@ from difflib import SequenceMatcher
 PROTECTED_TERMS = {
     # Brand
     "olivenet": "Olivenet",
-    "olivaborplus": "olivaborplus",
+    "olivenet.io": "olivenet.io",
 
     # Technical terms
     "lorawan": "LoRaWAN",
@@ -32,6 +33,7 @@ PROTECTED_TERMS = {
 # Common typo patterns
 COMMON_TYPOS = {
     "olivenet": ["ovenet", "oivenet", "olivnet", "oliveneet", "oliveenet", "olivent", "oilvent", "olivennet"],
+    "olivenet.io": ["olivarbus", "olivarplus", "olivaborus", "olivaborpus", "olivabor+", "olivarborplus", "olivabor plus", "oliva bor plus"],
     "lorawan": ["lorwan", "lowaran", "loarwan", "loorawan", "lorawon", "lorawen"],
     "iot": ["lot", "iiot", "oit", "liot"],
 }
@@ -47,7 +49,9 @@ def extract_text_from_html(html_content: str) -> str:
     Returns:
         Extracted text with whitespace normalized
     """
-    soup = BeautifulSoup(html_content, 'html.parser')
+    # HTML entity'leri decode et (örn: &nbsp; &#123; &quot;)
+    decoded_html = html.unescape(html_content)
+    soup = BeautifulSoup(decoded_html, 'html.parser')
 
     # Remove script and style tags
     for tag in soup(['script', 'style']):
