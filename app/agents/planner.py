@@ -185,6 +185,117 @@ class PlannerAgent(BaseAgent):
         else:
             return {"error": f"Unknown action: {action}"}
 
+    def _count_sectors(self, topics: List[str]) -> Dict[str, int]:
+        """
+        Konuların sektör dağılımını say.
+
+        Args:
+            topics: Konu başlıkları listesi
+
+        Returns:
+            Sektör bazlı konu sayıları
+        """
+        sectors = {
+            "tarim": 0,
+            "fabrika": 0,
+            "enerji": 0,
+            "genel": 0
+        }
+
+        keywords = {
+            "tarim": ["sera", "tarım", "sulama", "tarla", "hasat", "bitki", "toprak", "don", "nem"],
+            "fabrika": ["fabrika", "üretim", "makine", "oee", "bakım", "kalite", "endüstri",
+                       "hat", "duruş", "arıza", "titreşim", "motor", "plc", "scada", "modbus"],
+            "enerji": ["enerji", "güneş", "solar", "elektrik", "sayaç", "tüketim", "pik",
+                      "fatura", "peak", "kompresör", "hvac", "watt", "kwh"],
+            "genel": ["lorawan", "iot", "sensör", "gateway", "edge", "mqtt", "thingsboard",
+                     "dashboard", "api", "veri", "protokol", "wifi", "bulut", "cloud"]
+        }
+
+        for topic in topics:
+            topic_lower = topic.lower()
+            matched = False
+            for sector, words in keywords.items():
+                if any(word in topic_lower for word in words):
+                    sectors[sector] += 1
+                    matched = True
+                    break
+            if not matched:
+                sectors["genel"] += 1
+
+        return sectors
+
+    def _get_underrepresented_sector(self, counts: Dict[str, int]) -> str:
+        """
+        En az temsil edilen sektörü bul.
+
+        Args:
+            counts: Sektör bazlı konu sayıları
+
+        Returns:
+            Eksik sektör adı (tarim, fabrika, enerji, genel)
+        """
+        total = sum(counts.values()) or 1
+
+        # Hedef oranlar
+        targets = {
+            "tarim": 0.25,
+            "fabrika": 0.25,
+            "enerji": 0.20,
+            "genel": 0.30
+        }
+
+        # Her sektörün açık oranını hesapla
+        deficits = {}
+        for sector, target in targets.items():
+            current = counts.get(sector, 0) / total
+            deficits[sector] = target - current
+
+        # En büyük açık olan sektörü döndür
+        underrepresented = max(deficits, key=deficits.get)
+        self.log(f"Sektör analizi: {counts} → Öncelik: {underrepresented}")
+        return underrepresented
+
+    def _get_sector_context(self) -> str:
+        """Son 7 günün sektör dağılımını analiz et ve context oluştur."""
+        try:
+            recent_posts = get_published_posts(days=7)
+            recent_topics = [p.get('topic', '') for p in recent_posts]
+
+            if not recent_topics:
+                return ""
+
+            sector_counts = self._count_sectors(recent_topics)
+            underrepresented = self._get_underrepresented_sector(sector_counts)
+
+            # Türkçe sektör isimleri
+            sector_names = {
+                "tarim": "Tarım/Sera",
+                "fabrika": "Fabrika/Endüstri",
+                "enerji": "Enerji İzleme",
+                "genel": "Genel IoT/LoRaWAN"
+            }
+
+            context = f"""
+### SEKTÖR DENGESİ (ÖNEMLİ!)
+
+Son 7 günün dağılımı:
+- Tarım: {sector_counts.get('tarim', 0)} içerik
+- Fabrika: {sector_counts.get('fabrika', 0)} içerik
+- Enerji: {sector_counts.get('enerji', 0)} içerik
+- Genel IoT: {sector_counts.get('genel', 0)} içerik
+
+**ÖNCELİKLİ SEKTÖR: {sector_names.get(underrepresented, underrepresented)}**
+Bu sektörden konu seçmeye ÖNCELIK ver!
+
+Hedef dağılım: Tarım %25-30, Fabrika %25, Enerji %20, Genel %25-30
+"""
+            return context
+
+        except Exception as e:
+            self.log(f"Sektör context hatası: {e}", level="warning")
+            return ""
+
     def _get_performance_context(self) -> str:
         """Performance data'yı prompt context'i olarak formatla"""
         if not self.performance_context_enabled:
@@ -245,9 +356,10 @@ class PlannerAgent(BaseAgent):
         topics_pool = self.load_context("topics.md")
         strategy = self._get_strategy_with_cache()  # Feedback loop: cache'li version kullan
 
-        # Performance ve trend context
+        # Performance, trend ve sektör context
         performance_context = self._get_performance_context()
         trend_context = self._get_trend_context()
+        sector_context = self._get_sector_context()
 
         # Son postları al (tekrar önleme)
         recent_posts = get_published_posts(days=14)
@@ -272,6 +384,7 @@ class PlannerAgent(BaseAgent):
 {content_strategy}
 {performance_context}
 {trend_context}
+{sector_context}
 
 ### Mevcut Strateji
 - İçerik mix: {strategy.get('content_mix', {})}

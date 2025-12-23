@@ -18,6 +18,17 @@ logger = get_logger("veo")
 GEMINI_API_KEY = settings.gemini_api_key or os.getenv("GEMINI_API_KEY")
 OUTPUT_DIR = str(settings.outputs_dir)
 
+# No-text suffix for video generation
+# AI video generation cannot reliably render text, so we avoid it
+VIDEO_NO_TEXT_SUFFIX = """
+
+IMPORTANT VISUAL RULES:
+- NO TEXT in the video - avoid any written words, labels, or titles
+- NO LOGOS or brand names visible
+- Focus on visual storytelling without text overlays
+- Any signage or screens should be blurred or generic
+"""
+
 # Google GenAI client
 _client = None
 
@@ -48,6 +59,9 @@ async def generate_video_veo3(
 
     if not GEMINI_API_KEY:
         return {"success": False, "error": "GEMINI_API_KEY not set"}
+
+    # Add no-text suffix to avoid AI text rendering issues
+    prompt = prompt + VIDEO_NO_TEXT_SUFFIX
 
     # Duration validation (4, 6, 8)
     valid_durations = [4, 6, 8]

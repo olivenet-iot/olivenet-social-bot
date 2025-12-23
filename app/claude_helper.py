@@ -11,6 +11,66 @@ from .config import settings
 
 logger = logging.getLogger(__name__)
 
+# =============================================================================
+# OLIVENET WEBSITE TASARIM SİSTEMİ
+# Website (/opt/olivenet-website) ile tutarlılık için kullanılacak sabitler
+# Kaynak: globals.css, Stats.tsx, FeaturesGrid.tsx, CTABanner.tsx
+# =============================================================================
+OLIVENET_DESIGN = {
+    "colors": {
+        # Olive Palette (website globals.css:64-76)
+        "olive_900": "#1a2e1a",
+        "olive_800": "#243524",
+        "olive_700": "#2d4a2d",
+        "olive_600": "#3a5f3a",
+        "olive_500": "#4a7c4a",
+        "olive_400": "#5e9a5e",
+        "olive_300": "#7ab87a",
+        "olive_200": "#a3d4a3",
+        "olive_100": "#d1e8d1",
+        "olive_50": "#e8f4e8",
+        # Sky Accent (website globals.css:78-80)
+        "sky_500": "#0ea5e9",
+        "sky_400": "#38bdf8",
+        "sky_300": "#7dd3fc",
+        # Backgrounds
+        "bg_light": "#ffffff",
+        "bg_dark": "#0a0a0a",
+        "card_dark": "#171717",
+        # Text
+        "text_primary_dark": "#fafafa",
+        "text_muted_dark": "#a3a3a3",
+    },
+    "fonts": {
+        "family": "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+        "heading_weight": "700",
+        "body_weight": "400",
+    },
+    "sizes": {
+        "h1": "48px",
+        "h2": "36px",
+        "h3": "24px",
+        "body": "18px",
+        "small": "14px",
+    },
+    "radius": {
+        "base": "10px",
+        "card": "16px",
+        "cta": "24px",
+        "button": "8px",
+        "icon": "12px",
+    },
+    "gradients": {
+        "primary": "linear-gradient(to bottom right, #2d4a2d, #1a2e1a)",
+        "cta": "linear-gradient(to bottom right, #3a5f3a, #1a2e1a)",
+        "accent": "linear-gradient(to right, #4a7c4a, #0ea5e9)",
+    },
+    "effects": {
+        "glass": "background: rgba(255,255,255,0.1); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.2);",
+        "grid_pattern": "background-image: linear-gradient(to right, rgba(74,124,74,0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(74,124,74,0.1) 1px, transparent 1px); background-size: 40px 40px;",
+    }
+}
+
 async def run_claude_code(prompt: str, timeout: int = 60) -> str:
     """
     Run Claude Code CLI with the given prompt.
@@ -234,55 +294,99 @@ Bu post icin 1080x1080px sosyal medya gorseli HTML'i olustur:
 Post metni: {short_post[:300]}
 Konu: {topic}
 
-## TASARIM KURALLARI:
+## TASARIM SİSTEMİ (Website ile Tutarlı):
 
-0. FONT (zorunlu):
-   - External font KULLANMA (Google Fonts, vb.)
-   - System font kullan: font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-   - Ya da: font-family: system-ui, sans-serif;
+### RENK PALETİ (zorunlu - website globals.css'den):
+OLIVE PALETİ:
+- olive-900: #1a2e1a (en koyu, arka plan gradient)
+- olive-700: #2d4a2d (primary, gradient başlangıç)
+- olive-500: #4a7c4a (ana vurgu rengi)
+- olive-400: #5e9a5e (hover, açık vurgu)
+- olive-200: #a3d4a3 (label, açık metin)
+- olive-50:  #e8f4e8 (highlight, arka plan açık)
 
-1. RENK PALETİ (zorunlu):
-   - Arka plan: Koyu gradient (#0a0a0a, #1a2e1a)
-   - Ana vurgu: Olive yeşil (#4a7c4a)
-   - Accent: Sky mavi (#0ea5e9) veya Violet (#8b5cf6)
-   - Metin: Beyaz ve gri tonları
+SKY ACCENT:
+- sky-500: #0ea5e9 (accent)
+- sky-400: #38bdf8 (accent parlak)
 
-2. STİL:
-   - Glassmorphism kartlar (backdrop-filter: blur)
-   - Köşelerde dekoratif renkli noktalar
-   - Grid pattern arka plan (opsiyonel)
-   - Modern, minimal, profesyonel
+ARKA PLAN & METİN:
+- Arka plan gradient: #0a0a0a → #1a2e1a
+- Metin birincil: #fafafa (beyaz)
+- Metin ikincil: #a3a3a3 (gri)
 
-3. SOL ALT KÖŞE - LOGO (zorunlu):
-   - Bu base64 logo resmini kullan: {{{{logo}}}}
-   - Logo ve yazı yan yana olacak:
-   ```
-   <div style="position:absolute;bottom:24px;left:24px;display:flex;align-items:center;gap:12px;">
-     <img src="{{{{logo}}}}" style="width:48px;height:48px;border-radius:8px;">
-     <span style="color:#ffffff;font-size:24px;font-weight:600;font-family:system-ui,sans-serif;">Olivenet</span>
-   </div>
-   ```
+### TİPOGRAFİ (zorunlu):
+- Font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif
+- Başlık: 48px, font-weight: 700, letter-spacing: -0.02em
+- Alt başlık: 24px, font-weight: 600
+- Body: 18px, font-weight: 400, line-height: 1.6
 
-4. SAĞ ALT KÖŞE:
-   - Hashtag YAZMA (bunlar post metninde olacak)
-   - Boş bırak veya minimal dekoratif element
+### BORDER RADIUS (website tutarlılığı):
+- Card/Container: 16px (rounded-2xl)
+- Button: 8px
+- Icon container: 12px
+- CTA box: 24px
 
-5. YARATICILIK (önemli):
-   - Her görsel farklı layout dene
-   - Bazen tek büyük metrik, bazen grid
-   - Bazen ilustrasyon/ikon ağırlıklı, bazen data-driven
-   - Sıkıcı ve tekrarlayan olma
-   - Konuya özel yaratıcı elementler ekle:
-     * Tarım: yaprak, damla, toprak ikonları
-     * Enerji: şimşek, güneş, pil ikonları
-     * Kestirimci bakım: dişli, grafik, kalp atışı
-     * Bina: ev, termometre, hava ikonları
-   - SVG ikonlar kullanabilirsin (inline)
+### BILEŞEN STİLLERİ:
 
-6. İÇERİK:
-   - Dikkat çekici başlık
-   - 1-2 anahtar metrik/istatistik
-   - Konuyla ilgili görsel element
+1. STATS BOX (büyük rakam gösterimi - website Stats.tsx):
+   background: #1a2e1a;
+   Rakam: 48-64px, bold, #ffffff
+   Label: 14px, #a3d4a3
+   Border-radius: 16px
+   Padding: 24px
+
+2. FEATURE CARD (website FeaturesGrid.tsx):
+   background: rgba(255,255,255,0.05);
+   border: 1px solid rgba(255,255,255,0.1);
+   border-radius: 16px;
+   padding: 24px;
+
+3. ICON CONTAINER:
+   width: 48px; height: 48px;
+   background: rgba(74,124,74,0.1);
+   border-radius: 12px;
+   İkon rengi: #4a7c4a
+
+4. GLASS EFFECT:
+   background: rgba(255,255,255,0.1);
+   backdrop-filter: blur(12px);
+   border: 1px solid rgba(255,255,255,0.2);
+
+5. GRID PATTERN (opsiyonel):
+   background-image: linear-gradient(to right, rgba(74,124,74,0.1) 1px, transparent 1px),
+                     linear-gradient(to bottom, rgba(74,124,74,0.1) 1px, transparent 1px);
+   background-size: 40px 40px;
+
+### SOL ALT KÖŞE - LOGO (zorunlu):
+<div style="position:absolute;bottom:24px;left:24px;display:flex;align-items:center;gap:12px;">
+  <img src="{{{{logo}}}}" style="width:48px;height:48px;border-radius:8px;">
+  <span style="color:#ffffff;font-size:24px;font-weight:600;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">Olivenet</span>
+</div>
+
+### SAĞ ALT KÖŞE:
+- Hashtag YAZMA (post metninde olacak)
+- Boş bırak veya minimal dekoratif element
+
+### YARATICILIK (önemli):
+- Her görsel farklı layout dene
+- Bazen tek büyük metrik (Stats Box stili), bazen grid
+- Konuya özel SVG ikonlar:
+  * Tarım: yaprak, damla, toprak
+  * Enerji: şimşek, güneş, pil
+  * Kestirimci bakım: dişli, grafik
+  * Bina: ev, termometre
+
+### İÇERİK:
+- Dikkat çekici başlık
+- 1-2 anahtar metrik/istatistik
+- Konuyla ilgili görsel element
+
+### CRITICAL SPELLING RULES:
+- "Olivenet" - NOT "Ovenet", "Oivenet", "Olivnet"
+- "LoRaWAN" - NOT "Lorawan", "LoraWAN", "Lorwan"
+- "IoT" - NOT "Iot", "IOT", "lot"
+- "KKTC" - NOT "Kktc", "kktc"
+Double-check ALL brand names and technical terms!
 
 SADECE HTML kodunu yaz. Markdown code block (```) KULLANMA.
 Aciklama yazma, direkt <!DOCTYPE html> ile basla.
@@ -695,71 +799,111 @@ Instagram carousel için profesyonel bir HTML slide tasarla.
 - İçerik: {content}
 - Ana Konu: {topic}
 
-## SLIDE TİPLERİNE GÖRE TASARIM:
+## TASARIM SİSTEMİ (Website ile Tutarlı):
 
-**cover** (ilk slide):
-- Büyük, dikkat çekici başlık (min 64px)
-- Hook cümlesi
-- Gradient arka plan
+### RENK PALETİ:
+- olive-900: #1a2e1a (en koyu, stats arka plan)
+- olive-800: #243524
+- olive-700: #2d4a2d (primary gradient başlangıç)
+- olive-600: #3a5f3a
+- olive-500: #4a7c4a (ana vurgu, ikon)
+- olive-400: #5e9a5e
+- olive-300: #7ab87a
+- olive-200: #a3d4a3 (label metni)
+- olive-100: #d1e8d1
+- olive-50:  #e8f4e8 (en açık, highlight)
+- Arka plan koyu: #0a0a0a
+- sky-400: #38bdf8 (accent)
+- Beyaz: #fafafa, Muted: #a3a3a3
+
+### TİPOGRAFİ:
+- Font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif
+- H1: 48-56px, font-weight: 700
+- H2: 36px, font-weight: 700
+- H3: 24px, font-weight: 600
+- Body: 18-20px, font-weight: 400
+
+### BORDER RADIUS & SPACING:
+- Card: 16px (rounded-2xl)
+- CTA Banner: 24px (rounded-3xl)
+- Icon container: 12px
+- Button: 8px
+- Padding: 48px container
+
+## SLIDE TİPLERİNE GÖRE WEBSİTE STİLLERİ:
+
+**cover** (Hero Section Stili):
+- Arka plan: linear-gradient(to bottom right, #2d4a2d, #1a2e1a)
+- Grid pattern overlay: linear-gradient(to right, rgba(74,124,74,0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(74,124,74,0.1) 1px, transparent 1px); background-size: 40px 40px
+- Büyük başlık: 56-64px, bold, #fafafa
+- Alt başlık: 24px, #d1e8d1 (olive-100)
+- Dekoratif blur orb: 200px, rgba(94,154,94,0.2), blur(60px)
 - Minimal, temiz görünüm
 
-**content** (içerik slide'ları):
-- Numaralı liste veya bullet points
-- Her madde için ikon (emoji veya SVG)
-- Net, okunabilir font (min 28px)
-- Hiyerarşik düzen
+**content** (Feature Card Stili):
+- Arka plan: #0a0a0a veya gradient
+- Her madde bir kart: background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px
+- Hover efekti: border-color: rgba(74,124,74,0.3)
+- İkon container: 48x48px, background: rgba(74,124,74,0.1), border-radius: 12px
+- İkon rengi: #4a7c4a
+- Title: 20px, font-weight: 600, #fafafa
+- Description: 16px, #a3a3a3
 
-**stats** (istatistik slide):
-- Büyük rakamlar (80px+)
-- Karşılaştırma görselleri
-- Progress bar veya chart
-- Vurgu renkleriyle highlight
+**stats** (Stats Section Stili):
+- Arka plan: #1a2e1a (olive-900)
+- Büyük rakam: 64-80px, font-weight: 700, #ffffff
+- Suffix (%, +): aynı boyut, #4a7c4a (olive-500)
+- Label: 16px, #a3d4a3 (olive-200)
+- Grid layout: 2x2 veya tek büyük stat
+- Alt border: 1px solid rgba(255,255,255,0.1)
 
-**comparison** (karşılaştırma):
+**comparison** (Feature Card Varyasyonu):
 - Yan yana iki kolon
-- ✓ ve ✗ ikonları
-- Görsel ayrım
+- Sol kolon: ✗ ikonlu, rgba(239,68,68,0.1) arka plan
+- Sağ kolon: ✓ ikonlu, rgba(74,124,74,0.1) arka plan
+- Border-radius: 16px
 
-**cta** (son slide - call to action):
-- "Kaydet! 🔖" büyük yazı
-- "Takip Et!" mesajı
-- @olivaborplus mention
-- Olivenet logosu ve branding
+**cta** (CTA Banner Stili):
+- Arka plan: linear-gradient(to bottom right, #3a5f3a, #1a2e1a)
+- Grid pattern: rgba(255,255,255,0.03)
+- Glow orb: sağ üst, rgba(94,154,94,0.2), blur(60px)
+- Başlık: 36-48px, bold, #ffffff
+- "Kaydet! 🔖" ve "Takip Et!" CTA butonları
+- Buton: background: #ffffff, color: #1a2e1a, border-radius: 8px, padding: 16px 32px
+- @olivaborplus: #d1e8d1
+- Logo sol alt köşe
 
 ## TASARIM KURALLARI (ZORUNLU):
 
 1. **BOYUT**: 1080x1080px (Instagram kare)
 
-2. **RENKLER**:
-   - Arka plan: Koyu gradient (#0f172a → #1e293b) veya açık (#f8fafc)
-   - Ana vurgu: #4a7c4a (olive green)
-   - Accent: #38bdf8 (sky blue)
-   - Metin: Koyu arka planda beyaz, açık arka planda #1e293b
+2. **EFEKTLER**:
+   - Glass: background: rgba(255,255,255,0.05); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1);
+   - Grid pattern: background-image ile 40px grid
+   - Glow orbs: büyük blur'lu dekoratif elementler
 
-3. **FONT** (zorunlu):
-   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-   - Başlık: min 48px, font-weight: 700
-   - İçerik: min 28px, font-weight: 400-500
-   - Slide numarası: 18px, sağ üst köşe
-
-4. **LAYOUT**:
+3. **LAYOUT**:
    - Padding: min 48px her yönde
-   - Slide numarası: Sağ üst köşe ({slide_number}/{total_slides})
+   - Slide numarası: Sağ üst köşe ({slide_number}/{total_slides}), 18px, #a3a3a3
    - Son slide'da sol alt köşeye logo ekle
 
-5. **STİL**:
-   - Modern, clean, profesyonel
-   - Glassmorphism kartlar (opsiyonel)
-   - Soft shadow'lar
-   - Rounded corners (16-24px)
-
-6. **LOGO** (sadece son slide için):
+4. **LOGO** (sadece son slide için):
    ```html
    <div style="position:absolute;bottom:32px;left:32px;display:flex;align-items:center;gap:12px;">
      <img src="{{{{logo}}}}" style="width:48px;height:48px;border-radius:8px;">
      <span style="color:#ffffff;font-size:22px;font-weight:600;">Olivenet</span>
    </div>
    ```
+
+## CRITICAL SPELLING RULES:
+- "Olivenet" - NOT "Ovenet", "Oivenet", "Olivnet", "Oliveneet"
+- "LoRaWAN" - NOT "Lorawan", "LoraWAN", "Lorwan", "Lowaran"
+- "IoT" - NOT "Iot", "IOT", "lot", "iiot"
+- "KKTC" - NOT "Kktc", "kktc"
+- "SCADA" - NOT "Scada", "scada"
+- "MQTT" - NOT "Mqtt", "mqtt"
+
+Double-check ALL brand names and technical terms before output!
 
 ## ÇIKTI:
 - Sadece tam HTML kodu döndür

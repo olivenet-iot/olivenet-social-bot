@@ -369,6 +369,25 @@ Broad: #Technology #Innovation #DigitalTransformation #Sustainability
 
 ---
 
+## Haftalık Sektör Dağılımı
+
+12 içeriğin hedef dağılımı:
+
+| Sektör | Hedef Oran | İçerik Sayısı |
+|--------|------------|---------------|
+| Tarım/Sera | 25-30% | 3-4 |
+| Fabrika/Endüstri | 25% | 3 |
+| Enerji İzleme | 20% | 2-3 |
+| Genel IoT/LoRaWAN | 25-30% | 2-3 |
+
+### Kurallar:
+- Aynı sektörden arka arkaya **max 2** içerik
+- Haftada en az **1 fabrika konusu** ZORUNLU
+- Haftada en az **1 enerji konusu** ZORUNLU
+- Tarım ağırlıklı olmaktan kaçın (%30'u geçme)
+
+---
+
 ## İçerik Takvimi Örneği (Haftalık)
 
 | Gün | Post Türü | Konu Kategorisi |
@@ -426,8 +445,55 @@ Broad: #Technology #Innovation #DigitalTransformation #Sustainability
 
 ## Instagram Özel Kurallar (ÖNEMLİ!)
 
-### Post Uzunluğu
-- MAX 120 KELİME (kesinlikle aşılmamalı!)
+### Format Bazlı Caption Kuralları
+
+| Format | Max Kelime | Max Satır | Açıklama |
+|--------|------------|-----------|----------|
+| **Reels** | 40-50 | 2-3 | Hook + Değer + CTA |
+| **Carousel** | 20-30 | 1-2 | Bilgi slide'larda, caption minimal |
+| **Post** | 60-80 | 4-5 | Biraz daha detay OK |
+
+#### Reels Caption Yapısı
+```
+[HOOK - 1 satır, dikkat çekici]
+[Değer/Bilgi - 1 satır]
+[CTA - emoji ile]
+
+5-8 hashtag
+```
+
+**Örnek:**
+```
+Seranızda %40 su tasarrufu mümkün! 💧
+IoT sensörleri ile akıllı sulama sistemi.
+Kaydet ve uygula! 🔖
+
+#akıllıtarım #sera #iot #KKTC
+```
+
+#### Carousel Caption Yapısı
+```
+[Tek satır hook veya soru]
+[Kaydet çağrısı]
+
+5-8 hashtag
+```
+
+**Örnek:**
+```
+Edge Computing'i 5 slide'da öğren! ⬇️
+Kaydet, sonra oku 🔖
+
+#edgecomputing #iot #teknoloji
+```
+
+#### YAPMA:
+- 150+ kelime caption
+- Carousel'da slide'daki bilgiyi caption'da tekrarlama
+- "Bu videoda size anlatacağım..." gibi gereksiz girişler
+- Paragraf paragraf uzun açıklamalar
+
+### Post Uzunluğu (Genel)
 - Kısa, vurucu, okunabilir içerik
 - Mobil uyumlu paragraflar (2-3 cümle max)
 
@@ -548,3 +614,88 @@ Dönen: #AkıllıTarım #SeraOtomasyonu #EnerjiVerimliliği #DijitalDönüşüm 
 - Hep aynı hook tipi kullanma
 - Satış baskısı yapma
 - Jargon kullanma
+
+---
+
+## 🔄 İÇERİK ÇEŞİTLİLİĞİ STRATEJİSİ
+
+### Monotonluktan Kaçınma Kuralları
+
+**ZORUNLU KURALLAR:**
+1. **Aynı kategoriden arka arkaya max 2 içerik** - Örn: 2 tarım postu sonrası farklı kategori
+2. **Haftada en az 4 farklı kategori** - Tek konuya takılma
+3. **Aynı format arka arkaya max 3 kez** - 3 reels sonra carousel veya post
+
+### İçerik Tonu Çeşitliliği
+
+| Ton | Oran | Örnek |
+|-----|------|-------|
+| Eğitici | 40% | "X Nedir? Nasıl Çalışır?" |
+| Problem-Çözüm | 25% | "Y Sorununu Z ile Çözün" |
+| Behind-the-scenes | 15% | "Bir IoT Projesinin Arka Planı" |
+| Quick Tip | 15% | "30 Saniyede Öğren: ..." |
+| Trend/Haber | 5% | "2025'te IoT Trendleri" |
+
+### Format Rotasyonu (Haftalık Örnek)
+
+| Gün | Format | Ton |
+|-----|--------|-----|
+| Pazartesi | Reels | Eğitici |
+| Salı | Reels | Quick Tip |
+| Çarşamba | Carousel | Teknik Derinlik |
+| Perşembe | Reels | Problem-Çözüm |
+| Cuma | Post | Behind-the-scenes |
+| Cumartesi | Carousel | Karşılaştırma |
+| Pazar | Reels | Trend |
+
+### 🎨 Yaratıcı Format Fikirleri
+
+**Seri İçerikler:**
+- "Bunu Biliyor muydunuz?" serisi - Şaşırtıcı IoT gerçekleri
+- "X vs Y" karşılaştırmaları - WiFi vs LoRa, Edge vs Cloud
+- "5 Dakikada Anlat" serisi - Hızlı teknik açıklamalar
+- "Yanlış Bilinen 3 Şey" serisi - Myth-busting
+
+**Deneyim Paylaşımları:**
+- "Proje Günlüğü" - Behind-the-scenes kurulum/geliştirme
+- "Hata Yaptık, Öğrendik" - Gerçek deneyimler ve dersler
+- "Soru-Cevap" - Takipçi soruları cevaplama
+- "Bir Günüm" - Teknik ekip gün içi
+
+**Etkileşim Odaklı:**
+- Poll/Anket - "Hangisi daha önemli: A mı B mi?"
+- Quiz - "IoT bilgini test et"
+- Challenge - "1 hafta enerji takibi yap, sonucu paylaş"
+
+### Hook Rotasyonu Tablosu
+
+**KURAL: Aynı hook tipini arka arkaya KULLANMA!**
+
+| Hook Tipi | Örnek | Kullanım Sıklığı |
+|-----------|-------|------------------|
+| Soru | "Neden X yapmalısınız?" | Haftada 2 |
+| İstatistik | "%40 tasarruf mümkün!" | Haftada 2 |
+| Şok/Dikkat | "Bu hatayı herkes yapıyor!" | Haftada 1-2 |
+| Merak | "Kimsenin bilmediği 3 özellik..." | Haftada 1 |
+| Direkt | "X yapmanın en kolay yolu" | Haftada 1-2 |
+| Karşılaştırma | "A vs B: Hangisi kazanır?" | Haftada 1 |
+| FOMO | "Rakipler çoktan geçti..." | Haftada max 1 |
+
+### Kategori Rotasyonu Haritası
+
+```
+Hafta 1:
+Pzt: Tarım → Sal: LoRaWAN → Çar: Fabrika → Per: Enerji → Cum: AI → Cmt: KKTC → Paz: Edge
+
+Hafta 2:
+Pzt: Fabrika → Sal: Sensör → Çar: Tarım → Per: Gömülü → Cum: Enerji → Cmt: LoRaWAN → Paz: Platform
+```
+
+### Yaratıcılık Kontrol Listesi
+
+Her içerik planlamasında sor:
+- [ ] Son 2 içerik aynı kategoriden mi? (Hayır olmalı)
+- [ ] Bu hafta kaç farklı kategori var? (Min 4)
+- [ ] Son 3 içerik aynı formatta mı? (Hayır olmalı)
+- [ ] Hook tipi son posttan farklı mı? (Evet olmalı)
+- [ ] Ton dağılımı dengeli mi? (Hep eğitici olmasın)

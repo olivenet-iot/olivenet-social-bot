@@ -42,6 +42,16 @@ class CreatorAgent(BaseAgent):
         else:
             return {"error": f"Unknown action: {action}"}
 
+    def _should_avoid_text_in_visual(self, visual_type: str) -> bool:
+        """
+        Check if text should be avoided in this visual type.
+
+        AI-generated visuals (FLUX, Veo, Sora, Gemini) cannot reliably render text.
+        HTML-rendered visuals (infographic, carousel) can include text.
+        """
+        # HTML render = text OK, AI generation = avoid text
+        return visual_type.lower() not in ["infographic", "html", "carousel"]
+
     async def create_ab_variants(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         A/B Testing: Aynı konu için 2 farklı variant oluştur.
@@ -352,12 +362,11 @@ Sadece JSON döndür.
 {hook_hint}
 
 ### INSTAGRAM FORMATI (ÇOK ÖNEMLİ!)
-- MAX 120 KELİME (kesinlikle aşma!)
+- MAX 80 KELİME (kesinlikle aşma!)
 - Hook ile başla (yukarıdaki öncelikli tiplerden birini kullan)
-- 2-3 cümle ana mesaj
-- Opsiyonel: Max 3 bullet point
+- 2-3 cümle ana mesaj (kısa ve öz)
 - {cta_instruction}
-- 6-8 hashtag (sabit: #Olivenet #KKTC #IoT + rotasyonlu)
+- 5-8 hashtag (sabit: #Olivenet #KKTC #IoT + rotasyonlu)
 
 ### ENGAGEMENT OPTİMİZASYONU
 - Her 3-4 posttan birinde: "📌 Kaydet!" veya "🔖 Yer imi ekle!" ekle
@@ -381,6 +390,13 @@ Sadece post metnini yaz, başka açıklama ekleme.
 
         ig_response = await self.call_claude(ig_prompt, timeout=60)
         ig_text = ig_response.strip()
+
+        # Instagram caption uzunluk kontrolü
+        max_words = self._get_max_caption_length("post")
+        ig_word_count = len(ig_text.split())
+        if ig_word_count > max_words * 1.2:  # %20 tolerans
+            self.log(f"⚠️ IG caption çok uzun ({ig_word_count} kelime), kısaltılıyor...")
+            ig_text = await self._shorten_caption(ig_text, max_words)
 
         # Facebook içeriği (uzun)
         fb_prompt = f"""
@@ -454,29 +470,40 @@ Sadece post metnini yaz, başka açıklama ekleme.
 
         visual_guidelines = self.load_context("visual-guidelines.md")
 
+        # No-text suffix for AI-generated visuals
+        no_text_suffix = ""
+        if self._should_avoid_text_in_visual(visual_type):
+            no_text_suffix = """
+
+VISUAL STYLE - CRITICAL:
+- NO TEXT or written words in the image
+- Use visual metaphors and icons instead
+- Focus on photorealistic imagery without labels
+"""
+
         # Görsel tipine göre farklı prompt rehberi
         if visual_type == "flux":
             prompt_guide = self.load_context("flux-prompting-guide.md")
-            model_instructions = """
+            model_instructions = f"""
 FLUX.2 Pro için İngilizce prompt yaz.
 Framework: Subject + Action + Style + Context
 Marka renkleri: olive green (#4a7c4a), sky blue (#38bdf8)
 40-80 kelime arası, pozitif ifadeler kullan.
-"""
+{no_text_suffix}"""
         elif visual_type == "video":
             prompt_guide = ""
-            model_instructions = """
+            model_instructions = f"""
 Veo 3 video için İngilizce prompt yaz.
 Kamera hareketi + Sahne + Işık + Renk paleti + Atmosfer
 5 saniyelik video için uygun, tek sahne.
-"""
+{no_text_suffix}"""
         else:  # gemini, infographic
             prompt_guide = ""
-            model_instructions = """
+            model_instructions = f"""
 Gemini için İngilizce prompt yaz.
 Fotorealistik, profesyonel fotoğraf tarzı.
 IoT/teknoloji temalı, temiz ve modern.
-"""
+{no_text_suffix}"""
 
         prompt = f"""
 ## GÖREV: {visual_type.upper()} Görsel Prompt'u Oluştur
@@ -644,7 +671,7 @@ Sadece JSON döndür.
     "recommended_model": "veo3|sora-2|sora-2-pro",
     "recommended_duration": 5,
     "hook_description": "İlk 2 saniyede ne görünecek (Türkçe)",
-    "caption_ig": "Instagram Reels caption (Türkçe, max 80 kelime, emoji'li)",
+    "caption_ig": "Instagram Reels caption (Türkçe, max 50 kelime, hook+değer+CTA formatı, emoji'li)",
     "hashtags": ["Olivenet", "KKTC", "IoT", "..."],
     "camera_movement": "static|dolly|pan|arc|reveal",
     "mood": "professional|calm|energetic|inspirational"
@@ -778,11 +805,11 @@ Eğitici ve görsel açıdan tutarlı bir carousel oluştur.
 - title: Kısa başlık (max 5 kelime)
 - content: Ana metin (max 30 kelime, bullet point'ler tercih edilir)
 
-### Caption (SAVE-FOCUSED):
-- Instagram için optimize (max 120 kelime)
-- Hook ile başla
-- Konu özeti
-- "📌 Kaydet, ihtiyacın olduğunda kullan!" veya benzeri save CTA ile bitir
+### Caption (KISA ve SAVE-FOCUSED):
+- MAX 30 KELİME (bilgi slide'larda, caption minimal!)
+- Tek satır hook veya soru ile başla
+- "📌 Kaydet!" veya "🔖 Yer imi ekle!" ile bitir
+- Slide içeriğini caption'da TEKRARLAMA
 
 ### Hashtag'ler:
 - 6-8 adet
@@ -839,6 +866,14 @@ Sadece JSON döndür.
             caption = result.get("caption", "")
             hashtags = result.get("hashtags", [])
 
+            # Carousel caption uzunluk kontrolü
+            max_words = self._get_max_caption_length("carousel")
+            caption_word_count = len(caption.split())
+            if caption_word_count > max_words * 1.2:  # %20 tolerans
+                self.log(f"⚠️ Carousel caption çok uzun ({caption_word_count} kelime), kısaltılıyor...")
+                caption = await self._shorten_caption(caption, max_words)
+                result["caption"] = caption
+
             post_id = create_post(
                 topic=topic,
                 post_text=caption,
@@ -879,6 +914,59 @@ Sadece JSON döndür.
                 error_message=f"JSON parse error: {e}"
             )
             return {"success": False, "error": f"JSON parse error: {e}", "raw_response": response[:500]}
+
+    def _get_max_caption_length(self, content_type: str) -> int:
+        """
+        İçerik tipine göre max caption uzunluğu (kelime).
+
+        Args:
+            content_type: İçerik tipi (reels, carousel, post, image)
+
+        Returns:
+            Max kelime sayısı
+        """
+        limits = {
+            "reels": 50,
+            "carousel": 30,
+            "post": 80,
+            "image": 80
+        }
+        return limits.get(content_type.lower(), 60)
+
+    async def _shorten_caption(self, caption: str, max_words: int) -> str:
+        """
+        Caption'ı AI ile kısalt.
+
+        Args:
+            caption: Kısaltılacak caption
+            max_words: Hedef max kelime sayısı
+
+        Returns:
+            Kısaltılmış caption
+        """
+        self.log(f"Caption kısaltılıyor: {len(caption.split())} → {max_words} kelime")
+
+        prompt = f"""
+Aşağıdaki Instagram caption'ı {max_words} kelimeye kısalt.
+
+KURALLAR:
+- Ana mesajı koru
+- Hook'u (ilk cümleyi) koru
+- Hashtag'leri aynen koru
+- Gereksiz açıklamaları çıkar
+- Emoji'leri koru
+
+CAPTION:
+{caption}
+
+Sadece kısaltılmış caption'ı döndür, başka bir şey ekleme.
+"""
+
+        response = await self.call_claude(prompt, timeout=30)
+        shortened = response.strip()
+
+        self.log(f"Caption kısaltıldı: {len(shortened.split())} kelime")
+        return shortened
 
     def _detect_prompt_style(self, prompt: str) -> str:
         """

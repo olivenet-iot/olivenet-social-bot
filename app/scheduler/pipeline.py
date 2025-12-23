@@ -10,6 +10,7 @@ from typing import Dict, Any, Optional, Callable
 from enum import Enum
 
 from app.database import save_prompt
+from app.validators.text_validator import validate_html_content, fix_common_issues
 
 class PipelineState(Enum):
     """Pipeline durumları"""
@@ -1172,6 +1173,30 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                             total_slides=total_slides,
                             topic=topic
                         )
+
+                        # Text validation - typo kontrolü
+                        validation = validate_html_content(html_content)
+                        if not validation["can_render"]:
+                            self.log(f"[CAROUSEL] Slide {slide_num} yazım hatası tespit edildi")
+                            for issue in validation["issues"]:
+                                if issue["severity"] == "high":
+                                    self.log(f"  - '{issue['found']}' -> '{issue['expected']}'")
+
+                            # Otomatik düzelt
+                            html_content, fixes = fix_common_issues(html_content)
+                            if fixes:
+                                self.log(f"[CAROUSEL] Otomatik düzeltmeler: {fixes}")
+
+                            # Tekrar doğrula
+                            validation = validate_html_content(html_content)
+                            if not validation["can_render"]:
+                                self.log(f"[CAROUSEL] Slide {slide_num} hala hatalı, yeniden üretiliyor...")
+                                html_content = await generate_carousel_slide_html(
+                                    slide_data=slide,
+                                    slide_number=slide_num,
+                                    total_slides=total_slides,
+                                    topic=topic
+                                )
 
                         # PNG'ye render et
                         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")

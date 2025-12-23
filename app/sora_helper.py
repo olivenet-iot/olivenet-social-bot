@@ -18,6 +18,17 @@ OPENAI_API_KEY = settings.openai_api_key or os.getenv("OPENAI_API_KEY")
 OPENAI_API_URL = "https://api.openai.com/v1"
 OUTPUT_DIR = str(settings.outputs_dir)
 
+# No-text suffix for video generation
+# AI video generation cannot reliably render text, so we avoid it
+VIDEO_NO_TEXT_SUFFIX = """
+
+IMPORTANT VISUAL RULES:
+- NO TEXT in the video - avoid any written words, labels, or titles
+- NO LOGOS or brand names visible
+- Focus on visual storytelling without text overlays
+- Any signage or screens should be blurred or generic
+"""
+
 
 async def generate_video_sora(
     prompt: str,
@@ -38,6 +49,9 @@ async def generate_video_sora(
     if not OPENAI_API_KEY:
         print("[SORA] ❌ OPENAI_API_KEY not set")
         return {"success": False, "error": "OPENAI_API_KEY not set", "fallback": "veo3"}
+
+    # Add no-text suffix to avoid AI text rendering issues
+    prompt = prompt + VIDEO_NO_TEXT_SUFFIX
 
     # Duration validation (4, 8, 12 only)
     valid_durations = [4, 8, 12]
