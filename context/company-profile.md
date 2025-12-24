@@ -39,3 +39,12 @@ Olivenet Ltd., Kuzey Kıbrıs (KKTC) merkezli bir Endüstriyel IoT şirketidir. 
 - Abartılı iddialardan kaçın
 - Sektör bilgisi ve pratik ipuçları paylaş
 - Yerel (KKTC) başarı hikayeleri vurgula (gerçek olanlar)
+
+## Sosyal Medya Hesapları
+- **Instagram:** @olivenet.io
+- **Facebook:** olivenet.io
+- **Website:** https://olivenet.io
+- **Email:** info@olivenet.io
+
+⚠️ UYARI: "olivenetplus", "olivaborplus" gibi varyasyonlar YANLIŞTIR!
+Doğru handle: @olivenet.io

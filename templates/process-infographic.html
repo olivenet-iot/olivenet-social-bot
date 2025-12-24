@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Olivenet Process Infographic</title>
+  <style>
+    /* ===== RESET & BASE ===== */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    /* ===== OLIVENET RENK DEGiSKENLERi ===== */
+    :root {
+      /* Olive Paleti */
+      --olive-900: #1a2e1a;
+      --olive-800: #243524;
+      --olive-700: #2d4a2d;
+      --olive-600: #3a5f3a;
+      --olive-500: #4a7c4a;
+      --olive-400: #5e9a5e;
+      --olive-300: #7ab87a;
+      --olive-200: #a3d4a3;
+      --olive-100: #d1e8d1;
+      --olive-50: #e8f4e8;
+
+      /* Sky/Tech Vurgu */
+      --sky-500: #0ea5e9;
+      --sky-400: #38bdf8;
+      --sky-300: #7dd3fc;
+
+      /* Sektorel Renkler */
+      --emerald-500: #10b981;
+      --amber-500: #f59e0b;
+      --violet-500: #8b5cf6;
+
+      /* Notr */
+      --white: #ffffff;
+      --black: #0a0a0a;
+      --gray-400: #9ca3af;
+      --gray-600: #4b5563;
+    }
+
+    /* ===== ANA CONTAINER (1080x1080) ===== */
+    .social-post {
+      width: 1080px;
+      height: 1080px;
+      background: linear-gradient(135deg, var(--olive-900) 0%, var(--black) 100%);
+      position: relative;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    /* ===== GRID PATTERN ARKA PLAN ===== */
+    .grid-pattern {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(to right, rgba(74,124,74,0.08) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(74,124,74,0.08) 1px, transparent 1px);
+      background-size: 80px 80px;
+    }
+
+    /* ===== GLOWING ORB ===== */
+    .glow-orb {
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      filter: blur(150px);
+      background: rgba(74, 124, 74, 0.2);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    /* ===== iCERiK CONTAINER ===== */
+    .content {
+      position: relative;
+      z-index: 10;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 80px 60px;
+    }
+
+    /* ===== BASLIK ===== */
+    .title {
+      font-size: 56px;
+      font-weight: 700;
+      color: var(--white);
+      text-align: center;
+      letter-spacing: -1px;
+      margin-bottom: 80px;
+    }
+
+    /* ===== ADIM AKISI ===== */
+    .process-flow {
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 0;
+      width: 100%;
+    }
+
+    .step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 260px;
+      position: relative;
+    }
+
+    /* Adim Numarasi */
+    .step-number {
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, var(--olive-500), var(--olive-400));
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--white);
+      margin-bottom: 24px;
+      position: relative;
+      z-index: 2;
+      box-shadow: 0 4px 20px rgba(74, 124, 74, 0.4);
+    }
+
+    /* Baglanti Cizgisi */
+    .connector {
+      position: absolute;
+      top: 32px;
+      left: calc(50% + 32px);
+      width: calc(100% - 64px);
+      height: 4px;
+      background: linear-gradient(90deg, var(--olive-500), var(--olive-400));
+      z-index: 1;
+    }
+
+    .step:last-child .connector {
+      display: none;
+    }
+
+    /* ikon Container */
+    .step-icon {
+      width: 120px;
+      height: 120px;
+      background: rgba(74, 124, 74, 0.15);
+      border: 2px solid rgba(74, 124, 74, 0.3);
+      border-radius: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 28px;
+    }
+
+    .step-icon svg {
+      width: 56px;
+      height: 56px;
+      color: var(--olive-400);
+      stroke: currentColor;
+      stroke-width: 1.5;
+      fill: none;
+    }
+
+    /* Adim Basligi */
+    .step-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--white);
+      margin-bottom: 12px;
+      text-align: center;
+    }
+
+    /* Adim Altyazisi */
+    .step-subtitle {
+      font-size: 20px;
+      color: var(--gray-400);
+      text-align: center;
+      line-height: 1.4;
+      max-width: 200px;
+    }
+
+    /* ===== LOGO ===== */
+    .logo {
+      position: absolute;
+      bottom: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .logo-img {
+      height: 56px;
+      width: auto;
+      border-radius: 14px;
+      object-fit: contain;
+    }
+
+    .logo-text {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--white);
+      letter-spacing: 1px;
+    }
+
+    /* ===== VARYANTLAR ===== */
+
+    /* Tarim/Sera Varyanti */
+    .social-post.tarim .step-number {
+      background: linear-gradient(135deg, var(--emerald-500), #34d399);
+      box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);
+    }
+    .social-post.tarim .connector {
+      background: linear-gradient(90deg, var(--emerald-500), #34d399);
+    }
+    .social-post.tarim .step-icon {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+    .social-post.tarim .step-icon svg {
+      color: var(--emerald-500);
+    }
+    .social-post.tarim .glow-orb {
+      background: rgba(16, 185, 129, 0.15);
+    }
+
+    /* Enerji Varyanti */
+    .social-post.enerji .step-number {
+      background: linear-gradient(135deg, var(--amber-500), #fbbf24);
+      box-shadow: 0 4px 20px rgba(245, 158, 11, 0.4);
+    }
+    .social-post.enerji .connector {
+      background: linear-gradient(90deg, var(--amber-500), #fbbf24);
+    }
+    .social-post.enerji .step-icon {
+      background: rgba(245, 158, 11, 0.15);
+      border-color: rgba(245, 158, 11, 0.3);
+    }
+    .social-post.enerji .step-icon svg {
+      color: var(--amber-500);
+    }
+    .social-post.enerji .glow-orb {
+      background: rgba(245, 158, 11, 0.15);
+    }
+
+    /* Bina Varyanti */
+    .social-post.bina .step-number {
+      background: linear-gradient(135deg, var(--sky-500), var(--sky-400));
+      box-shadow: 0 4px 20px rgba(14, 165, 233, 0.4);
+    }
+    .social-post.bina .connector {
+      background: linear-gradient(90deg, var(--sky-500), var(--sky-400));
+    }
+    .social-post.bina .step-icon {
+      background: rgba(14, 165, 233, 0.15);
+      border-color: rgba(14, 165, 233, 0.3);
+    }
+    .social-post.bina .step-icon svg {
+      color: var(--sky-400);
+    }
+    .social-post.bina .glow-orb {
+      background: rgba(14, 165, 233, 0.15);
+    }
+
+    /* Bakim Varyanti */
+    .social-post.bakim .step-number {
+      background: linear-gradient(135deg, var(--violet-500), #a78bfa);
+      box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4);
+    }
+    .social-post.bakim .connector {
+      background: linear-gradient(90deg, var(--violet-500), #a78bfa);
+    }
+    .social-post.bakim .step-icon {
+      background: rgba(139, 92, 246, 0.15);
+      border-color: rgba(139, 92, 246, 0.3);
+    }
+    .social-post.bakim .step-icon svg {
+      color: var(--violet-500);
+    }
+    .social-post.bakim .glow-orb {
+      background: rgba(139, 92, 246, 0.15);
+    }
+  </style>
+</head>
+<body>
+
+<!-- ===== PROCESS STYLE INFOGRAPHIC ===== -->
+<div class="social-post {{VARIANT}}">
+  <!-- Arka Plan Elementleri -->
+  <div class="grid-pattern"></div>
+  <div class="glow-orb"></div>
+
+  <!-- icerik -->
+  <div class="content">
+    <!-- Baslik -->
+    <div class="title">{{TITLE}}</div>
+
+    <!-- Adim Akisi -->
+    <div class="process-flow">
+      <!-- Adim 1 -->
+      <div class="step">
+        <div class="step-number">1</div>
+        <div class="connector"></div>
+        <div class="step-icon">
+          {{STEP_1_ICON}}
+        </div>
+        <div class="step-title">{{STEP_1_TITLE}}</div>
+        <div class="step-subtitle">{{STEP_1_SUBTITLE}}</div>
+      </div>
+
+      <!-- Adim 2 -->
+      <div class="step">
+        <div class="step-number">2</div>
+        <div class="connector"></div>
+        <div class="step-icon">
+          {{STEP_2_ICON}}
+        </div>
+        <div class="step-title">{{STEP_2_TITLE}}</div>
+        <div class="step-subtitle">{{STEP_2_SUBTITLE}}</div>
+      </div>
+
+      <!-- Adim 3 -->
+      <div class="step">
+        <div class="step-number">3</div>
+        <div class="step-icon">
+          {{STEP_3_ICON}}
+        </div>
+        <div class="step-title">{{STEP_3_TITLE}}</div>
+        <div class="step-subtitle">{{STEP_3_SUBTITLE}}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Logo -->
+  <div class="logo">
+    <img src="{{LOGO_DATA}}" alt="Olivenet" class="logo-img">
+    <span class="logo-text">Olivenet</span>
+  </div>
+</div>
+
+<!--
+===== KULLANIM KILAVUZU =====
+
+PLACEHOLDER'LAR:
+{{TITLE}}           - Surecin basligi (orn: "IoT Kurulum Adimlari")
+{{VARIANT}}         - Renk varyanti: tarim, enerji, bina, bakim veya bos
+
+Adim 1:
+{{STEP_1_ICON}}     - SVG ikon
+{{STEP_1_TITLE}}    - Adim basligi (orn: "Kur")
+{{STEP_1_SUBTITLE}} - Adim aciklamasi (orn: "Sensor yerlestir")
+
+Adim 2:
+{{STEP_2_ICON}}     - SVG ikon
+{{STEP_2_TITLE}}    - Adim basligi (orn: "Bagla")
+{{STEP_2_SUBTITLE}} - Adim aciklamasi (orn: "Gateway baglan")
+
+Adim 3:
+{{STEP_3_ICON}}     - SVG ikon
+{{STEP_3_TITLE}}    - Adim basligi (orn: "izle")
+{{STEP_3_SUBTITLE}} - Adim aciklamasi (orn: "Dashboard izle")
+
+{{LOGO_DATA}}       - Base64 encoded logo
+
+iKON TiPLERi:
+- radio: Sensor/Radyo
+- settings: Ayarlar/Yapilandirma
+- chart: Grafik/izleme
+- download: indirme/Kurulum
+- link: Baglanti
+- check: Onay/Tamamlandi
+- play: Baslatma
+- shield: Guvenlik
+-->
+
+</body>
+</html>

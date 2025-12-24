@@ -996,6 +996,66 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif action == "regenerate_visual":
         pipeline.set_approval({"action": "regenerate"})
 
+    elif action == "retry_visual":
+        # Hata sonrası tekrar deneme - aynı regenerate mantığı
+        pipeline.set_approval({"action": "regenerate"})
+
+    elif action == "change_visual_type":
+        # Görsel tipi seçim menüsü göster
+        keyboard = [
+            [InlineKeyboardButton("📊 İnfografik", callback_data="set_type_infographic")],
+            [InlineKeyboardButton("🖼️ FLUX Görsel", callback_data="set_type_flux")],
+            [InlineKeyboardButton("🎬 Video (Veo)", callback_data="set_type_video")],
+            [InlineKeyboardButton("📱 Carousel", callback_data="set_type_carousel")],
+            [InlineKeyboardButton("❌ İptal", callback_data="cancel")]
+        ]
+        menu_text = (
+            "🎨 *Görsel Tipi Seçin:*\n\n"
+            "📊 İnfografik - HTML tabanlı infografik\n"
+            "🖼️ FLUX - AI görsel üretimi\n"
+            "🎬 Video - Veo ile video üretimi\n"
+            "📱 Carousel - Çoklu slayt formatı"
+        )
+        # Fotoğraf/video mesajı ise caption düzenle, değilse text düzenle
+        if query.message.photo or query.message.video:
+            await query.edit_message_caption(
+                caption=menu_text,
+                parse_mode="Markdown",
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
+        else:
+            await query.edit_message_text(
+                menu_text,
+                parse_mode="Markdown",
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
+
+    elif action.startswith("set_type_"):
+        # Görsel tipi seçildi
+        new_type = action.replace("set_type_", "")
+        type_names = {
+            "infographic": "İnfografik",
+            "flux": "FLUX Görsel",
+            "video": "Video (Veo)",
+            "carousel": "Carousel"
+        }
+        status_text = (
+            f"🎨 Görsel tipi değiştirildi: *{type_names.get(new_type, new_type)}*\n\n"
+            "Yeni görsel üretiliyor..."
+        )
+        # Fotoğraf/video mesajı ise caption düzenle, değilse text düzenle
+        if query.message.photo or query.message.video:
+            await query.edit_message_caption(
+                caption=status_text,
+                parse_mode="Markdown"
+            )
+        else:
+            await query.edit_message_text(
+                status_text,
+                parse_mode="Markdown"
+            )
+        pipeline.set_approval({"action": "change_type", "new_type": new_type})
+
     elif action == "publish_now":
         pipeline.set_approval({"action": "publish_now"})
         # Audit log
@@ -1094,9 +1154,23 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"✅ {text} için zamanlandı.")
 
     elif pending_input.get("type") == "revise_feedback":
-        pipeline.set_approval({"action": "revise_content", "feedback": text})
-        pending_input = {}
-        await update.message.reply_text("✅ Revizyon talebi alındı, içerik düzenleniyor...")
+        # Akıllı yönlendirme: feedback'e göre hangi aşamaya dönülecek
+        feedback_lower = text.lower()
+
+        # Görsel ile ilgili anahtar kelimeler
+        visual_keywords = ["görsel", "resim", "image", "foto", "fotoğraf", "grafik",
+                          "renk", "tasarım", "design", "infografik", "video", "animasyon"]
+
+        if any(word in feedback_lower for word in visual_keywords):
+            # Görsel revize talebi -> görsel üretimine dön
+            pipeline.set_approval({"action": "regenerate", "feedback": text})
+            pending_input = {}
+            await update.message.reply_text("🎨 Görsel revizyon talebi alındı, yeni görsel üretiliyor...")
+        else:
+            # Metin/içerik revize talebi -> içerik düzenleme
+            pipeline.set_approval({"action": "revise_content", "feedback": text})
+            pending_input = {}
+            await update.message.reply_text("✏️ İçerik revizyon talebi alındı, metin düzenleniyor...")
 
     elif pending_input.get("type") == "manual_topic":
         # Manuel konu ile pipeline başlat

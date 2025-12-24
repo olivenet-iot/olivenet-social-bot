@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Olivenet Before/After Infographic</title>
+  <style>
+    /* ===== RESET & BASE ===== */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    /* ===== OLIVENET RENK DEĞİŞKENLERİ ===== */
+    :root {
+      /* Olive Paleti */
+      --olive-900: #1a2e1a;
+      --olive-800: #243524;
+      --olive-700: #2d4a2d;
+      --olive-600: #3a5f3a;
+      --olive-500: #4a7c4a;
+      --olive-400: #5e9a5e;
+      --olive-300: #7ab87a;
+      --olive-200: #a3d4a3;
+      --olive-100: #d1e8d1;
+      --olive-50: #e8f4e8;
+
+      /* Sky/Tech Vurgu */
+      --sky-500: #0ea5e9;
+      --sky-400: #38bdf8;
+      --sky-300: #7dd3fc;
+
+      /* Sektorel Renkler */
+      --emerald-500: #10b981;
+      --amber-500: #f59e0b;
+      --violet-500: #8b5cf6;
+      --red-500: #ef4444;
+
+      /* Notr */
+      --white: #ffffff;
+      --black: #0a0a0a;
+      --gray-400: #9ca3af;
+      --gray-600: #4b5563;
+    }
+
+    /* ===== ANA CONTAINER (1080x1080) ===== */
+    .social-post {
+      width: 1080px;
+      height: 1080px;
+      background: linear-gradient(135deg, var(--olive-900) 0%, var(--black) 100%);
+      position: relative;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    /* ===== GRID PATTERN ARKA PLAN ===== */
+    .grid-pattern {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(to right, rgba(74,124,74,0.08) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(74,124,74,0.08) 1px, transparent 1px);
+      background-size: 80px 80px;
+    }
+
+    /* ===== GLOWING ORB ===== */
+    .glow-orb {
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      filter: blur(150px);
+      background: rgba(74, 124, 74, 0.2);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    /* ===== İÇERİK CONTAINER ===== */
+    .content {
+      position: relative;
+      z-index: 10;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      padding: 60px;
+    }
+
+    /* ===== BAŞLIK ===== */
+    .main-title {
+      font-size: 48px;
+      font-weight: 800;
+      color: var(--white);
+      text-align: center;
+      margin-bottom: 48px;
+      letter-spacing: -1px;
+    }
+
+    /* ===== KARŞILAŞTIRMA CONTAINER ===== */
+    .comparison-container {
+      display: flex;
+      flex: 1;
+      gap: 32px;
+      align-items: stretch;
+    }
+
+    /* ===== ÖNCE / SONRA KUTULARI ===== */
+    .comparison-box {
+      flex: 1;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 24px;
+      padding: 36px;
+      border: 2px solid rgba(74, 124, 74, 0.3);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .before-box {
+      border-color: rgba(239, 68, 68, 0.4);
+    }
+
+    .after-box {
+      border-color: rgba(16, 185, 129, 0.4);
+    }
+
+    .box-header {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 28px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .before-box .box-header {
+      color: var(--red-500);
+    }
+
+    .after-box .box-header {
+      color: var(--emerald-500);
+    }
+
+    .box-items {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      flex: 1;
+    }
+
+    .box-item {
+      font-size: 26px;
+      color: var(--gray-400);
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      line-height: 1.4;
+    }
+
+    .box-item .icon {
+      font-size: 28px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .before-box .box-item .icon {
+      color: var(--red-500);
+    }
+
+    .after-box .box-item .icon {
+      color: var(--emerald-500);
+    }
+
+    /* ===== ORTA OK ===== */
+    .arrow-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 16px;
+    }
+
+    .arrow-text {
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--olive-400);
+      background: rgba(74, 124, 74, 0.2);
+      padding: 20px 12px;
+      border-radius: 12px;
+      letter-spacing: 2px;
+    }
+
+    /* ===== LOGO ===== */
+    .logo {
+      position: absolute;
+      bottom: 48px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo-img {
+      height: 48px;
+      width: auto;
+      border-radius: 12px;
+      object-fit: contain;
+    }
+
+    .logo-text {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--white);
+      letter-spacing: 1px;
+    }
+
+    /* ===== VARYANTLAR ===== */
+
+    /* Tarım/Sera Varyantı */
+    .social-post.tarim .main-title {
+      color: var(--emerald-500);
+    }
+    .social-post.tarim .glow-orb {
+      background: rgba(16, 185, 129, 0.15);
+    }
+
+    /* Enerji Varyantı */
+    .social-post.enerji .main-title {
+      color: var(--amber-500);
+    }
+    .social-post.enerji .glow-orb {
+      background: rgba(245, 158, 11, 0.15);
+    }
+
+    /* Bakım Varyantı */
+    .social-post.bakim .main-title {
+      color: var(--violet-500);
+    }
+    .social-post.bakim .glow-orb {
+      background: rgba(139, 92, 246, 0.15);
+    }
+
+    /* Bina Varyantı */
+    .social-post.bina .main-title {
+      color: var(--sky-400);
+    }
+    .social-post.bina .glow-orb {
+      background: rgba(14, 165, 233, 0.15);
+    }
+  </style>
+</head>
+<body>
+
+<!-- ===== BEFORE/AFTER INFOGRAPHIC ===== -->
+<div class="social-post {{VARIANT}}">
+  <!-- Arka Plan Elementleri -->
+  <div class="grid-pattern"></div>
+  <div class="glow-orb"></div>
+
+  <!-- İçerik -->
+  <div class="content">
+    <!-- Ana Başlık -->
+    <div class="main-title">{{TITLE}}</div>
+
+    <!-- Karşılaştırma Bölümü -->
+    <div class="comparison-container">
+      <!-- ÖNCE Kutusu -->
+      <div class="comparison-box before-box">
+        <div class="box-header">
+          <span>{{BEFORE_TITLE}}</span>
+        </div>
+        <div class="box-items">
+          {{BEFORE_ITEMS}}
+        </div>
+      </div>
+
+      <!-- Orta Ok -->
+      <div class="arrow-container">
+        <div class="arrow-text">{{ARROW_TEXT}}</div>
+      </div>
+
+      <!-- SONRA Kutusu -->
+      <div class="comparison-box after-box">
+        <div class="box-header">
+          <span>{{AFTER_TITLE}}</span>
+        </div>
+        <div class="box-items">
+          {{AFTER_ITEMS}}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Logo -->
+  <div class="logo">
+    <img src="{{LOGO_DATA}}" alt="Olivenet" class="logo-img">
+    <span class="logo-text">Olivenet</span>
+  </div>
+</div>
+
+<!--
+===== KULLANIM KILAVUZU =====
+
+PLACEHOLDER'LAR:
+{{TITLE}}        - Ana başlık (örn: "Akıllı Sera Dönüşümü")
+{{BEFORE_TITLE}} - Sol kutu başlık (örn: "ÖNCE")
+{{BEFORE_ITEMS}} - Sol kutu maddeleri (HTML format)
+{{AFTER_TITLE}}  - Sağ kutu başlık (örn: "SONRA")
+{{AFTER_ITEMS}}  - Sağ kutu maddeleri (HTML format)
+{{ARROW_TEXT}}   - Ortadaki ok metni (örn: "DÖNÜŞÜM")
+{{VARIANT}}      - Renk varyantı: tarim, enerji, bakim, bina veya boş
+{{LOGO_DATA}}    - Base64 logo
+
+ITEM FORMAT:
+<div class="box-item">
+  <span class="icon">❌</span>
+  <span>Manuel sulama kontrolü</span>
+</div>
+-->
+
+</body>
+</html>

@@ -766,6 +766,11 @@ Sadece JSON döndür, başka açıklama ekleme.
         prompt = f"""
 ## GÖREV: Instagram Carousel İçeriği Oluştur
 
+### ⚠️ MARKA BİLGİSİ (KRİTİK!)
+- Instagram: @olivenet.io (DİKKAT: olivenetplus, olivaborplus vb. DEĞİL!)
+- Website: olivenet.io
+- Email: info@olivenet.io
+
 ### Şirket Profili
 {company_profile[:1500]}
 
@@ -841,7 +846,7 @@ Eğitici ve görsel açıdan tutarlı bir carousel oluştur.
         {{
             "slide_type": "cta",
             "title": "📌 Kaydet!",
-            "content": "Daha fazlası için takip et\\n@olivaborplus"
+            "content": "Daha fazlası için takip et\\n@olivenet.io"
         }}
     ],
     "hashtags": ["#Olivenet", "#KKTC", "#IoT", ...]

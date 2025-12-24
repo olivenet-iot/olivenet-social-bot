@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Olivenet Dashboard Infographic</title>
+  <style>
+    /* ===== RESET & BASE ===== */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    /* ===== OLIVENET RENK DEGiSKENLERi ===== */
+    :root {
+      /* Olive Paleti */
+      --olive-900: #1a2e1a;
+      --olive-800: #243524;
+      --olive-700: #2d4a2d;
+      --olive-600: #3a5f3a;
+      --olive-500: #4a7c4a;
+      --olive-400: #5e9a5e;
+      --olive-300: #7ab87a;
+      --olive-200: #a3d4a3;
+      --olive-100: #d1e8d1;
+      --olive-50: #e8f4e8;
+
+      /* Sky/Tech Vurgu */
+      --sky-500: #0ea5e9;
+      --sky-400: #38bdf8;
+      --sky-300: #7dd3fc;
+
+      /* Sektorel Renkler */
+      --emerald-500: #10b981;
+      --amber-500: #f59e0b;
+      --violet-500: #8b5cf6;
+
+      /* Notr */
+      --white: #ffffff;
+      --black: #0a0a0a;
+      --gray-400: #9ca3af;
+      --gray-600: #4b5563;
+    }
+
+    /* ===== ANA CONTAINER (1080x1080) ===== */
+    .social-post {
+      width: 1080px;
+      height: 1080px;
+      background: linear-gradient(135deg, var(--olive-900) 0%, var(--black) 100%);
+      position: relative;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    /* ===== GRID PATTERN ARKA PLAN ===== */
+    .grid-pattern {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(to right, rgba(74,124,74,0.08) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(74,124,74,0.08) 1px, transparent 1px);
+      background-size: 80px 80px;
+    }
+
+    /* ===== GLOWING ORB ===== */
+    .glow-orb {
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      filter: blur(150px);
+      background: rgba(74, 124, 74, 0.2);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    /* ===== iCERiK CONTAINER ===== */
+    .content {
+      position: relative;
+      z-index: 10;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 80px;
+      gap: 48px;
+    }
+
+    /* ===== BASLIK ===== */
+    .title {
+      font-size: 48px;
+      font-weight: 700;
+      color: var(--white);
+      text-align: center;
+      letter-spacing: -1px;
+    }
+
+    /* ===== METRiK KARTLARI ===== */
+    .metrics-row {
+      display: flex;
+      gap: 32px;
+      justify-content: center;
+    }
+
+    .metric-card {
+      width: 280px;
+      background: rgba(74, 124, 74, 0.15);
+      border: 1px solid rgba(74, 124, 74, 0.3);
+      border-radius: 24px;
+      padding: 40px;
+      text-align: center;
+      backdrop-filter: blur(10px);
+    }
+
+    .metric-icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .metric-icon svg {
+      width: 48px;
+      height: 48px;
+      color: var(--olive-400);
+      stroke: currentColor;
+      stroke-width: 1.5;
+      fill: none;
+    }
+
+    .metric-value {
+      font-size: 56px;
+      font-weight: 800;
+      color: var(--white);
+      line-height: 1;
+      margin-bottom: 12px;
+    }
+
+    .metric-label {
+      font-size: 24px;
+      color: var(--gray-400);
+      font-weight: 500;
+    }
+
+    /* ===== PROGRESS BAR ===== */
+    .progress-container {
+      width: 100%;
+      max-width: 600px;
+    }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .progress-label {
+      font-size: 24px;
+      color: var(--gray-400);
+      font-weight: 500;
+    }
+
+    .progress-value {
+      font-size: 24px;
+      color: var(--emerald-500);
+      font-weight: 700;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 20px;
+      background: rgba(74, 124, 74, 0.2);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--olive-500), var(--emerald-500));
+      border-radius: 10px;
+      transition: width 0.3s ease;
+    }
+
+    /* ===== STATUS BADGES ===== */
+    .status-row {
+      display: flex;
+      gap: 24px;
+      justify-content: center;
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 32px;
+      background: rgba(74, 124, 74, 0.15);
+      border: 1px solid rgba(74, 124, 74, 0.3);
+      border-radius: 50px;
+    }
+
+    .status-dot {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--gray-600);
+    }
+
+    .status-dot.active {
+      background: var(--emerald-500);
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.6);
+    }
+
+    .status-label {
+      font-size: 22px;
+      color: var(--white);
+      font-weight: 500;
+    }
+
+    /* ===== LOGO ===== */
+    .logo {
+      position: absolute;
+      bottom: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .logo-img {
+      height: 56px;
+      width: auto;
+      border-radius: 14px;
+      object-fit: contain;
+    }
+
+    .logo-text {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--white);
+      letter-spacing: 1px;
+    }
+
+    /* ===== VARYANTLAR ===== */
+
+    /* Tarim/Sera Varyanti */
+    .social-post.tarim .metric-card {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+    .social-post.tarim .metric-icon svg {
+      color: var(--emerald-500);
+    }
+    .social-post.tarim .glow-orb {
+      background: rgba(16, 185, 129, 0.15);
+    }
+
+    /* Enerji Varyanti */
+    .social-post.enerji .metric-card {
+      background: rgba(245, 158, 11, 0.15);
+      border-color: rgba(245, 158, 11, 0.3);
+    }
+    .social-post.enerji .metric-icon svg {
+      color: var(--amber-500);
+    }
+    .social-post.enerji .progress-fill {
+      background: linear-gradient(90deg, var(--amber-500), #fbbf24);
+    }
+    .social-post.enerji .progress-value {
+      color: var(--amber-500);
+    }
+    .social-post.enerji .glow-orb {
+      background: rgba(245, 158, 11, 0.15);
+    }
+
+    /* Bina Varyanti */
+    .social-post.bina .metric-card {
+      background: rgba(14, 165, 233, 0.15);
+      border-color: rgba(14, 165, 233, 0.3);
+    }
+    .social-post.bina .metric-icon svg {
+      color: var(--sky-400);
+    }
+    .social-post.bina .progress-fill {
+      background: linear-gradient(90deg, var(--sky-500), var(--sky-400));
+    }
+    .social-post.bina .progress-value {
+      color: var(--sky-400);
+    }
+    .social-post.bina .glow-orb {
+      background: rgba(14, 165, 233, 0.15);
+    }
+  </style>
+</head>
+<body>
+
+<!-- ===== DASHBOARD STYLE INFOGRAPHIC ===== -->
+<div class="social-post {{VARIANT}}">
+  <!-- Arka Plan Elementleri -->
+  <div class="grid-pattern"></div>
+  <div class="glow-orb"></div>
+
+  <!-- icerik -->
+  <div class="content">
+    <!-- Baslik -->
+    <div class="title">{{TITLE}}</div>
+
+    <!-- Metrik Kartlari -->
+    <div class="metrics-row">
+      <div class="metric-card">
+        <div class="metric-icon">
+          {{METRIC_1_ICON}}
+        </div>
+        <div class="metric-value">{{METRIC_1_VALUE}}</div>
+        <div class="metric-label">{{METRIC_1_LABEL}}</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon">
+          {{METRIC_2_ICON}}
+        </div>
+        <div class="metric-value">{{METRIC_2_VALUE}}</div>
+        <div class="metric-label">{{METRIC_2_LABEL}}</div>
+      </div>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="progress-container">
+      <div class="progress-header">
+        <span class="progress-label">{{PROGRESS_LABEL}}</span>
+        <span class="progress-value">%{{PROGRESS_VALUE}}</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" style="width: {{PROGRESS_VALUE}}%;"></div>
+      </div>
+    </div>
+
+    <!-- Status Badges -->
+    <div class="status-row">
+      <div class="status-badge">
+        <div class="status-dot {{STATUS_1_ACTIVE}}"></div>
+        <span class="status-label">{{STATUS_1_LABEL}}</span>
+      </div>
+      <div class="status-badge">
+        <div class="status-dot {{STATUS_2_ACTIVE}}"></div>
+        <span class="status-label">{{STATUS_2_LABEL}}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Logo -->
+  <div class="logo">
+    <img src="{{LOGO_DATA}}" alt="Olivenet" class="logo-img">
+    <span class="logo-text">Olivenet</span>
+  </div>
+</div>
+
+<!--
+===== KULLANIM KILAVUZU =====
+
+PLACEHOLDER'LAR:
+{{TITLE}}           - Dashboard basligi (orn: "Sera Durumu")
+{{METRIC_1_ICON}}   - Birinci metrik ikonu (SVG)
+{{METRIC_1_VALUE}}  - Birinci metrik degeri (orn: "22°C")
+{{METRIC_1_LABEL}}  - Birinci metrik etiketi (orn: "Sicaklik")
+{{METRIC_2_ICON}}   - ikinci metrik ikonu (SVG)
+{{METRIC_2_VALUE}}  - ikinci metrik degeri (orn: "54%")
+{{METRIC_2_LABEL}}  - ikinci metrik etiketi (orn: "Nem")
+{{PROGRESS_LABEL}}  - Progress bar etiketi (orn: "Su Tasarrufu")
+{{PROGRESS_VALUE}}  - Progress bar degeri (0-100)
+{{STATUS_1_LABEL}}  - Birinci status etiketi (orn: "Pompa")
+{{STATUS_1_ACTIVE}} - "active" veya bos
+{{STATUS_2_LABEL}}  - ikinci status etiketi (orn: "Vana")
+{{STATUS_2_ACTIVE}} - "active" veya bos
+{{VARIANT}}         - Renk varyanti: tarim, enerji, bina veya bos
+{{LOGO_DATA}}       - Base64 encoded logo
+
+iKON TiPLERi:
+- thermometer: Sicaklik
+- droplet: Nem/Su
+- sun: Isik
+- wind: Ruzgar
+- gauge: Basinc
+- bolt: Enerji
+- cpu: islemci
+- wifi: Baglanti
+-->
+
+</body>
+</html>

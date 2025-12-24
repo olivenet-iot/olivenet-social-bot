@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Olivenet Billboard Infographic</title>
+  <style>
+    /* ===== RESET & BASE ===== */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    /* ===== OLIVENET RENK DEĞİŞKENLERİ ===== */
+    :root {
+      /* Olive Paleti */
+      --olive-900: #1a2e1a;
+      --olive-800: #243524;
+      --olive-700: #2d4a2d;
+      --olive-600: #3a5f3a;
+      --olive-500: #4a7c4a;
+      --olive-400: #5e9a5e;
+      --olive-300: #7ab87a;
+      --olive-200: #a3d4a3;
+      --olive-100: #d1e8d1;
+      --olive-50: #e8f4e8;
+
+      /* Sky/Tech Vurgu */
+      --sky-500: #0ea5e9;
+      --sky-400: #38bdf8;
+      --sky-300: #7dd3fc;
+
+      /* Sektorel Renkler */
+      --emerald-500: #10b981;
+      --amber-500: #f59e0b;
+      --violet-500: #8b5cf6;
+
+      /* Notr */
+      --white: #ffffff;
+      --black: #0a0a0a;
+      --gray-400: #9ca3af;
+      --gray-600: #4b5563;
+    }
+
+    /* ===== ANA CONTAINER (1080x1080) ===== */
+    .social-post {
+      width: 1080px;
+      height: 1080px;
+      background: linear-gradient(135deg, var(--olive-900) 0%, var(--black) 100%);
+      position: relative;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    /* ===== GRID PATTERN ARKA PLAN ===== */
+    .grid-pattern {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(to right, rgba(74,124,74,0.08) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(74,124,74,0.08) 1px, transparent 1px);
+      background-size: 80px 80px;
+    }
+
+    /* ===== GLOWING ORB ===== */
+    .glow-orb {
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      border-radius: 50%;
+      filter: blur(120px);
+      background: rgba(74, 124, 74, 0.25);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    /* ===== İÇERİK CONTAINER ===== */
+    .content {
+      position: relative;
+      z-index: 10;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 80px;
+      text-align: center;
+    }
+
+    /* ===== İKON CONTAINER ===== */
+    .icon-container {
+      width: 140px;
+      height: 140px;
+      background: rgba(74, 124, 74, 0.25);
+      border: 2px solid rgba(74, 124, 74, 0.4);
+      border-radius: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 48px;
+    }
+
+    .icon-container svg {
+      width: 72px;
+      height: 72px;
+      color: var(--olive-400);
+      stroke: currentColor;
+      stroke-width: 1.5;
+      fill: none;
+    }
+
+    /* ===== HERO STAT - DEV RAKAM ===== */
+    .hero-stat {
+      font-size: 180px;
+      font-weight: 800;
+      color: var(--white);
+      line-height: 1;
+      margin-bottom: 32px;
+      letter-spacing: -4px;
+      text-shadow: 0 4px 60px rgba(74, 124, 74, 0.3);
+    }
+
+    /* ===== HERO TEXT - TEK CÜMLE ===== */
+    .hero-text {
+      font-size: 42px;
+      font-weight: 500;
+      color: var(--gray-400);
+      line-height: 1.3;
+      max-width: 85%;
+      margin-bottom: 64px;
+    }
+
+    /* ===== LOGO ===== */
+    .logo {
+      position: absolute;
+      bottom: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .logo-img {
+      height: 56px;
+      width: auto;
+      border-radius: 14px;
+      object-fit: contain;
+    }
+
+    .logo-text {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--white);
+      letter-spacing: 1px;
+    }
+
+    /* ===== VARYANTLAR ===== */
+
+    /* Tarım/Sera Varyantı */
+    .social-post.tarim .hero-stat {
+      color: var(--emerald-500);
+      text-shadow: 0 4px 60px rgba(16, 185, 129, 0.3);
+    }
+    .social-post.tarim .icon-container {
+      background: rgba(16, 185, 129, 0.2);
+      border-color: rgba(16, 185, 129, 0.4);
+    }
+    .social-post.tarim .icon-container svg {
+      color: var(--emerald-500);
+    }
+    .social-post.tarim .glow-orb {
+      background: rgba(16, 185, 129, 0.2);
+    }
+
+    /* Enerji Varyantı */
+    .social-post.enerji .hero-stat {
+      color: var(--amber-500);
+      text-shadow: 0 4px 60px rgba(245, 158, 11, 0.3);
+    }
+    .social-post.enerji .icon-container {
+      background: rgba(245, 158, 11, 0.2);
+      border-color: rgba(245, 158, 11, 0.4);
+    }
+    .social-post.enerji .icon-container svg {
+      color: var(--amber-500);
+    }
+    .social-post.enerji .glow-orb {
+      background: rgba(245, 158, 11, 0.2);
+    }
+
+    /* Bakım Varyantı */
+    .social-post.bakim .hero-stat {
+      color: var(--violet-500);
+      text-shadow: 0 4px 60px rgba(139, 92, 246, 0.3);
+    }
+    .social-post.bakim .icon-container {
+      background: rgba(139, 92, 246, 0.2);
+      border-color: rgba(139, 92, 246, 0.4);
+    }
+    .social-post.bakim .icon-container svg {
+      color: var(--violet-500);
+    }
+    .social-post.bakim .glow-orb {
+      background: rgba(139, 92, 246, 0.2);
+    }
+
+    /* Bina Varyantı */
+    .social-post.bina .hero-stat {
+      color: var(--sky-400);
+      text-shadow: 0 4px 60px rgba(14, 165, 233, 0.3);
+    }
+    .social-post.bina .icon-container {
+      background: rgba(14, 165, 233, 0.2);
+      border-color: rgba(14, 165, 233, 0.4);
+    }
+    .social-post.bina .icon-container svg {
+      color: var(--sky-400);
+    }
+    .social-post.bina .glow-orb {
+      background: rgba(14, 165, 233, 0.2);
+    }
+  </style>
+</head>
+<body>
+
+<!-- ===== BILLBOARD STYLE INFOGRAPHIC ===== -->
+<div class="social-post {{VARIANT}}">
+  <!-- Arka Plan Elementleri -->
+  <div class="grid-pattern"></div>
+  <div class="glow-orb"></div>
+
+  <!-- İçerik -->
+  <div class="content">
+    <!-- İkon -->
+    <div class="icon-container">
+      {{ICON_SVG}}
+    </div>
+
+    <!-- Dev Rakam -->
+    <div class="hero-stat">{{HERO_STAT}}</div>
+
+    <!-- Tek Cümle -->
+    <div class="hero-text">{{HERO_TEXT}}</div>
+  </div>
+
+  <!-- Logo - Gerçek Olivenet logosu -->
+  <div class="logo">
+    <img src="{{LOGO_DATA}}" alt="Olivenet" class="logo-img" style="height: 56px; width: auto; border-radius: 14px;">
+    <span class="logo-text">Olivenet</span>
+  </div>
+</div>
+
+<!--
+===== KULLANIM KILAVUZU =====
+
+PLACEHOLDER'LAR:
+{{HERO_STAT}} - Büyük rakam (örn: "%90", "3x", "2024")
+{{HERO_TEXT}} - Tek cümle, max 8 kelime
+{{ICON_SVG}}  - SVG ikon kodu
+{{VARIANT}}   - Renk varyantı: tarim, enerji, bakim, bina veya boş
+
+İKON TİPLERİ:
+- cpu: İşlemci/teknoloji
+- chart: Grafik/istatistik
+- leaf: Yaprak/tarım
+- bolt: Şimşek/enerji
+- shield: Kalkan/güvenlik
+- wifi: Bağlantı/IoT
+- gear: Dişli/bakım
+- cloud: Bulut/veri
+-->
+
+</body>
+</html>

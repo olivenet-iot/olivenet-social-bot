@@ -8,3 +8,4 @@ google-genai>=1.0.0
 replicate
 cloudinary
 beautifulsoup4
+anthropic>=0.40.0

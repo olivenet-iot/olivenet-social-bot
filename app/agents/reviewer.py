@@ -4,6 +4,7 @@ Reviewer Agent - Kalite kontrol
 """
 
 import json
+import re
 from datetime import datetime
 from typing import Dict, Any
 from .base_agent import BaseAgent
@@ -390,3 +391,125 @@ Sadece JSON döndür.
 
         self.log(f"Final onay: {'HAZIR' if all_passed else 'EKSİK'}")
         return result
+
+    def validate_carousel_content(self, content: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Carousel içeriğini doğrula ve hataları tespit et.
+
+        Args:
+            content: Carousel içeriği (slides, caption, hashtags)
+
+        Returns:
+            {
+                "valid": bool,
+                "issues": List[str],
+                "auto_fixed": Dict - düzeltilmiş içerik
+            }
+        """
+        issues = []
+
+        content_str = str(content).lower()
+
+        # 1. Yanlış marka adı kontrolü
+        wrong_handles = ["olivenetplus", "olivaborplus", "olivenet_plus", "@oliveneet", "olivaborus", "olivarbus"]
+        for wrong in wrong_handles:
+            if wrong in content_str:
+                issues.append(f"HATA: '{wrong}' yanlış, '@olivenet.io' olmalı")
+
+        # 2. Doğru handle kontrolü
+        if "@olivenet.io" not in content_str:
+            issues.append("UYARI: @olivenet.io handle'ı bulunamadı")
+
+        # 3. Kaydet tekrarı kontrolü
+        kaydet_count = content_str.count("kaydet")
+        if kaydet_count > 2:
+            issues.append(f"UYARI: 'Kaydet' {kaydet_count} kez kullanılmış, fazla")
+
+        # 4. Slide sayısı kontrolü
+        slides = content.get("slides", [])
+        if len(slides) < 3 or len(slides) > 7:
+            issues.append(f"HATA: {len(slides)} slide var, 3-7 arası olmalı")
+
+        # 5. Slide type kontrolü
+        if slides:
+            first_type = slides[0].get("slide_type", "")
+            last_type = slides[-1].get("slide_type", "")
+            if first_type != "cover":
+                issues.append("UYARI: İlk slide 'cover' tipinde olmalı")
+            if last_type != "cta":
+                issues.append("UYARI: Son slide 'cta' tipinde olmalı")
+
+        # 6. Cover'da "kaydet" kontrolü (SADECE cover'da olmalı)
+        if slides and len(slides) > 0:
+            first_slide_str = str(slides[0]).lower()
+
+            # Cover'da "kaydet" olmalı (🔖 KAYDET:)
+            if "kaydet" not in first_slide_str:
+                issues.append("UYARI: Cover slide'da '🔖 KAYDET:' hook'u bulunamadı")
+
+            # Diğer slide'larda "kaydet" olmamalı (CTA hariç - son slide)
+            for i, slide in enumerate(slides[1:-1], start=2):  # Slide 2 to N-1
+                slide_str = str(slide).lower()
+                if "kaydet" in slide_str:
+                    issues.append(f"HATA: Slide {i}'de 'Kaydet' var - sadece Cover'da olmalı")
+
+        self.log(f"Carousel validasyon: {len(issues)} sorun bulundu")
+
+        return {
+            "valid": len([i for i in issues if "HATA" in i]) == 0,
+            "issues": issues,
+            "auto_fixed": self._auto_fix_carousel(content) if issues else content
+        }
+
+    def _auto_fix_carousel(self, content: Dict[str, Any]) -> Dict[str, Any]:
+        """Marka adı hatalarını ve kaydet yerleşimini otomatik düzelt."""
+        content_str = json.dumps(content, ensure_ascii=False)
+
+        # Yanlış handle'ları düzelt (@ olanlar önce, sonra @ olmayanlar)
+        fixes = [
+            # Önce @ ile başlayanlar
+            ("@olivenetplus", "@olivenet.io"),
+            ("@olivaborplus", "@olivenet.io"),
+            ("@olivaborus", "@olivenet.io"),
+            ("@olivarbus", "@olivenet.io"),
+            ("@oliveneet", "@olivenet.io"),
+            # Sonra @ olmadan
+            ("olivenetplus", "olivenet.io"),
+            ("olivaborplus", "olivenet.io"),
+            ("olivaborus", "olivenet.io"),
+            ("olivarbus", "olivenet.io"),
+        ]
+        for wrong, correct in fixes:
+            content_str = content_str.replace(wrong, correct)
+
+        try:
+            fixed_content = json.loads(content_str)
+            # Content slide'larından kaydet'i temizle
+            fixed_content = self._remove_kaydet_from_content_slides(fixed_content)
+            return fixed_content
+        except json.JSONDecodeError:
+            return content
+
+    def _remove_kaydet_from_content_slides(self, content: Dict[str, Any]) -> Dict[str, Any]:
+        """Content slide'larından (cover ve cta hariç) 'kaydet' kelimesini kaldır."""
+        slides = content.get("slides", [])
+        if len(slides) <= 2:
+            return content
+
+        # Slide 2 to N-1 (cover=0 ve cta=son hariç)
+        for i in range(1, len(slides) - 1):
+            slide = slides[i]
+            if isinstance(slide, dict):
+                for key in ["title", "content", "text", "heading", "subtitle"]:
+                    if key in slide and isinstance(slide[key], str):
+                        # 🔖 KAYDET: veya kaydet kelimesini temizle
+                        original = slide[key]
+                        cleaned = re.sub(r'🔖\s*KAYDET:?\s*', '', slide[key], flags=re.IGNORECASE)
+                        cleaned = re.sub(r'\bkaydet\b', '', cleaned, flags=re.IGNORECASE)
+                        cleaned = re.sub(r'\s+', ' ', cleaned).strip()  # Fazla boşlukları temizle
+                        if cleaned != original:
+                            slide[key] = cleaned
+                            self.log(f"Slide {i+1}'den 'kaydet' temizlendi")
+
+        content["slides"] = slides
+        return content

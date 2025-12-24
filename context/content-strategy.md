@@ -238,13 +238,42 @@ Save rate, algoritma için en önemli sinyal. Her 3-4 posttan 1'inde kullan:
 - "📲 Bu bilgiyi ihtiyacı olan biriyle paylaş"
 - "🏭 Fabrika müdürü arkadaşına story'le gönder"
 
-### 📝 Carousel için Save-Optimized Format
-Carousel'larda save rate doğal olarak yüksek, bu şablonu kullan:
+### 📝 Carousel Yapısı (5 Slide Standardı)
+
+#### Slide 1: COVER (Hook)
+- **Amaç:** Dikkat çek, swipe ettir
+- **Format:** "🔖 KAYDET: [Başlık]" + alt açıklama
+- **YASAK:** "Kaydet" kelimesi başka slide'da kullanılmamalı
+- **Max:** 10 kelime
+
+#### Slide 2-4: CONTENT
+- **Amaç:** Değer ver, bilgilendir
+- Her slide TEK konsept
+- Büyük rakamlar/istatistikler kullan
+- İkonlar ile görselleştir
+- **Max:** 30 kelime/slide
+
+#### Slide 5: CTA (Call to Action)
+- **Amaç:** Engagement iste
+- **Format:**
 ```
-Slide 1: "🔖 KAYDET: [X] Adımda [Y] Rehberi"
-Slide 2-6: İçerik adımları
-Son Slide: "📌 Bu rehberi kaydet!\nProjelerde referans olarak kullan.\n\nSorular için DM at 💬"
+[Özet/Sonuç cümlesi]
+
+📌 Kaydet
+👉 Takip: @olivenet.io
+🔗 Link bio'da
 ```
+
+#### Slide Tipleri
+| Tip | Kullanım | Örnek |
+|-----|----------|-------|
+| cover | İlk slide | Hook başlık |
+| content | Bilgi slideleri | Maddeler, adımlar |
+| stats | İstatistik | Büyük rakamlar |
+| comparison | Karşılaştırma | Yan yana |
+| cta | Son slide | Kaydet + Takip |
+
+⚠️ **ÖNEMLİ:** Instagram handle'ı @olivenet.io - başka varyasyon kullanılmamalı!
 
 ---
 

@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Olivenet Big Number Infographic</title>
+  <style>
+    /* ===== RESET & BASE ===== */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    /* ===== OLIVENET RENK DEĞİŞKENLERİ ===== */
+    :root {
+      /* Olive Paleti */
+      --olive-900: #1a2e1a;
+      --olive-800: #243524;
+      --olive-700: #2d4a2d;
+      --olive-600: #3a5f3a;
+      --olive-500: #4a7c4a;
+      --olive-400: #5e9a5e;
+      --olive-300: #7ab87a;
+      --olive-200: #a3d4a3;
+      --olive-100: #d1e8d1;
+      --olive-50: #e8f4e8;
+
+      /* Sky/Tech Vurgu */
+      --sky-500: #0ea5e9;
+      --sky-400: #38bdf8;
+
+      /* Sektorel Renkler */
+      --emerald-500: #10b981;
+      --amber-500: #f59e0b;
+      --violet-500: #8b5cf6;
+
+      /* Notr */
+      --white: #ffffff;
+      --black: #0a0a0a;
+      --gray-400: #9ca3af;
+      --gray-600: #4b5563;
+    }
+
+    /* ===== ANA CONTAINER (1080x1080) ===== */
+    .social-post {
+      width: 1080px;
+      height: 1080px;
+      background: linear-gradient(135deg, var(--olive-900) 0%, var(--black) 100%);
+      position: relative;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    /* ===== GRID PATTERN ARKA PLAN ===== */
+    .grid-pattern {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(to right, rgba(74,124,74,0.08) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(74,124,74,0.08) 1px, transparent 1px);
+      background-size: 80px 80px;
+    }
+
+    /* ===== GLOWING ORB ===== */
+    .glow-orb {
+      position: absolute;
+      width: 700px;
+      height: 700px;
+      border-radius: 50%;
+      filter: blur(180px);
+      background: rgba(74, 124, 74, 0.25);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    /* ===== İÇERİK CONTAINER ===== */
+    .content {
+      position: relative;
+      z-index: 10;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 80px;
+      text-align: center;
+    }
+
+    /* ===== İKON ===== */
+    .big-icon {
+      font-size: 80px;
+      margin-bottom: 32px;
+      filter: drop-shadow(0 4px 20px rgba(74, 124, 74, 0.3));
+    }
+
+    /* ===== DEV RAKAM ===== */
+    .big-number {
+      font-size: 220px;
+      font-weight: 900;
+      color: var(--white);
+      line-height: 0.9;
+      letter-spacing: -8px;
+      margin-bottom: 24px;
+      text-shadow: 0 8px 80px rgba(74, 124, 74, 0.4);
+    }
+
+    /* ===== LABEL ===== */
+    .number-label {
+      font-size: 48px;
+      font-weight: 600;
+      color: var(--olive-400);
+      text-transform: uppercase;
+      letter-spacing: 6px;
+      margin-bottom: 48px;
+    }
+
+    /* ===== CONTEXT / AÇIKLAMA ===== */
+    .context {
+      font-size: 32px;
+      font-weight: 400;
+      color: var(--gray-400);
+      line-height: 1.5;
+      max-width: 80%;
+      padding: 24px 40px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 16px;
+      border-left: 4px solid var(--olive-500);
+    }
+
+    /* ===== LOGO ===== */
+    .logo {
+      position: absolute;
+      bottom: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .logo-img {
+      height: 56px;
+      width: auto;
+      border-radius: 14px;
+      object-fit: contain;
+    }
+
+    .logo-text {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--white);
+      letter-spacing: 1px;
+    }
+
+    /* ===== VARYANTLAR ===== */
+
+    /* Tarım/Sera Varyantı */
+    .social-post.tarim .big-number {
+      color: var(--emerald-500);
+      text-shadow: 0 8px 80px rgba(16, 185, 129, 0.4);
+    }
+    .social-post.tarim .number-label {
+      color: var(--emerald-500);
+    }
+    .social-post.tarim .context {
+      border-left-color: var(--emerald-500);
+    }
+    .social-post.tarim .glow-orb {
+      background: rgba(16, 185, 129, 0.2);
+    }
+
+    /* Enerji Varyantı */
+    .social-post.enerji .big-number {
+      color: var(--amber-500);
+      text-shadow: 0 8px 80px rgba(245, 158, 11, 0.4);
+    }
+    .social-post.enerji .number-label {
+      color: var(--amber-500);
+    }
+    .social-post.enerji .context {
+      border-left-color: var(--amber-500);
+    }
+    .social-post.enerji .glow-orb {
+      background: rgba(245, 158, 11, 0.2);
+    }
+
+    /* Bakım Varyantı */
+    .social-post.bakim .big-number {
+      color: var(--violet-500);
+      text-shadow: 0 8px 80px rgba(139, 92, 246, 0.4);
+    }
+    .social-post.bakim .number-label {
+      color: var(--violet-500);
+    }
+    .social-post.bakim .context {
+      border-left-color: var(--violet-500);
+    }
+    .social-post.bakim .glow-orb {
+      background: rgba(139, 92, 246, 0.2);
+    }
+
+    /* Bina Varyantı */
+    .social-post.bina .big-number {
+      color: var(--sky-400);
+      text-shadow: 0 8px 80px rgba(14, 165, 233, 0.4);
+    }
+    .social-post.bina .number-label {
+      color: var(--sky-400);
+    }
+    .social-post.bina .context {
+      border-left-color: var(--sky-400);
+    }
+    .social-post.bina .glow-orb {
+      background: rgba(14, 165, 233, 0.2);
+    }
+  </style>
+</head>
+<body>
+
+<!-- ===== BIG NUMBER INFOGRAPHIC ===== -->
+<div class="social-post {{VARIANT}}">
+  <!-- Arka Plan Elementleri -->
+  <div class="grid-pattern"></div>
+  <div class="glow-orb"></div>
+
+  <!-- İçerik -->
+  <div class="content">
+    <!-- İkon -->
+    <div class="big-icon">{{ICON}}</div>
+
+    <!-- Dev Rakam -->
+    <div class="big-number">{{BIG_NUMBER}}</div>
+
+    <!-- Label -->
+    <div class="number-label">{{LABEL}}</div>
+
+    <!-- Context -->
+    <div class="context">{{CONTEXT}}</div>
+  </div>
+
+  <!-- Logo -->
+  <div class="logo">
+    <img src="{{LOGO_DATA}}" alt="Olivenet" class="logo-img">
+    <span class="logo-text">Olivenet</span>
+  </div>
+</div>
+
+<!--
+===== KULLANIM KILAVUZU =====
+
+PLACEHOLDER'LAR:
+{{ICON}}       - Emoji ikon (örn: "⚡", "🌱", "📊")
+{{BIG_NUMBER}} - Dev rakam (örn: "%94", "3.5M", "10x")
+{{LABEL}}      - Rakam etiketi (örn: "ENERJİ TASARRUFU")
+{{CONTEXT}}    - Açıklama cümlesi
+{{VARIANT}}    - Renk varyantı: tarim, enerji, bakim, bina veya boş
+{{LOGO_DATA}}  - Base64 logo
+
+ÖRNEK KULLANIM:
+{{ICON}} = ⚡
+{{BIG_NUMBER}} = %40
+{{LABEL}} = ENERJİ TASARRUFU
+{{CONTEXT}} = Akıllı sayaçlarla gerçek zamanlı tüketim takibi yaparak enerji maliyetlerinizi optimize edin.
+{{VARIANT}} = enerji
+-->
+
+</body>
+</html>

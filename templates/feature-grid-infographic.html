@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Olivenet Feature Grid Infographic</title>
+  <style>
+    /* ===== RESET & BASE ===== */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    /* ===== OLIVENET RENK DEĞİŞKENLERİ ===== */
+    :root {
+      /* Olive Paleti */
+      --olive-900: #1a2e1a;
+      --olive-800: #243524;
+      --olive-700: #2d4a2d;
+      --olive-600: #3a5f3a;
+      --olive-500: #4a7c4a;
+      --olive-400: #5e9a5e;
+      --olive-300: #7ab87a;
+      --olive-200: #a3d4a3;
+      --olive-100: #d1e8d1;
+      --olive-50: #e8f4e8;
+
+      /* Sky/Tech Vurgu */
+      --sky-500: #0ea5e9;
+      --sky-400: #38bdf8;
+
+      /* Sektorel Renkler */
+      --emerald-500: #10b981;
+      --amber-500: #f59e0b;
+      --violet-500: #8b5cf6;
+
+      /* Notr */
+      --white: #ffffff;
+      --black: #0a0a0a;
+      --gray-400: #9ca3af;
+      --gray-600: #4b5563;
+    }
+
+    /* ===== ANA CONTAINER (1080x1080) ===== */
+    .social-post {
+      width: 1080px;
+      height: 1080px;
+      background: linear-gradient(135deg, var(--olive-900) 0%, var(--black) 100%);
+      position: relative;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    /* ===== GRID PATTERN ARKA PLAN ===== */
+    .grid-pattern {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(to right, rgba(74,124,74,0.08) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(74,124,74,0.08) 1px, transparent 1px);
+      background-size: 80px 80px;
+    }
+
+    /* ===== GLOWING ORB ===== */
+    .glow-orb {
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      filter: blur(150px);
+      background: rgba(74, 124, 74, 0.18);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    /* ===== İÇERİK CONTAINER ===== */
+    .content {
+      position: relative;
+      z-index: 10;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      padding: 60px 70px;
+    }
+
+    /* ===== BAŞLIK ===== */
+    .main-title {
+      font-size: 52px;
+      font-weight: 800;
+      color: var(--white);
+      text-align: center;
+      margin-bottom: 16px;
+      letter-spacing: -1px;
+    }
+
+    .subtitle {
+      font-size: 26px;
+      color: var(--gray-400);
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    /* ===== FEATURE GRID ===== */
+    .feature-grid {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 28px;
+    }
+
+    .feature-card {
+      background: rgba(0, 0, 0, 0.35);
+      border-radius: 24px;
+      padding: 36px;
+      border: 2px solid rgba(74, 124, 74, 0.25);
+      display: flex;
+      flex-direction: column;
+      transition: all 0.3s ease;
+    }
+
+    .feature-card:hover {
+      border-color: rgba(74, 124, 74, 0.5);
+      transform: translateY(-4px);
+    }
+
+    .feature-icon {
+      width: 72px;
+      height: 72px;
+      border-radius: 18px;
+      background: rgba(74, 124, 74, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+      margin-bottom: 24px;
+    }
+
+    .feature-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--white);
+      margin-bottom: 12px;
+    }
+
+    .feature-desc {
+      font-size: 20px;
+      color: var(--gray-400);
+      line-height: 1.5;
+      flex: 1;
+    }
+
+    /* ===== LOGO ===== */
+    .logo {
+      position: absolute;
+      bottom: 48px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo-img {
+      height: 48px;
+      width: auto;
+      border-radius: 12px;
+      object-fit: contain;
+    }
+
+    .logo-text {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--white);
+      letter-spacing: 1px;
+    }
+
+    /* ===== VARYANTLAR ===== */
+
+    .social-post.tarim .main-title { color: var(--emerald-500); }
+    .social-post.tarim .feature-icon { background: rgba(16, 185, 129, 0.2); }
+    .social-post.tarim .feature-card { border-color: rgba(16, 185, 129, 0.2); }
+    .social-post.tarim .glow-orb { background: rgba(16, 185, 129, 0.12); }
+
+    .social-post.enerji .main-title { color: var(--amber-500); }
+    .social-post.enerji .feature-icon { background: rgba(245, 158, 11, 0.2); }
+    .social-post.enerji .feature-card { border-color: rgba(245, 158, 11, 0.2); }
+    .social-post.enerji .glow-orb { background: rgba(245, 158, 11, 0.12); }
+
+    .social-post.bakim .main-title { color: var(--violet-500); }
+    .social-post.bakim .feature-icon { background: rgba(139, 92, 246, 0.2); }
+    .social-post.bakim .feature-card { border-color: rgba(139, 92, 246, 0.2); }
+    .social-post.bakim .glow-orb { background: rgba(139, 92, 246, 0.12); }
+
+    .social-post.bina .main-title { color: var(--sky-400); }
+    .social-post.bina .feature-icon { background: rgba(14, 165, 233, 0.2); }
+    .social-post.bina .feature-card { border-color: rgba(14, 165, 233, 0.2); }
+    .social-post.bina .glow-orb { background: rgba(14, 165, 233, 0.12); }
+  </style>
+</head>
+<body>
+
+<!-- ===== FEATURE GRID INFOGRAPHIC ===== -->
+<div class="social-post {{VARIANT}}">
+  <!-- Arka Plan Elementleri -->
+  <div class="grid-pattern"></div>
+  <div class="glow-orb"></div>
+
+  <!-- İçerik -->
+  <div class="content">
+    <!-- Başlık -->
+    <div class="main-title">{{TITLE}}</div>
+    <div class="subtitle">{{SUBTITLE}}</div>
+
+    <!-- Feature Grid -->
+    <div class="feature-grid">
+      {{FEATURES}}
+    </div>
+  </div>
+
+  <!-- Logo -->
+  <div class="logo">
+    <img src="{{LOGO_DATA}}" alt="Olivenet" class="logo-img">
+    <span class="logo-text">Olivenet</span>
+  </div>
+</div>
+
+<!--
+===== KULLANIM KILAVUZU =====
+
+PLACEHOLDER'LAR:
+{{TITLE}}     - Ana başlık (örn: "Akıllı Sera Özellikleri")
+{{SUBTITLE}}  - Alt açıklama
+{{FEATURES}}  - 4 adet feature card (HTML format)
+{{VARIANT}}   - Renk varyantı: tarim, enerji, bakim, bina veya boş
+{{LOGO_DATA}} - Base64 logo
+
+FEATURE CARD FORMAT (4 adet):
+<div class="feature-card">
+  <div class="feature-icon">🌡️</div>
+  <div class="feature-title">Sıcaklık İzleme</div>
+  <div class="feature-desc">Gerçek zamanlı sıcaklık takibi ve uyarılar</div>
+</div>
+-->
+
+</body>
+</html>

@@ -78,6 +78,19 @@ class ContentPipeline:
         self.approval_response = response
         self.approval_event.set()
 
+    @property
+    def current_state(self) -> Dict[str, Any]:
+        """Audit logging için current_data'dan state çıkar"""
+        content = self.current_data.get("content", {})
+        topic = self.current_data.get("topic_suggestion", {})
+        visual = self.current_data.get("visual_result", {})
+
+        return {
+            "post_id": content.get("post_id"),
+            "topic": topic.get("topic"),
+            "visual_type": visual.get("visual_type", "post")
+        }
+
     async def run_daily_content(self) -> Dict[str, Any]:
         """Günlük içerik pipeline'ı çalıştır"""
         self.log("Günlük içerik pipeline'ı başlatılıyor...")
@@ -235,135 +248,173 @@ class ContentPipeline:
                 )
                 self.log(f"Visual prompt kaydedildi (style: {prompt_style})")
 
-            # Görsel üret
-            self.log(f"Görsel üretiliyor ({visual_type})...")
+            # ========== GÖRSEL + REVIEW ANA DÖNGÜSÜ ==========
+            # Final onayda "görsel değiştir" talebi gelirse geri dönmek için
+            while True:  # Ana döngü - görsel regenerate from review için
 
-            image_path = None
-            video_path = None
+                # ========== GÖRSEL ÜRETİM DÖNGÜSÜ ==========
+                while True:
+                    self.log(f"Görsel üretiliyor ({visual_type})...")
 
-            if visual_type == "flux":
-                from app.flux_helper import generate_image_flux
-                visual_result = await generate_image_flux(
-                    prompt=visual_prompt_result.get("visual_prompt"),
-                    width=1024,
-                    height=1024
-                )
-                if visual_result.get("success"):
-                    image_path = visual_result.get("image_path")
+                    image_path = None
+                    video_path = None
+                    visual_result = None
 
-            elif visual_type == "video":
-                from app.veo_helper import generate_video_with_retry
-                visual_result = await generate_video_with_retry(
-                    prompt=visual_prompt_result.get("visual_prompt")
-                )
-                if visual_result.get("success"):
-                    video_path = visual_result.get("video_path")
+                    if visual_type == "flux":
+                        from app.flux_helper import generate_image_flux
+                        visual_result = await generate_image_flux(
+                            prompt=visual_prompt_result.get("visual_prompt"),
+                            width=1024,
+                            height=1024
+                        )
+                        if visual_result.get("success"):
+                            image_path = visual_result.get("image_path")
 
-            elif visual_type == "gemini":
-                # Gemini devre dışı - FLUX'a yönlendir
-                self.log("Gemini devre dışı, FLUX kullanılıyor...")
-                from app.flux_helper import generate_image_flux
-                visual_result = await generate_image_flux(
-                    prompt=visual_prompt_result.get("visual_prompt"),
-                    width=1024,
-                    height=1024
-                )
-                if visual_result.get("success"):
-                    image_path = visual_result.get("image_path")
+                    elif visual_type == "video":
+                        from app.veo_helper import generate_video_with_retry
+                        visual_result = await generate_video_with_retry(
+                            prompt=visual_prompt_result.get("visual_prompt")
+                        )
+                        if visual_result.get("success"):
+                            video_path = visual_result.get("video_path")
 
-            elif visual_type == "infographic":
-                from app.claude_helper import generate_visual_html
-                from app.renderer import render_html_to_png
-                html = await generate_visual_html(
-                    content_result.get("post_text"),
-                    topic_result.get("topic")
-                )
-                # render_html_to_png direkt path döndürür
-                image_path = await render_html_to_png(html)
-                visual_result = {"success": True, "image_path": image_path}
+                    elif visual_type == "gemini":
+                        # Gemini devre dışı - FLUX'a yönlendir
+                        self.log("Gemini devre dışı, FLUX kullanılıyor...")
+                        from app.flux_helper import generate_image_flux
+                        visual_result = await generate_image_flux(
+                            prompt=visual_prompt_result.get("visual_prompt"),
+                            width=1024,
+                            height=1024
+                        )
+                        if visual_result.get("success"):
+                            image_path = visual_result.get("image_path")
 
-            self.current_data["visual_result"] = {
-                "image_path": image_path,
-                "video_path": video_path,
-                "visual_type": visual_type
-            }
+                    elif visual_type == "infographic":
+                        from app.claude_helper import generate_visual_html
+                        from app.renderer import render_html_to_png
+                        html = await generate_visual_html(
+                            content_result.get("post_text"),
+                            topic_result.get("topic")
+                        )
+                        image_path = await render_html_to_png(html)
+                        visual_result = {"success": True, "image_path": image_path}
 
-            # Görsel üretimi başarısız olduysa hata ver
-            if not image_path and not video_path:
-                error_msg = visual_result.get("error", "Görsel üretilemedi") if visual_result else "Görsel üretilemedi"
-                self.log(f"Görsel üretim hatası: {error_msg}")
-                await self.notify_telegram(
-                    message=f"❌ Görsel üretim hatası: {error_msg}",
-                    buttons=[
-                        {"text": "🔄 Tekrar Dene", "callback": "retry_visual"},
-                        {"text": "🎨 Tip Değiştir", "callback": "change_visual_type"},
-                        {"text": "❌ İptal", "callback": "cancel"}
-                    ]
-                )
-                self.state = PipelineState.AWAITING_VISUAL_APPROVAL
-                approval = await self.wait_for_approval()
-                if approval.get("action") == "cancel":
-                    return {"success": False, "reason": "Görsel üretilemedi"}
-                # retry_visual ve change_visual_type için ayrı handler gerekli
-                return {"success": False, "reason": error_msg, "retry_available": True}
+                    elif visual_type == "carousel":
+                        # Carousel tipi seçildi - carousel pipeline'a yönlendir
+                        self.log("Carousel tipi seçildi, carousel pipeline'a geçiliyor...")
+                        await self.notify_telegram(message="📱 Carousel modu için /carousel komutu kullanın.")
+                        visual_type = "flux"  # Varsayılana dön
+                        continue
 
-            result["stages_completed"].append("visual_generation")
+                    self.current_data["visual_result"] = {
+                        "image_path": image_path,
+                        "video_path": video_path,
+                        "visual_type": visual_type
+                    }
 
-            # Telegram'a görseli gönder
-            self.state = PipelineState.AWAITING_VISUAL_APPROVAL
-            await self.notify_telegram(
-                message=f"""
+                    # Görsel üretimi başarısız olduysa
+                    if not image_path and not video_path:
+                        error_msg = visual_result.get("error", "Görsel üretilemedi") if visual_result else "Görsel üretilemedi"
+                        self.log(f"Görsel üretim hatası: {error_msg}")
+                        await self.notify_telegram(
+                            message=f"❌ Görsel üretim hatası: {error_msg}",
+                            buttons=[
+                                {"text": "🔄 Tekrar Dene", "callback": "retry_visual"},
+                                {"text": "🎨 Tip Değiştir", "callback": "change_visual_type"},
+                                {"text": "❌ İptal", "callback": "cancel"}
+                            ]
+                        )
+                        self.state = PipelineState.AWAITING_VISUAL_APPROVAL
+                        approval = await self.wait_for_approval()
+
+                        if approval.get("action") == "cancel":
+                            self.state = PipelineState.IDLE
+                            return {"success": False, "reason": "Görsel üretilemedi"}
+
+                        if approval.get("action") == "regenerate":
+                            self.log("Görsel yeniden üretiliyor...")
+                            continue
+
+                        if approval.get("action") == "change_type":
+                            visual_type = approval.get("new_type", "flux")
+                            self.log(f"Görsel tipi değiştirildi: {visual_type}")
+                            continue
+
+                        continue  # Varsayılan: tekrar dene
+
+                    if "visual_generation" not in result["stages_completed"]:
+                        result["stages_completed"].append("visual_generation")
+
+                    # Telegram'a görseli gönder
+                    self.state = PipelineState.AWAITING_VISUAL_APPROVAL
+                    await self.notify_telegram(
+                        message=f"""
 🎨 *Görsel Hazır*
 
 Tip: {visual_type}
 Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
 """,
-                data={
-                    "image_path": image_path,
-                    "video_path": video_path,
-                    "visual_type": visual_type
-                },
-                buttons=[
-                    {"text": "✅ Onayla", "callback": "approve_visual"},
-                    {"text": "🔄 Yeniden Üret", "callback": "regenerate_visual"},
-                    {"text": "🎨 Tip Değiştir", "callback": "change_visual_type"},
-                    {"text": "❌ İptal", "callback": "cancel"}
-                ]
-            )
+                        data={
+                            "image_path": image_path,
+                            "video_path": video_path,
+                            "visual_type": visual_type
+                        },
+                        buttons=[
+                            {"text": "✅ Onayla", "callback": "approve_visual"},
+                            {"text": "🔄 Yeniden Üret", "callback": "regenerate_visual"},
+                            {"text": "🎨 Tip Değiştir", "callback": "change_visual_type"},
+                            {"text": "❌ İptal", "callback": "cancel"}
+                        ]
+                    )
 
-            approval = await self.wait_for_approval()
+                    approval = await self.wait_for_approval()
 
-            if approval.get("action") == "cancel":
-                self.state = PipelineState.IDLE
-                return {"success": False, "reason": "Kullanıcı iptal etti"}
+                    if approval.get("action") == "cancel":
+                        self.state = PipelineState.IDLE
+                        return {"success": False, "reason": "Kullanıcı iptal etti"}
 
-            # ========== AŞAMA 4-5: Review + Final Onay Döngüsü ==========
-            while True:
-                self.log("Aşama 4: Kalite kontrol...")
-                self.state = PipelineState.REVIEWING
+                    if approval.get("action") == "regenerate":
+                        await self.notify_telegram(message="🔄 Görsel yeniden üretiliyor...")
+                        continue
 
-                review_result = await self.reviewer.execute({
-                    "action": "review_post",
-                    "post_text": content_result.get("post_text"),
-                    "topic": topic_result.get("topic"),
-                    "post_id": content_result.get("post_id")
-                })
+                    if approval.get("action") == "change_type":
+                        visual_type = approval.get("new_type", "flux")
+                        await self.notify_telegram(message=f"🎨 Görsel tipi değiştirildi: {visual_type}")
+                        continue
 
-                self.current_data["review"] = review_result
-                if "review" not in result["stages_completed"]:
-                    result["stages_completed"].append("review")
+                    # approve_visual -> görsel döngüsünden çık
+                    break
 
-                # ========== AŞAMA 5: Final Onay ==========
-                self.state = PipelineState.AWAITING_FINAL_APPROVAL
+                # ========== AŞAMA 4-5: Review + Final Onay Döngüsü ==========
+                regenerate_visual = False  # Flag for visual regeneration from review
 
-                score = review_result.get("total_score", 0)
-                decision = review_result.get("decision") or "revise"  # None-safe
+                while True:
+                    self.log("Aşama 4: Kalite kontrol...")
+                    self.state = PipelineState.REVIEWING
 
-                await self.notify_telegram(
-                    message=f"""
+                    review_result = await self.reviewer.execute({
+                        "action": "review_post",
+                        "post_text": content_result.get("post_text"),
+                        "topic": topic_result.get("topic"),
+                        "post_id": content_result.get("post_id")
+                    })
+
+                    self.current_data["review"] = review_result
+                    if "review" not in result["stages_completed"]:
+                        result["stages_completed"].append("review")
+
+                    # ========== AŞAMA 5: Final Onay ==========
+                    self.state = PipelineState.AWAITING_FINAL_APPROVAL
+
+                    score = review_result.get("total_score", 0)
+                    decision = review_result.get("decision") or "revise"  # None-safe
+
+                    await self.notify_telegram(
+                        message=f"""
 ✅ *Final Onay*
 
-📊 *Review Sonucu:*
+📊 *İçerik Review:*
 - Karar: {decision.upper()}
 - Puan: {score}/10
 - Hook: {review_result.get('scores', {}).get('hook_score', 'N/A')}/10
@@ -379,37 +430,48 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
 ---
 *Post şimdi yayınlansın mı?*
 """,
-                    data=review_result,
-                    buttons=[
-                        {"text": "🚀 YAYINLA", "callback": "publish_now"},
-                        {"text": "⏰ Zamanla", "callback": "schedule"},
-                        {"text": "✏️ Revize Et", "callback": "revise"},
-                        {"text": "❌ İptal", "callback": "cancel"}
-                    ]
-                )
+                        data=review_result,
+                        buttons=[
+                            {"text": "🚀 YAYINLA", "callback": "publish_now"},
+                            {"text": "⏰ Zamanla", "callback": "schedule"},
+                            {"text": "✏️ Revize Et", "callback": "revise"},
+                            {"text": "❌ İptal", "callback": "cancel"}
+                        ]
+                    )
 
-                approval = await self.wait_for_approval()
+                    approval = await self.wait_for_approval()
 
-                if approval.get("action") == "cancel":
-                    self.state = PipelineState.IDLE
-                    return {"success": False, "reason": "Kullanıcı iptal etti"}
+                    if approval.get("action") == "cancel":
+                        self.state = PipelineState.IDLE
+                        return {"success": False, "reason": "Kullanıcı iptal etti"}
 
-                # Revize talebi
-                if approval.get("action") == "revise_content":
-                    await self.notify_telegram(message="✏️ İçerik revize ediliyor...")
+                    # Görsel regenerate talebi (revize feedback'ten)
+                    if approval.get("action") == "regenerate":
+                        await self.notify_telegram(message="🔄 Görsel yeniden üretiliyor...")
+                        regenerate_visual = True
+                        break  # Review loop'dan çık, dış loop devam edecek
 
-                    revision_result = await self.creator.execute({
-                        "action": "revise_post",
-                        "post_text": content_result.get("post_text"),
-                        "feedback": approval.get("feedback", "İyileştir"),
-                        "post_id": content_result.get("post_id")
-                    })
-                    content_result["post_text"] = revision_result.get("revised_post", content_result["post_text"])
-                    self.log("İçerik revize edildi, tekrar review yapılıyor...")
-                    continue  # Tekrar review yap
+                    # Revize talebi
+                    if approval.get("action") == "revise_content":
+                        await self.notify_telegram(message="✏️ İçerik revize ediliyor...")
 
-                # publish_now veya schedule → döngüden çık
-                break
+                        revision_result = await self.creator.execute({
+                            "action": "revise_post",
+                            "post_text": content_result.get("post_text"),
+                            "feedback": approval.get("feedback", "İyileştir"),
+                            "post_id": content_result.get("post_id")
+                        })
+                        content_result["post_text"] = revision_result.get("revised_post", content_result["post_text"])
+                        self.log("İçerik revize edildi, tekrar review yapılıyor...")
+                        continue  # Tekrar review yap
+
+                    # publish_now veya schedule → döngüden çık
+                    break
+
+                # Görsel regenerate talep edildiyse dış loop'a dön
+                if regenerate_visual:
+                    self.log("Görsel regenerate talebi, görsel döngüsüne dönülüyor...")
+                    continue  # Dış while True loop'una dön
 
             # ========== AŞAMA 6: Yayınla ==========
             if approval.get("action") in ["publish_now", "schedule"]:
@@ -1142,6 +1204,25 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             result["hashtags"] = carousel_content.get("hashtags")
             result["slide_count"] = carousel_content.get("slide_count", 0)
             result["stages_completed"].append("content_created")
+
+            # ========== Carousel İçerik Validasyonu ==========
+            self.log("[CAROUSEL] İçerik validasyonu yapılıyor...")
+            validation = self.reviewer.validate_carousel_content(carousel_content)
+
+            if not validation.get("valid"):
+                self.log(f"[CAROUSEL] ⚠️ Validasyon uyarıları: {validation.get('issues')}")
+
+            if validation.get("issues"):
+                # Auto-fix uygula
+                fixed_content = validation.get("auto_fixed", carousel_content)
+                if fixed_content != carousel_content:
+                    self.log("[CAROUSEL] 🔧 Otomatik düzeltmeler uygulandı")
+                    carousel_content = fixed_content
+                    result["caption"] = fixed_content.get("caption", result["caption"])
+                    result["slides"] = fixed_content.get("slides", result["slides"])
+
+            result["validation"] = validation
+            result["stages_completed"].append("content_validated")
 
             # Carousel slide prompt'larını kaydet
             post_id = carousel_content.get("post_id")
