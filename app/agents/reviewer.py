@@ -439,19 +439,24 @@ Sadece JSON döndür.
             if last_type != "cta":
                 issues.append("UYARI: Son slide 'cta' tipinde olmalı")
 
-        # 6. Cover'da "kaydet" kontrolü (SADECE cover'da olmalı)
+        # 6. Cover'da "kaydet" OLMAMALI (sadece CTA'da olmalı)
         if slides and len(slides) > 0:
             first_slide_str = str(slides[0]).lower()
+            first_slide_raw = str(slides[0])
 
-            # Cover'da "kaydet" olmalı (🔖 KAYDET:)
-            if "kaydet" not in first_slide_str:
-                issues.append("UYARI: Cover slide'da '🔖 KAYDET:' hook'u bulunamadı")
+            # Cover'da "kaydet" OLMAMALI
+            if "kaydet" in first_slide_str:
+                issues.append("HATA: Cover slide'da 'KAYDET' var - Cover'da olmamalı!")
 
-            # Diğer slide'larda "kaydet" olmamalı (CTA hariç - son slide)
-            for i, slide in enumerate(slides[1:-1], start=2):  # Slide 2 to N-1
+            # Cover'da 📌 ve 🔖 emojileri de OLMAMALI
+            if "📌" in first_slide_raw or "🔖" in first_slide_raw:
+                issues.append("HATA: Cover slide'da save emojisi (📌/🔖) var - Cover'da olmamalı!")
+
+            # Content slide'larda (2 to N-1) "kaydet" olmamalı
+            for i, slide in enumerate(slides[1:-1], start=2):
                 slide_str = str(slide).lower()
                 if "kaydet" in slide_str:
-                    issues.append(f"HATA: Slide {i}'de 'Kaydet' var - sadece Cover'da olmalı")
+                    issues.append(f"HATA: Slide {i}'de 'Kaydet' var - sadece CTA'da olmalı")
 
         self.log(f"Carousel validasyon: {len(issues)} sorun bulundu")
 
@@ -484,11 +489,54 @@ Sadece JSON döndür.
 
         try:
             fixed_content = json.loads(content_str)
-            # Content slide'larından kaydet'i temizle
+            # 1. Cover slide'dan KAYDET'i temizle (EN ÖNCELİKLİ)
+            fixed_content = self._clean_cover_slide(fixed_content)
+            # 2. Content slide'larından kaydet'i temizle
             fixed_content = self._remove_kaydet_from_content_slides(fixed_content)
             return fixed_content
         except json.JSONDecodeError:
             return content
+
+    def _clean_cover_slide(self, content: Dict[str, Any]) -> Dict[str, Any]:
+        """Cover slide'dan KAYDET ve save emojilerini temizle - ZORUNLU"""
+        slides = content.get("slides", [])
+        if not slides:
+            return content
+
+        cover = slides[0]
+        if not isinstance(cover, dict):
+            return content
+
+        def remove_kaydet_from_text(text: str) -> str:
+            if not isinstance(text, str):
+                return text
+            # Tüm KAYDET varyasyonlarını kaldır
+            patterns = [
+                r'📌\s*KAYDET:?\s*',
+                r'🔖\s*KAYDET:?\s*',
+                r'📌\s*Kaydet:?\s*',
+                r'🔖\s*Kaydet:?\s*',
+                r'KAYDET:?\s*',
+                r'Kaydet:?\s*',
+            ]
+            for pattern in patterns:
+                text = re.sub(pattern, '', text, flags=re.IGNORECASE)
+            # Fazla boşlukları temizle
+            text = re.sub(r'\s+', ' ', text).strip()
+            return text
+
+        # Cover'daki tüm string alanları temizle
+        for key in ["title", "heading", "content", "text", "subtitle"]:
+            if key in cover and isinstance(cover[key], str):
+                original = cover[key]
+                cleaned = remove_kaydet_from_text(cover[key])
+                if cleaned != original:
+                    cover[key] = cleaned
+                    self.log(f"Cover slide'dan KAYDET temizlendi: '{original[:30]}...' → '{cleaned[:30]}...'")
+
+        slides[0] = cover
+        content["slides"] = slides
+        return content
 
     def _remove_kaydet_from_content_slides(self, content: Dict[str, Any]) -> Dict[str, Any]:
         """Content slide'larından (cover ve cta hariç) 'kaydet' kelimesini kaldır."""

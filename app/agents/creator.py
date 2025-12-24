@@ -789,19 +789,24 @@ Sadece JSON döndür, başka açıklama ekleme.
 Eğitici ve görsel açıdan tutarlı bir carousel oluştur.
 
 ### Slide Yapısı ve Tipleri:
-1. **Slide 1 (cover)**: "🔖 KAYDET: " ile başla + dikkat çekici soru/istatistik
+1. **Slide 1 (cover)**: Dikkat çekici kısa başlık + merak uyandıran soru/istatistik
 2. **Slide 2-{slide_count-1} (content/stats)**: Ana bilgiler, adımlar veya karşılaştırmalar
-3. **Slide {slide_count} (cta)**: "📌 Bu rehberi kaydet!" + yumuşak satış CTA
+3. **Slide {slide_count} (cta)**: "📌 Kaydet & Takip Et!" + CTA
 
 ### SLIDE TİPLERİ (ZORUNLU):
-- **cover**: İlk slide, dikkat çekici hook
+- **cover**: İlk slide, dikkat çekici hook (KAYDET KULLANMA!)
 - **content**: Bullet point'ler, numaralı liste
 - **stats**: Büyük rakamlar, istatistikler
 - **comparison**: Yan yana karşılaştırma
 - **cta**: Son slide, kaydet/takip et çağrısı
 
-### SAVE-OPTİMİZE İÇERİK (ZORUNLU):
-- İlk slide başlığı "🔖 KAYDET:" ile başlamalı
+### ⛔ COVER SLIDE KURALLARI (KRİTİK):
+- Cover'da "KAYDET" kelimesi KULLANMA
+- Cover'da 📌 veya 🔖 emojileri KULLANMA
+- Cover sadece dikkat çekici başlık içermeli (5-8 kelime)
+- "KAYDET" SADECE son slide'da (CTA) kullanılabilir!
+
+### SAVE-OPTİMİZE İÇERİK:
 - Son slide kaydetmeye teşvik etmeli (📌 emojisi)
 - İçerik referans değeri taşımalı (checklist, adımlar, karşılaştırma)
 
@@ -830,8 +835,8 @@ Eğitici ve görsel açıdan tutarlı bir carousel oluştur.
     "slides": [
         {{
             "slide_type": "cover",
-            "title": "🔖 KAYDET: Başlık",
-            "content": "Hook cümlesi veya dikkat çekici istatistik"
+            "title": "Enerji Faturanızı %40 Düşürün",
+            "content": "Sera sahibi misiniz? Bu 3 yöntem ile tasarruf edin!"
         }},
         {{
             "slide_type": "content",

@@ -1222,6 +1222,17 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                     result["slides"] = fixed_content.get("slides", result["slides"])
 
             result["validation"] = validation
+
+            # SON KONTROL: Cover'da hala KAYDET var mı?
+            slides = carousel_content.get("slides", [])
+            if slides:
+                cover_str = str(slides[0]).lower()
+                if "kaydet" in cover_str:
+                    self.log("[CAROUSEL] ⚠️ UYARI: Cover'da hala KAYDET var! Zorla temizleniyor...")
+                    carousel_content = self.reviewer._clean_cover_slide(carousel_content)
+                    result["slides"] = carousel_content.get("slides", result["slides"])
+                    self.log("[CAROUSEL] ✅ Cover slide zorla temizlendi")
+
             result["stages_completed"].append("content_validated")
 
             # Carousel slide prompt'larını kaydet
