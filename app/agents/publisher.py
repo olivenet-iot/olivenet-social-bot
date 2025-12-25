@@ -5,10 +5,26 @@ Publisher Agent - Yayıncı
 
 import json
 import os
+import re
 from datetime import datetime
 from typing import Dict, Any
 from .base_agent import BaseAgent
 from app.database import update_post, log_agent_action
+
+
+def clean_caption_for_instagram(caption: str) -> str:
+    """Instagram için caption temizle - markdown kaldır"""
+    if not caption:
+        return caption
+    # **bold** → bold
+    caption = re.sub(r'\*\*(.+?)\*\*', r'\1', caption)
+    # *italic* → italic
+    caption = re.sub(r'\*(.+?)\*', r'\1', caption)
+    # __underline__ → underline
+    caption = re.sub(r'__(.+?)__', r'\1', caption)
+    # `code` → code
+    caption = re.sub(r'`(.+?)`', r'\1', caption)
+    return caption
 
 
 class PublisherAgent(BaseAgent):
@@ -94,6 +110,9 @@ class PublisherAgent(BaseAgent):
 
     async def _publish_to_instagram(self, post_text: str, image_path: str = None, video_path: str = None) -> Dict[str, Any]:
         """Instagram'a paylaş (Fotoğraf veya Reels)"""
+        # Markdown temizle (Instagram desteklemiyor)
+        post_text = clean_caption_for_instagram(post_text)
+
         try:
             # Video/Reels için
             if video_path and os.path.exists(video_path):
@@ -174,6 +193,8 @@ class PublisherAgent(BaseAgent):
 
         post_id = input_data.get("post_id")
         caption = input_data.get("caption", "")
+        # Markdown temizle (Instagram desteklemiyor)
+        caption = clean_caption_for_instagram(caption)
         image_urls = input_data.get("image_urls", [])
         hashtags = input_data.get("hashtags", [])
 

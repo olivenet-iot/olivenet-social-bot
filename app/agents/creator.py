@@ -367,6 +367,8 @@ Sadece JSON döndür.
 - 2-3 cümle ana mesaj (kısa ve öz)
 - {cta_instruction}
 - 5-8 hashtag (sabit: #Olivenet #KKTC #IoT + rotasyonlu)
+- MARKDOWN KULLANMA: **bold**, *italic*, `code` YASAK (Instagram desteklemiyor)
+- Vurgu için BÜYÜK HARF veya emoji kullan
 
 ### ENGAGEMENT OPTİMİZASYONU
 - Her 3-4 posttan birinde: "📌 Kaydet!" veya "🔖 Yer imi ekle!" ekle
