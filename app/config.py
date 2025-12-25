@@ -112,6 +112,9 @@ class Settings(BaseSettings):
     # FLUX Settings
     flux_api_key: str = Field(default="", description="FLUX API key")
 
+    # FAL.ai Settings (Kling video generation)
+    fal_api_key: str = Field(default="", description="FAL API key for Kling video generation")
+
     # Claude Code Settings
     claude_timeout_post: int = Field(default=60, description="Timeout for post generation (seconds)")
     claude_timeout_visual: int = Field(default=90, description="Timeout for visual generation (seconds)")

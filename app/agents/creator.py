@@ -669,8 +669,9 @@ Sadece JSON döndür.
 {{
     "video_prompt_sora": "SORA 2 formatında detaylı İngilizce prompt (sahne + cinematography + lighting + actions + sound)",
     "video_prompt_veo": "VEO 3 timestamp formatında İngilizce prompt ([00:00-00:02] format)",
+    "video_prompt_kling": "KLING formatında kısa İngilizce prompt (Subject + Movement + Scene + Camera + Lighting + Atmosphere, virgülle ayrılmış, max 200 karakter)",
     "complexity": "low|medium|high",
-    "recommended_model": "veo3|sora-2|sora-2-pro",
+    "recommended_model": "veo3|sora-2|sora-2-pro|kling_pro",
     "recommended_duration": 5,
     "hook_description": "İlk 2 saniyede ne görünecek (Türkçe)",
     "caption_ig": "Instagram Reels caption (Türkçe, max 50 kelime, hook+değer+CTA formatı, emoji'li)",
@@ -681,16 +682,24 @@ Sadece JSON döndür.
 ```
 
 ### ÖNEMLİ KURALLAR:
-1. video_prompt_sora ve video_prompt_veo İNGİLİZCE olmalı
+1. video_prompt_sora, video_prompt_veo ve video_prompt_kling İNGİLİZCE olmalı
 2. 9:16 dikey format belirt (720x1280)
-3. Süre 5-6 saniye hedefle
+3. Süre 5-6 saniye hedefle (Kling için 10 saniyeye kadar olabilir)
 4. İlk 2 saniye HOOK olmalı - dikkat çekici
 5. Olivenet renkleri: Yeşil (#2E7D32), Mavi (#38bdf8)
 6. Tek sahne, akıcı hareket
 7. Gerçekçi ve üretilebilir prompt yaz
 
+### KLING FORMAT KURALLARI (video_prompt_kling):
+- Basit, virgülle ayrılmış İngilizce
+- Formül: Subject + Description + Movement + Scene + Camera + Lighting + Atmosphere
+- Max 200 karakter
+- Sayı kullanma, "multiple" veya "several" yaz
+- Karmaşık fiziksel hareket YOK (top sektirme, koşma vb.)
+- Örnek: "Medium shot, bokeh background, a technician in safety helmet, checking sensor readings, industrial factory, warm ambient lighting, professional documentary style."
+
 ### COMPLEXITY KURALLARI:
-- LOW: Tek sahne, statik/basit hareket → veo3
+- LOW: Tek sahne, statik/basit hareket → veo3 veya kling_pro
 - MEDIUM: Kamera takibi, 2-3 element → sora-2
 - HIGH: Dönüşüm, kompleks hareket → sora-2-pro
 

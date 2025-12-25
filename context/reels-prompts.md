@@ -190,3 +190,88 @@ Contrast: Harsh vs soft lighting, dying vs thriving
 - [ ] Ses/ambient tanımı var mı?
 - [ ] 9:16 aspect ratio belirtildi mi?
 - [ ] Süre 5-8 saniye arasında mı?
+
+---
+
+## KLING AI PROMPT FORMATI
+
+### Temel Formül
+```
+Subject + Description + Movement + Scene + Camera + Lighting + Atmosphere
+```
+
+### Bileşenler
+
+| Bileşen | Açıklama | Örnek |
+|---------|----------|-------|
+| Subject | Ana odak | A technician, A sensor device |
+| Description | Görünüm detayları | wearing safety helmet, in blue uniform |
+| Movement | Hareket durumu | checking the screen, walking slowly |
+| Scene | Ortam | industrial factory floor |
+| Camera | Kamera teknikleri | medium shot, bokeh background |
+| Lighting | Işık durumu | ambient lighting, morning light |
+| Atmosphere | Genel hava | professional mood, cinematic feel |
+
+### Kling Kuralları
+- Basit, virgülle ayrılmış cümleler
+- 5-10 saniye içerik (Veo/Sora'dan uzun!)
+- Fiziksel karmaşıklıktan kaçın (top sektirme vb.)
+- Sayılardan kaçın ("10 sensör" → "multiple sensors")
+- Max 200 karakter önerilir
+
+### Kling Prompt Örnekleri
+
+**Basit:**
+```
+A technician checking a digital screen in a factory, industrial lighting.
+```
+
+**Detaylı:**
+```
+Medium shot, bokeh background, a technician wearing safety helmet and blue uniform, examining a glowing sensor device mounted on industrial pipes, factory interior with steel structures, warm industrial lighting with lens flare, cinematic color grading, professional documentary mood.
+```
+
+### IoT/Olivenet Şablonları (Kling)
+
+**Fabrika/Enerji:**
+```
+[Camera], [Subject] in [clothing], [action] in [location], [background], [lighting], [atmosphere].
+```
+Örnek:
+```
+Medium shot with shallow depth of field, an engineer in safety vest, monitoring energy meters on a control panel, industrial facility with pipes and gauges in background, warm ambient lighting, professional documentary style.
+```
+
+**Sera/Tarım:**
+```
+Slow tracking shot, modern irrigation sensors among green crops, water droplets on leaves, greenhouse interior, soft morning sunlight, fresh technological atmosphere.
+```
+
+**Akıllı Bina:**
+```
+Close-up with rack focus, a smart thermostat displaying temperature, mounted on modern office wall, minimalist interior with glass partitions, soft diffused lighting, clean technological aesthetic.
+```
+
+### Camera Language (Kling)
+
+| Türkçe | İngilizce Prompt |
+|--------|------------------|
+| Yakın çekim | Close-up, extreme close-up |
+| Orta çekim | Medium shot |
+| Geniş çekim | Wide shot, establishing shot |
+| Alçak açı | Low-angle shot |
+| Yüksek açı | High-angle shot |
+| Arka plan bulanık | Bokeh background, shallow depth of field |
+| Takip | Tracking shot, following shot |
+| Dönen kamera | Circling camera, orbit shot |
+
+### Lighting (Kling)
+
+| Türkçe | İngilizce Prompt |
+|--------|------------------|
+| Doğal ışık | Natural lighting, ambient light |
+| Sabah ışığı | Morning light, golden hour |
+| Endüstriyel | Industrial lighting, fluorescent |
+| Dramatik | Dramatic lighting, chiaroscuro |
+| Yumuşak | Soft diffused lighting |
+| Lens parlaması | Lens flare |

@@ -529,21 +529,60 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Otonom pipeline'ı arka planda çalıştır
         asyncio.create_task(pipeline.run_autonomous_content(min_score=7))
 
-    # ===== REELS OLUŞTUR =====
+    # ===== REELS OLUŞTUR - MODEL SEÇİM MENÜSÜ =====
     elif action == "create_reels":
+        # Video model seçim menüsü göster
+        video_model_keyboard = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("🎬 Veo 3", callback_data="video_model:veo3"),
+                InlineKeyboardButton("🎥 Sora 2", callback_data="video_model:sora2"),
+            ],
+            [
+                InlineKeyboardButton("⚡ Kling Pro (10s)", callback_data="video_model:kling_pro"),
+                InlineKeyboardButton("💎 Kling Master", callback_data="video_model:kling_master"),
+            ],
+            [
+                InlineKeyboardButton("❌ İptal", callback_data="main_menu"),
+            ]
+        ])
         await query.edit_message_text(
-            "🎬 *REELS MOD* baslatiliyor...\n\n"
-            "Video icerigi olusturulacak:\n"
-            "• Konu secimi (AI)\n"
-            "• Caption uretimi (IG+FB)\n"
-            "• Video prompt (Sora/Veo format)\n"
-            "• Video uretimi (Sora 2 → Veo 3 fallback)\n"
-            "• Instagram Reels + Facebook Video\n\n"
-            "Bu islem 5-10 dakika surebilir..."
+            "🎬 *Video Modeli Seçin*\n\n"
+            "• *Veo 3*: Google, 8s, yüksek kalite\n"
+            "• *Sora 2*: OpenAI, 8s, yaratıcı\n"
+            "• *Kling Pro*: fal.ai, 10s, hızlı\n"
+            "• *Kling Master*: fal.ai, 10s, en iyi kalite\n\n"
+            "💡 Tüm modeller 9:16 dikey format kullanır.",
+            parse_mode="Markdown",
+            reply_markup=video_model_keyboard
         )
 
-        # Reels pipeline'ı arka planda çalıştır
-        asyncio.create_task(pipeline.run_reels_content())
+    # ===== VIDEO MODEL SEÇİMİ =====
+    elif action.startswith("video_model:"):
+        model = action.replace("video_model:", "")
+
+        model_names = {
+            "veo3": "Veo 3 (Google)",
+            "sora2": "Sora 2 (OpenAI)",
+            "kling_pro": "Kling Pro (fal.ai)",
+            "kling_master": "Kling Master (fal.ai)"
+        }
+        model_name = model_names.get(model, model)
+
+        await query.edit_message_text(
+            f"🎬 *REELS MOD* başlatılıyor...\n\n"
+            f"🎯 *Model:* {model_name}\n\n"
+            "Video içeriği oluşturulacak:\n"
+            "• Konu seçimi (AI)\n"
+            "• Caption üretimi (IG+FB)\n"
+            "• Video prompt\n"
+            f"• Video üretimi ({model_name})\n"
+            "• Instagram Reels + Facebook Video\n\n"
+            "⏳ Bu işlem 5-10 dakika sürebilir...",
+            parse_mode="Markdown"
+        )
+
+        # Reels pipeline'ı arka planda çalıştır - seçilen model ile
+        asyncio.create_task(pipeline.run_reels_content(force_model=model))
 
     # ===== HAFTALIK PLAN =====
     elif action == "weekly_plan":

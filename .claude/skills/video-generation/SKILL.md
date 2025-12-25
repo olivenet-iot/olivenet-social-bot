@@ -1,6 +1,6 @@
 ---
 name: video-generation
-description: AI video generation with Sora and Veo. Use when creating Reels, video prompts, or handling video generation workflows.
+description: AI video generation with Sora, Veo, and Kling. Use when creating Reels, video prompts, or handling video generation workflows.
 ---
 
 # AI Video Generation
@@ -13,6 +13,8 @@ description: AI video generation with Sora and Veo. Use when creating Reels, vid
 | Veo 3.1 Fast | Google | Quick generation | 4-8s | Medium |
 | Sora 2 | OpenAI | Medium complexity | 4-12s | High |
 | Sora 2 Pro | OpenAI | Complex scenes, humans | 4-12s | Premium |
+| Kling Pro | fal.ai | Industrial, IoT scenes | 5-10s | High |
+| Kling Master | fal.ai | Premium quality | 5-10s | Premium |
 
 ## Model Selection Logic
 
@@ -137,5 +139,65 @@ OPENAI_API_KEY=your_openai_api_key    # For Sora
 |-------|----------|------------------|
 | Veo | 5 minutes | 5 seconds |
 | Sora | 5 minutes | 10 seconds |
+
+## Kling AI (fal.ai)
+
+### Endpoints
+
+| Type | Endpoint |
+|------|----------|
+| Text-to-Video (Pro) | `fal-ai/kling-video/v2.5-turbo/pro/text-to-video` |
+| Text-to-Video (Master) | `fal-ai/kling-video/v2.1/master/text-to-video` |
+| Image-to-Video | `fal-ai/kling-video/v2.1/pro/image-to-video` |
+
+### Features
+
+- Duration: 5s or 10s (longer than Veo/Sora!)
+- Aspect Ratio: 9:16, 16:9, 1:1
+- Tiers: Standard (fast), Pro (quality), Master (premium)
+
+### Kling Prompt Format
+
+**Formula:**
+```
+Subject + Description + Movement + Scene + Camera + Lighting + Atmosphere
+```
+
+**Example:**
+```
+Medium shot, bokeh background, a technician in safety helmet, checking
+sensor readings on tablet, industrial factory floor, warm ambient lighting,
+professional documentary style.
+```
+
+### Best Practices
+
+- Simple, comma-separated sentences
+- Avoid complex physical movements (bouncing balls, running)
+- Avoid specific numbers ("10 sensors" → "multiple sensors")
+- Always include camera language and lighting
+- Use quality terms: "cinematic", "professional", "documentary style"
+
+### Kling Generation
+
+```python
+from app.fal_helper import FalVideoGenerator
+
+result = await FalVideoGenerator.generate_video(
+    prompt="Your Kling-formatted prompt",
+    model="kling_pro",  # or kling_master, kling_standard
+    duration=10,
+    aspect_ratio="9:16"
+)
+
+if result.get("success"):
+    video_path = result["video_path"]
+```
+
+### Environment Variables
+
+```bash
+FAL_API_KEY=your_fal_api_key    # For Kling
+```
 
 For more details, see [prompt-examples.md](prompt-examples.md) and [technical.md](technical.md).

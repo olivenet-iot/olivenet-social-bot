@@ -1004,9 +1004,20 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             self.current_data["reels_prompt"] = reels_prompt_result
             result["stages_completed"].append("video_prompt")
 
-            # Prompt seçimi - Sora veya Veo
-            video_prompt = reels_prompt_result.get("video_prompt_sora") or reels_prompt_result.get("video_prompt_veo", "")
+            # Model'e göre doğru prompt'u seç
+            def get_video_prompt_for_model(prompt_result: dict, model: str) -> str:
+                """Model'e göre optimize edilmiş prompt seç"""
+                if model and model.startswith("kling"):
+                    return prompt_result.get("video_prompt_kling") or prompt_result.get("video_prompt_sora", "")
+                elif model and (model == "veo3" or model.startswith("veo")):
+                    return prompt_result.get("video_prompt_veo") or prompt_result.get("video_prompt_sora", "")
+                else:  # Sora veya default
+                    return prompt_result.get("video_prompt_sora") or prompt_result.get("video_prompt_veo", "")
+
             recommended_model = reels_prompt_result.get("recommended_model", "veo3")
+            # force_model varsa onu kullan, yoksa recommended_model
+            model_to_use = force_model or recommended_model
+            video_prompt = get_video_prompt_for_model(reels_prompt_result, model_to_use)
             complexity = reels_prompt_result.get("complexity", "medium")
 
             # Video prompt'u kaydet
@@ -1029,9 +1040,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
 
             from app.sora_helper import generate_video_smart
 
-            # Force model veya recommended
-            model_to_use = force_model or recommended_model
-
+            # model_to_use zaten yukarıda tanımlandı (prompt seçimi için)
             video_result = await generate_video_smart(
                 prompt=video_prompt,
                 topic=topic,

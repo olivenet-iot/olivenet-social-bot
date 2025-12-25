@@ -204,7 +204,7 @@ async def generate_video_smart(
     force_model: str = None,
     duration: int = 8
 ) -> Dict[str, Any]:
-    """Akilli video uretimi - Sora → Veo fallback"""
+    """Akilli video uretimi - Kling / Sora / Veo secimi"""
 
     if force_model:
         model = force_model
@@ -214,8 +214,43 @@ async def generate_video_smart(
         model = complexity.get("model", "veo3")
         duration = complexity.get("duration", duration)
 
+    # Model isim normalizasyonu (UI'dan gelen kısa isimler)
+    model_aliases = {
+        "sora2": "sora-2",
+        "sora2-pro": "sora-2-pro",
+        "veo": "veo3"
+    }
+    if model in model_aliases:
+        model = model_aliases[model]
+
     print(f"[VIDEO] 🎯 Complexity: {complexity.get('complexity')}")
     print(f"[VIDEO] Model: {model}")
+
+    # Kling modelleri icin fal.ai kullan
+    if model and model.startswith("kling"):
+        print(f"[VIDEO] → Kling AI ({model}) kullaniliyor...")
+        try:
+            from app.fal_helper import FalVideoGenerator
+            result = await FalVideoGenerator.generate_video(
+                prompt=prompt,
+                model=model,
+                duration=10,  # Kling 10 saniyeye kadar destekliyor
+                aspect_ratio="9:16"
+            )
+            if result.get("success"):
+                return result
+            # Kling basarisiz - Veo'ya fallback
+            print(f"[VIDEO] ⚠️ Kling basarisiz: {result.get('error')}, Veo'ya geciliyor...")
+        except Exception as e:
+            print(f"[VIDEO] ⚠️ Kling hatasi: {e}, Veo'ya geciliyor...")
+
+        # Fallback to Veo
+        from app.veo_helper import generate_video_veo3
+        result = await generate_video_veo3(prompt, aspect_ratio="9:16", duration_seconds=duration)
+        if result.get("success"):
+            result["fallback_from"] = model
+            result["model_used"] = result.get("model", "veo-3")
+        return result
 
     # Veo secildiyse direkt Veo'ya git
     if model == "veo3" or model.startswith("veo"):
