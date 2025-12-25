@@ -538,7 +538,10 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 InlineKeyboardButton("🎥 Sora 2", callback_data="video_model:sora2"),
             ],
             [
-                InlineKeyboardButton("⚡ Kling Pro (10s)", callback_data="video_model:kling_pro"),
+                InlineKeyboardButton("⚡ Kling 2.5", callback_data="video_model:kling_pro"),
+                InlineKeyboardButton("🔊 Kling 2.6", callback_data="video_model:kling_26_pro"),
+            ],
+            [
                 InlineKeyboardButton("💎 Kling Master", callback_data="video_model:kling_master"),
             ],
             [
@@ -549,7 +552,8 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "🎬 *Video Modeli Seçin*\n\n"
             "• *Veo 3*: Google, 8s, yüksek kalite\n"
             "• *Sora 2*: OpenAI, 8s, yaratıcı\n"
-            "• *Kling Pro*: fal.ai, 10s, hızlı\n"
+            "• *Kling 2.5*: fal.ai, 10s, hızlı\n"
+            "• *Kling 2.6*: fal.ai, 10s, 🔊 ambient sesli\n"
             "• *Kling Master*: fal.ai, 10s, en iyi kalite\n\n"
             "💡 Tüm modeller 9:16 dikey format kullanır.",
             parse_mode="Markdown",
@@ -563,7 +567,8 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         model_names = {
             "veo3": "Veo 3 (Google)",
             "sora2": "Sora 2 (OpenAI)",
-            "kling_pro": "Kling Pro (fal.ai)",
+            "kling_pro": "Kling 2.5 (fal.ai)",
+            "kling_26_pro": "Kling 2.6 Pro (fal.ai)",
             "kling_master": "Kling Master (fal.ai)"
         }
         model_name = model_names.get(model, model)

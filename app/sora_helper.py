@@ -231,11 +231,14 @@ async def generate_video_smart(
         print(f"[VIDEO] → Kling AI ({model}) kullaniliyor...")
         try:
             from app.fal_helper import FalVideoGenerator
+            # Kling 2.6 için audio aktif
+            generate_audio = True if model == "kling_26_pro" else None
             result = await FalVideoGenerator.generate_video(
                 prompt=prompt,
                 model=model,
                 duration=10,  # Kling 10 saniyeye kadar destekliyor
-                aspect_ratio="9:16"
+                aspect_ratio="9:16",
+                generate_audio=generate_audio
             )
             if result.get("success"):
                 return result

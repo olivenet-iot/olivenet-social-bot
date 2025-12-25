@@ -42,6 +42,13 @@ class FalVideoGenerator:
             "image_to_video": "fal-ai/kling-video/v2.1/master/image-to-video",
             "name": "Kling 2.1 Master",
             "max_duration": 10
+        },
+        "kling_26_pro": {
+            "text_to_video": "fal-ai/kling-video/v2.6/pro/text-to-video",
+            "image_to_video": "fal-ai/kling-video/v2.6/pro/image-to-video",
+            "name": "Kling 2.6 Pro",
+            "max_duration": 10,
+            "has_audio": True
         }
     }
 
@@ -54,17 +61,19 @@ class FalVideoGenerator:
         model: str = "kling_pro",
         duration: int = 5,
         aspect_ratio: str = "9:16",
-        image_url: Optional[str] = None
+        image_url: Optional[str] = None,
+        generate_audio: Optional[bool] = None
     ) -> Dict[str, Any]:
         """
         fal.ai uzerinden Kling AI ile video uret.
 
         Args:
             prompt: Video icerigi icin metin aciklamasi
-            model: kling_standard, kling_pro veya kling_master
+            model: kling_standard, kling_pro, kling_master veya kling_26_pro
             duration: Video suresi (5 veya 10 saniye)
             aspect_ratio: Video orani ("9:16" dikey, "16:9" yatay, "1:1" kare)
             image_url: Opsiyonel - image-to-video icin kaynak gorsel URL
+            generate_audio: Opsiyonel - Kling 2.6+ icin ambient ses uretimi (varsayilan True)
 
         Returns:
             {
@@ -105,6 +114,12 @@ class FalVideoGenerator:
                 "negative_prompt": "blur, distort, low quality, static, frozen, text, watermark"
             }
 
+        # Audio desteği (Kling 2.6+)
+        if model_config.get("has_audio"):
+            if generate_audio is None:
+                generate_audio = True  # 2.6 için varsayılan açık
+            request_body["generate_audio"] = generate_audio
+
         logger.info(f"fal.ai video uretimi basliyor: {model_config['name']}, {duration}s, {aspect_ratio}")
 
         try:
@@ -127,7 +142,8 @@ class FalVideoGenerator:
                 "duration": duration,
                 "model": model_config["name"],
                 "model_used": f"kling-{model.replace('kling_', '')}",
-                "provider": "fal.ai/kling"
+                "provider": "fal.ai/kling",
+                "has_audio": model_config.get("has_audio", False)
             }
 
         except Exception as e:
