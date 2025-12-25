@@ -671,8 +671,9 @@ Sadece JSON döndür.
     "video_prompt_veo": "VEO 3 timestamp formatında İngilizce prompt ([00:00-00:02] format)",
     "video_prompt_kling": "KLING formatında kısa İngilizce prompt (Subject + Movement + Scene + Camera + Lighting + Atmosphere, virgülle ayrılmış, max 200 karakter)",
     "video_prompt_hailuo": "HAILUO formatında dinamik İngilizce prompt (Camera Motion + Subject + Action + Scene + Lighting + Style, aksiyon odaklı, max 200 karakter)",
+    "video_prompt_wan": "WAN formatında multi-shot sinematik prompt (Global style + Shot timing brackets [0-5s] + Camera action, max 600 karakter)",
     "complexity": "low|medium|high",
-    "recommended_model": "veo3|sora-2|sora-2-pro|kling_pro|hailuo_pro",
+    "recommended_model": "veo3|sora-2|sora-2-pro|kling_pro|hailuo_pro|wan_26",
     "recommended_duration": 5,
     "hook_description": "İlk 2 saniyede ne görünecek (Türkçe)",
     "caption_ig": "Instagram Reels caption (Türkçe, max 50 kelime, hook+değer+CTA formatı, emoji'li)",
@@ -683,7 +684,7 @@ Sadece JSON döndür.
 ```
 
 ### ÖNEMLİ KURALLAR:
-1. video_prompt_sora, video_prompt_veo, video_prompt_kling ve video_prompt_hailuo İNGİLİZCE olmalı
+1. video_prompt_sora, video_prompt_veo, video_prompt_kling, video_prompt_hailuo ve video_prompt_wan İNGİLİZCE olmalı
 2. 9:16 dikey format belirt (720x1280)
 3. Süre 5-6 saniye hedefle (Kling için 10 saniyeye kadar olabilir)
 4. İlk 2 saniye HOOK olmalı - dikkat çekici
@@ -706,6 +707,14 @@ Sadece JSON döndür.
 - Max 200 karakter
 - 6 saniyelik içerik için optimize et
 - Örnek: "Tracking shot, technician running through factory, sparks flying, industrial lighting, energetic cinematic style."
+
+### WAN FORMAT KURALLARI (video_prompt_wan):
+- İlk cümlede global stil (Photoreal, 4K, cinematic lighting)
+- Multi-shot için timing bracket: [0-5s], [5-10s], [10-15s]
+- Kamera hareketleri: push, pull, pan, track, orbit
+- Max 600 karakter
+- 15 saniyeye kadar içerik
+- Örnek: "Industrial facility. Cinematic, 4K. Shot 1 [0-5s] Wide establishing shot of factory exterior at dawn. Shot 2 [5-10s] Camera tracks through control room, engineers at dashboards. Shot 3 [10-15s] Close-up of IoT sensor with pulsing LED."
 
 ### COMPLEXITY KURALLARI:
 - LOW: Tek sahne, statik/basit hareket → veo3 veya kling_pro

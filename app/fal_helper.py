@@ -60,6 +60,12 @@ class FalVideoGenerator:
             "text_to_video": "fal-ai/minimax/hailuo-2.3/pro/text-to-video",
             "name": "Hailuo 02 Pro",
             "max_duration": 6
+        },
+        # Wan 2.6
+        "wan_26": {
+            "text_to_video": "wan/v2.6/text-to-video",
+            "name": "Wan 2.6",
+            "max_duration": 15
         }
     }
 
@@ -80,7 +86,7 @@ class FalVideoGenerator:
 
         Args:
             prompt: Video icerigi icin metin aciklamasi
-            model: kling_standard, kling_pro, kling_master, kling_26_pro, hailuo_standard veya hailuo_pro
+            model: kling_standard, kling_pro, kling_master, kling_26_pro, hailuo_standard, hailuo_pro veya wan_26
             duration: Video suresi (5 veya 10 saniye)
             aspect_ratio: Video orani ("9:16" dikey, "16:9" yatay, "1:1" kare)
             image_url: Opsiyonel - image-to-video icin kaynak gorsel URL
