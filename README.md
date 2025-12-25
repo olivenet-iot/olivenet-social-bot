@@ -1,80 +1,168 @@
-# Olivenet Social Bot 🤖
+# Olivenet Social Bot
 
-Multi-agent AI sistemi ile otomatik sosyal medya içerik üretimi ve paylaşımı.
+Multi-agent AI sistemi ile Instagram icin otomatik icerik uretimi ve yayinlama.
 
-## 🎯 Özellikler
+## Ozellikler
 
-### 🎬 Video Üretimi (Reels)
-| Model | Kullanım | Süre |
-|-------|----------|------|
-| **Sora 2** | Premium kalite (öncelikli) | ~2 dk |
-| **Veo 3.1** | Fallback | ~1 dk |
+- **6 AI Agent** - Orchestrator, Planner, Creator, Reviewer, Publisher, Analytics
+- **11 Infographic Template** - Carousel ve post icin HTML sablonlar
+- **Video Uretimi** - Sora 2 + Veo 3.1 (fallback)
+- **Gorsel Uretimi** - FLUX.2 Pro
+- **3 Icerik Turu** - Post, Carousel, Reels
+- **Telegram Kontrol Paneli** - Onay akisi ve yonetim
+- **Performance-Aware** - Performans verisine dayali icerik onerisi
+- **A/B Testing** - Hook ve ton karsilastirmasi
 
-- Otomatik format dönüşümü (H.264 + AAC)
-- Cloudinary CDN entegrasyonu
-- Instagram Reels + Facebook Video
+---
 
-### 🤖 AI Agents
-| Agent | Görev |
-|-------|-------|
-| **Planner** | Konu seçimi, haftalık planlama |
-| **Creator** | İçerik üretimi (caption + video prompt) |
-| **Reviewer** | Kalite kontrolü (1-10 puan) |
-| **Publisher** | Çoklu platform yayınlama |
+## Mimari
 
-### 📱 Platformlar
-- **Instagram**: Post + Reels (12/hafta)
-- **Facebook**: Video + Post (3/hafta)
-- **Telegram**: Kontrol paneli
-
-## 📊 İçerik Kategorileri (10 adet)
-
-| # | Emoji | Kategori |
-|---|-------|----------|
-| 1 | 🌾 | Tarım & Sera Otomasyonu |
-| 2 | ⚡ | Enerji İzleme & Yönetim |
-| 3 | 🔧 | Kestirimci Bakım |
-| 4 | 📡 | LoRaWAN Teknolojisi |
-| 5 | 🤖 | Edge AI & Yapay Zeka |
-| 6 | 🏭 | Endüstriyel IoT |
-| 7 | 📊 | Veri Yönetimi & Analitik |
-| 8 | 📱 | IoT Platformları (ThingsBoard) |
-| 9 | 🔐 | IoT Güvenlik |
-| 10 | 🌍 | Sürdürülebilirlik |
-
-## 📅 Haftalık Program
 ```
-Pazartesi:   10:00 (IG+FB) + 19:00 (IG)
-Salı:        10:00 (IG)    + 19:00 (IG) 🎬 REELS
-Çarşamba:    10:00 (IG+FB) + 19:00 (IG)
-Perşembe:    10:00 (IG)    + 19:00 (IG) 🎬 REELS
-Cuma:        10:00 (IG+FB) + 19:00 (IG)
-Cumartesi:   14:00 (IG) 🎬 REELS
-Pazar:       14:00 (IG)
+                    ┌──────────────┐
+                    │ Orchestrator │ Pipeline koordinasyonu
+                    └──────┬───────┘
+                           │
+         ┌─────────────────┼─────────────────┐
+         ▼                 ▼                 ▼
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│   Planner   │───▶│   Creator   │───▶│  Reviewer   │
+│ Konu secimi │    │ Icerik uret │    │ Kalite ctrl │
+└─────────────┘    └─────────────┘    └──────┬──────┘
+                                             │
+                                             ▼
+                   ┌─────────────┐    ┌─────────────┐
+                   │  Analytics  │◀───│  Publisher  │
+                   │ Perf. takip │    │ IG yayinla  │
+                   └─────────────┘    └─────────────┘
 ```
 
-**Özet:** 12 içerik/hafta (9 post + 3 reels)
+---
 
-## 🔧 Teknoloji Stack
+## AI Agents
 
-### Backend
+| Agent | Gorev | Dosya |
+|-------|-------|-------|
+| **Orchestrator** | Pipeline koordinasyonu, haftalik plan, strateji | `orchestrator.py` |
+| **Planner** | Konu secimi, performans-aware oneri | `planner.py` |
+| **Creator** | Caption + gorsel/video prompt uretimi | `creator.py` |
+| **Reviewer** | Kalite kontrol (0-10 puan), A/B karsilastirma | `reviewer.py` |
+| **Publisher** | Instagram yayinlama (post, carousel, reels) | `publisher.py` |
+| **Analytics** | Performans takip, viral score hesaplama | `analytics.py` |
+
+---
+
+## Icerik Turleri
+
+| Tur | Aciklama | Gorsel |
+|-----|----------|--------|
+| **Post** | Tek gorsel + caption | FLUX.2 Pro |
+| **Carousel** | 5+ slide infographic | HTML template |
+| **Reels** | 8s AI video | Sora 2 / Veo 3.1 |
+
+---
+
+## Template Sistemi
+
+11 HTML infographic template (1080x1080px):
+
+| Template | Kullanim Alani |
+|----------|----------------|
+| `dashboard-infographic` | Metrik/panel gorunumu |
+| `feature-grid-infographic` | Ozellik grid layout |
+| `timeline-infographic` | Zaman cizelgesi |
+| `before-after-infographic` | Oncesi/sonrasi donusum |
+| `comparison-infographic` | Yan yana karsilastirma |
+| `quote-infographic` | Alinti/soz |
+| `billboard-infographic` | Buyuk baslik, dikkat cekici |
+| `big-number-infographic` | Buyuk istatistik (%75 gibi) |
+| `process-infographic` | Adim adim surec |
+| `checklist-infographic` | Kontrol listesi |
+| `visual-template` | Genel amacli |
+
+---
+
+## Proje Yapisi
+
+```
+olivenet-social-bot/
+├── app/
+│   ├── agents/              # 6 AI Agent
+│   │   ├── base_agent.py    # Temel agent sinifi
+│   │   ├── orchestrator.py  # Pipeline koordinasyonu
+│   │   ├── planner.py       # Konu secimi
+│   │   ├── creator.py       # Icerik uretimi
+│   │   ├── reviewer.py      # Kalite kontrol
+│   │   ├── publisher.py     # Instagram yayinlama
+│   │   └── analytics.py     # Performans takip
+│   │
+│   ├── scheduler/           # Zamanlama
+│   │   └── pipeline.py      # ContentPipeline sinifi
+│   │
+│   ├── database/            # Veri katmani
+│   │   ├── models.py        # SQLite tablo tanimlari
+│   │   └── crud.py          # CRUD operasyonlari
+│   │
+│   ├── validators/          # Dogrulama
+│   │   └── text_validator.py
+│   │
+│   ├── utils/               # Yardimci
+│   │   └── logger.py
+│   │
+│   ├── claude_helper.py     # Claude CLI wrapper
+│   ├── flux_helper.py       # FLUX.2 Pro API
+│   ├── sora_helper.py       # OpenAI Sora API
+│   ├── veo_helper.py        # Google Veo API
+│   ├── instagram_helper.py  # Instagram Graph API
+│   ├── insights_helper.py   # Instagram Analytics
+│   ├── cloudinary_helper.py # Video CDN
+│   ├── renderer.py          # HTML -> PNG (Playwright)
+│   ├── telegram_pipeline.py # Telegram bot
+│   └── config.py            # Konfigürasyon
+│
+├── context/                 # AI Context dosyalari
+│   ├── company-profile.md   # Sirket bilgisi
+│   ├── content-strategy.md  # Icerik stratejisi
+│   ├── topics.md            # 10 kategori konu havuzu
+│   ├── schedule-strategy.md # Zamanlama kurallari
+│   ├── visual-guidelines.md # Tasarim rehberi
+│   └── agent-personas/      # Agent kisilikleri
+│
+├── templates/               # 11 HTML template
+│
+├── .claude/skills/          # 11 Claude Code skill
+│   ├── database-patterns/
+│   ├── instagram-api/
+│   ├── multi-agent-architecture/
+│   ├── olivenet-brand/
+│   ├── telegram-bot/
+│   ├── video-generation/
+│   ├── flux-image/
+│   ├── cloudinary-cdn/
+│   ├── template-system/
+│   ├── helper-reference/
+│   └── recent-changes/
+│
+├── data/
+│   └── content.db           # SQLite veritabani
+│
+├── outputs/                 # Uretilen medya
+├── logs/                    # Log dosyalari
+├── main.py                  # Ana giris noktasi
+└── requirements.txt         # Python bagimliliklari
+```
+
+---
+
+## Kurulum
+
+### Gereksinimler
+
 - Python 3.10+
-- SQLite (içerik veritabanı)
-- APScheduler (zamanlama)
+- ffmpeg (video donusumu)
+- Playwright (HTML rendering)
 
-### AI & Video
-- **Claude AI** (Anthropic) - İçerik üretimi
-- **Sora 2** (OpenAI) - Video üretimi
-- **Veo 3.1** (Google) - Video fallback
-- **FLUX** - Görsel üretimi
+### Adimlar
 
-### Entegrasyonlar
-- Facebook Graph API
-- Instagram Graph API
-- Telegram Bot API
-- Cloudinary (Video CDN)
-
-## 🚀 Kurulum
 ```bash
 # Clone
 git clone https://github.com/olivenet-iot/olivenet-social-bot.git
@@ -87,7 +175,10 @@ source venv/bin/activate
 # Dependencies
 pip install -r requirements.txt
 
-# ffmpeg (video dönüşümü için)
+# Playwright browser
+playwright install chromium
+
+# ffmpeg
 sudo apt install ffmpeg
 
 # Environment
@@ -98,136 +189,213 @@ nano .env  # API key'leri ekle
 python main.py
 ```
 
-## 📁 Proje Yapısı
+---
+
+## Konfigürasyon
+
+### Gerekli API Keys
+
+| Servis | Env Degiskeni | Aciklama |
+|--------|---------------|----------|
+| **Telegram** | `TELEGRAM_BOT_TOKEN` | Bot API token |
+| | `TELEGRAM_ADMIN_CHAT_ID` | Admin chat ID |
+| **Instagram** | `INSTAGRAM_ACCESS_TOKEN` | Graph API token |
+| | `INSTAGRAM_USER_ID` | IG User ID |
+| **OpenAI** | `OPENAI_API_KEY` | Sora video icin |
+| **Google** | `GEMINI_API_KEY` | Veo video icin |
+| **FLUX** | `BFL_API_KEY` | Gorsel uretimi |
+| **Cloudinary** | `CLOUDINARY_CLOUD_NAME` | Video CDN |
+| | `CLOUDINARY_API_KEY` | |
+| | `CLOUDINARY_API_SECRET` | |
+| **imgbb** | `IMGBB_API_KEY` | Gorsel CDN |
+
+---
+
+## Telegram Komutlari
+
+| Komut | Aciklama |
+|-------|----------|
+| `/start` | Ana menu |
+| `/status` | Sistem durumu |
+| `/manual` | Manuel icerik olustur |
+| `/stats` | Analytics ozeti |
+| `/next` | Siradaki planlanan icerik |
+| `/schedule` | Haftalik takvim |
+| `/sync` | Instagram insights senkronizasyonu |
+| `/prompts` | Prompt performans raporu |
+
+### Ana Menu Butonlari
+
 ```
-olivenet-social-bot/
-├── app/
-│   ├── agents/              # AI Agents
-│   │   ├── planner.py       # Konu planlama
-│   │   ├── creator.py       # İçerik üretimi
-│   │   ├── reviewer.py      # Kalite kontrol
-│   │   └── publisher.py     # Yayınlama
-│   ├── scheduler/           # Zamanlama
-│   │   └── pipeline.py      # İçerik pipeline
-│   ├── sora_helper.py       # OpenAI Sora API
-│   ├── veo_helper.py        # Google Veo API
-│   ├── cloudinary_helper.py # Video CDN
-│   ├── instagram_helper.py  # IG Reels API
-│   ├── facebook_helper.py   # FB Video API
-│   └── telegram_pipeline.py # Telegram kontrol
-├── context/                 # AI Context dosyaları
-│   ├── company-profile.md   # Şirket bilgisi
-│   ├── content-strategy.md  # İçerik stratejisi
-│   ├── topics.md            # Konu havuzu (10 kategori)
-│   ├── schedule-strategy.md # Zamanlama kuralları
-│   └── reels-prompts.md     # Video prompt şablonları
-├── data/
-│   └── content.db           # SQLite veritabanı
-├── outputs/                 # Üretilen videolar
-├── main.py                  # Ana giriş noktası
-└── requirements.txt
+[Gunluk Icerik] [Reels]
+[Carousel] [Otonom]
+[Icerik Plani] [Zamanlama]
+[Siradaki] [Hizli Durum]
+[Analytics] [Strateji]
+[Sync] [Yardim]
 ```
 
-## 🎬 Reels Pipeline
+---
+
+## Pipeline Akisi
+
+### Gunluk Icerik (Manuel Onay)
+
 ```
-┌─────────────┐
-│  Planner    │ Konu seç (topics.md'den)
-└──────┬──────┘
-       ▼
-┌─────────────┐
-│  Creator    │ Caption + Video prompt üret
-└──────┬──────┘
-       ▼
-┌─────────────┐
-│  Sora 2     │ Video üret (~2 dk)
-└──────┬──────┘
-       │ ❌ Fail?
-       ▼
-┌─────────────┐
-│  Veo 3.1    │ Fallback video (~1 dk)
-└──────┬──────┘
-       ▼
-┌─────────────┐
-│  Reviewer   │ Kalite kontrol (min 6.0/10)
-└──────┬──────┘
-       ▼
-┌─────────────┐
-│  Cloudinary │ CDN'e yükle
-└──────┬──────┘
-       ▼
-┌─────────────┐
-│  Publisher  │ FB + IG Reels yayınla
-└─────────────┘
+1. Planner     → Konu oner
+   ↓ [Telegram: Onayla/Degistir]
+2. Creator     → Caption + gorsel prompt
+   ↓ [Telegram: Onayla/Yeniden Yaz]
+3. FLUX/Veo    → Gorsel/video uret
+   ↓ [Telegram: Onayla/Yeniden Uret]
+4. Reviewer    → Kalite kontrol (min 7.0/10)
+   ↓ [Telegram: Yayinla/Zamanla/Revize]
+5. Publisher   → Instagram'a yayinla
 ```
 
-## ⚙️ Servis Yönetimi
+### Otonom Mod
+
+```
+Planner → Creator → Visual → Reviewer → (score >= 7) → Publisher
+```
+
+### Carousel Pipeline
+
+```
+1. Konu sec
+2. 5+ slide HTML uret
+3. Her slide'i PNG'ye render et
+4. CDN'e yukle
+5. Instagram carousel olarak yayinla
+```
+
+---
+
+## Icerik Kategorileri
+
+| # | Kategori | Aciklama |
+|---|----------|----------|
+| 1 | Tarim & Sera Otomasyonu | Akilli tarim cozumleri |
+| 2 | Enerji Izleme & Yonetim | Enerji verimliligi |
+| 3 | Kestirimci Bakim | Predictive maintenance |
+| 4 | LoRaWAN Teknolojisi | Uzun menzil IoT |
+| 5 | Edge AI & Yapay Zeka | Ucta islem |
+| 6 | Endustriyel IoT | Fabrika otomasyonu |
+| 7 | Veri Yonetimi & Analitik | Data insights |
+| 8 | IoT Platformlari | ThingsBoard vb. |
+| 9 | IoT Guvenlik | Siber guvenlik |
+| 10 | Surdurulebilirlik | Yesil teknoloji |
+
+---
+
+## Haftalik Program
+
+```
+Pazartesi:   10:00 (Post) + 19:00 (Post)
+Sali:        10:00 (Post) + 19:00 (Reels)
+Carsamba:    10:00 (Post) + 19:00 (Post)
+Persembe:    10:00 (Post) + 19:00 (Reels)
+Cuma:        10:00 (Post) + 19:00 (Post)
+Cumartesi:   14:00 (Reels)
+Pazar:       14:00 (Post)
+```
+
+**Haftalik:** 12 icerik (7 Reels + 2 Carousel + 3 Post)
+
+---
+
+## Veritabani
+
+SQLite ile 9 tablo:
+
+| Tablo | Amac |
+|-------|------|
+| `posts` | Tum icerikler |
+| `analytics` | Post performans metrikleri |
+| `content_calendar` | Planlanan icerikler |
+| `strategy` | AI ogrenmis stratejiler |
+| `agent_logs` | Agent aktiviteleri |
+| `hook_performance` | Hook tipi performanslari |
+| `ab_test_results` | A/B test sonuclari |
+| `approval_logs` | Onay audit trail |
+| `prompt_history` | Prompt performans takibi |
+
+### Viral Score Formulu
+
+```python
+viral_score = (saves * 2) + (shares * 3) + engagement + (non_follower_reach * 0.015)
+```
+
+---
+
+## Skills Sistemi
+
+Claude Code icin 11 skill dosyasi (`.claude/skills/`):
+
+| Skill | Aciklama |
+|-------|----------|
+| `database-patterns` | SQLite CRUD patterns |
+| `instagram-api` | Graph API v21.0 |
+| `multi-agent-architecture` | Agent ve pipeline yapisi |
+| `olivenet-brand` | Marka sesi, hook'lar |
+| `telegram-bot` | Bot komutlari |
+| `video-generation` | Sora & Veo API |
+| `flux-image` | FLUX.2 Pro gorsel |
+| `cloudinary-cdn` | Video CDN |
+| `template-system` | HTML template'ler |
+| `helper-reference` | Tum helper fonksiyonlari |
+| `recent-changes` | Son degisiklikler |
+
+---
+
+## Servis Yonetimi
+
 ```bash
-# Systemd service
+# Systemd
 sudo systemctl start olivenet-social
 sudo systemctl stop olivenet-social
 sudo systemctl restart olivenet-social
 sudo systemctl status olivenet-social
 
-# Logları izle
+# Loglar
 sudo journalctl -u olivenet-social -f
+
+# Manuel calistirma
+cd /opt/olivenet-social-bot
+source venv/bin/activate
+python main.py
 ```
 
-## 📊 Performans Metrikleri
+---
 
-| Metrik | Değer |
-|--------|-------|
-| Sora video üretimi | ~2 dakika |
-| Veo video üretimi | ~1 dakika |
-| Instagram upload | ~30 saniye |
-| Tam pipeline | ~4-5 dakika |
-| Haftalık içerik | 12 adet |
-| Reels/hafta | 3 adet |
+## Son Guncellemeler
 
-## 🔐 Gerekli API Keys
-```env
-# AI
-ANTHROPIC_API_KEY=sk-ant-xxx
-OPENAI_API_KEY=sk-proj-xxx
-GEMINI_API_KEY=xxx
+| Tarih | Degisiklik |
+|-------|------------|
+| 2024-12 | Carousel iyilestirmeleri + 5 yeni template |
+| 2024-12 | KAYDET sorunu fix (4 katmanli savunma) |
+| 2024-12 | Prompt Tracking sistemi |
+| 2024-12 | A/B Testing entegrasyonu |
+| 2024-12 | Facebook devre disi birakildi |
+| 2024-12 | Skills sistemi eklendi (11 skill) |
 
-# Social Media
-FACEBOOK_ACCESS_TOKEN=xxx
-FACEBOOK_PAGE_ID=xxx
-INSTAGRAM_ACCOUNT_ID=xxx
-TELEGRAM_BOT_TOKEN=xxx
-TELEGRAM_ADMIN_CHAT_ID=xxx
+---
 
-# CDN
-CLOUDINARY_CLOUD_NAME=xxx
-CLOUDINARY_API_KEY=xxx
-CLOUDINARY_API_SECRET=xxx
+## Hakkinda
 
-# Image
-IMGBB_API_KEY=xxx
-FLUX_API_KEY=xxx
-```
+**Olivenet Ltd.** - KKTC merkezli Endustriyel IoT sirketi
 
-## 📝 Telegram Komutları
+- Akilli Tarim & Sera Otomasyonu
+- Enerji Izleme Sistemleri
+- LoRaWAN Cozumleri
+- Kestirimci Bakim
 
-- `/start` - Ana menü
-- `📝 Post Oluştur` - Manuel post
-- `🎬 Reels Oluştur` - Manuel reels
-- `📊 Durum` - Sistem durumu
-- `📅 Haftalık Plan` - Program görüntüle
+---
 
-## 🏢 Hakkında
-
-**Olivenet** - KKTC merkezli Endüstriyel IoT şirketi
-
-- 🌾 Tarım & Sera Otomasyonu
-- ⚡ Enerji İzleme Sistemleri
-- 📡 LoRaWAN Çözümleri
-- 🔧 Kestirimci Bakım
-
-## 📄 Lisans
+## Lisans
 
 MIT License
 
 ---
 
-Made with ❤️ by Olivenet
+Made with love by Olivenet
