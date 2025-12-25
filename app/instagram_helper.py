@@ -241,7 +241,8 @@ async def create_media_container(
         data["is_carousel_item"] = "true"
 
     try:
-        async with aiohttp.ClientSession() as session:
+        timeout = aiohttp.ClientTimeout(total=30)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.post(url, data=data) as response:
                 result = await response.json()
 
@@ -254,6 +255,9 @@ async def create_media_container(
                 print(f"[INSTAGRAM] Media Container oluşturuldu: {container_id}")
                 return container_id
 
+    except asyncio.TimeoutError:
+        print("[INSTAGRAM] Container creation timeout (30s)")
+        return None
     except Exception as e:
         print(f"[INSTAGRAM] Container creation error: {e}")
         return None
@@ -288,7 +292,8 @@ async def create_carousel_container(
     }
 
     try:
-        async with aiohttp.ClientSession() as session:
+        timeout = aiohttp.ClientTimeout(total=30)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.post(url, data=data) as response:
                 result = await response.json()
 
@@ -300,6 +305,9 @@ async def create_carousel_container(
                 print(f"[INSTAGRAM] Carousel Container: {container_id}")
                 return container_id
 
+    except asyncio.TimeoutError:
+        print("[INSTAGRAM] Carousel container timeout (30s)")
+        return None
     except Exception as e:
         print(f"[INSTAGRAM] Carousel container error: {e}")
         return None
@@ -473,21 +481,36 @@ async def post_carousel_to_instagram(
 
     print(f"[INSTAGRAM] Carousel paylaşılıyor ({len(image_urls)} görsel)...")
 
-    # Adım 1: Her görsel için child container oluştur
+    # Adım 1: Her görsel için child container oluştur (retry ile)
+    MAX_RETRIES = 3
+    RETRY_DELAY = 3  # saniye (exponential: 3, 6, 9)
+
     children_ids = []
     for i, image_url in enumerate(image_urls):
         print(f"[INSTAGRAM] Carousel item {i+1}/{len(image_urls)} oluşturuluyor...")
-        container_id = await create_media_container(
-            image_url=image_url,
-            media_type="IMAGE",
-            is_carousel_item=True
-        )
+
+        container_id = None
+        for attempt in range(MAX_RETRIES):
+            container_id = await create_media_container(
+                image_url=image_url,
+                media_type="IMAGE",
+                is_carousel_item=True
+            )
+
+            if container_id:
+                break  # Başarılı
+
+            # Retry gerekli
+            if attempt < MAX_RETRIES - 1:
+                wait_time = RETRY_DELAY * (attempt + 1)
+                print(f"[INSTAGRAM] Item {i+1} retry {attempt + 1}/{MAX_RETRIES}, {wait_time}s bekleniyor...")
+                await asyncio.sleep(wait_time)
 
         if container_id:
             children_ids.append(container_id)
             await asyncio.sleep(2)  # Rate limit
         else:
-            print(f"[INSTAGRAM] Item {i+1} oluşturulamadı!")
+            print(f"[INSTAGRAM] Item {i+1} {MAX_RETRIES} denemede de oluşturulamadı!")
 
     if len(children_ids) < 2:
         return {"success": False, "error": "En az 2 carousel item gerekli"}

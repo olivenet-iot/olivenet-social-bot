@@ -12,10 +12,9 @@ from .models import get_connection
 
 def get_kktc_now() -> datetime:
     """
-    KKTC saatini al (UTC+2 - Kış saati / UTC+3 - Yaz saati)
-    Şu an yaz saati uygulanmıyor, UTC+2 kullanılıyor.
+    KKTC saatini al (UTC+3)
     """
-    return datetime.utcnow() + timedelta(hours=2)
+    return datetime.utcnow() + timedelta(hours=3)
 
 
 # ============ POSTS ============
@@ -1189,7 +1188,7 @@ def get_next_schedule_slot() -> Optional[Dict]:
     """
     Config'deki WEEKLY_SCHEDULE'dan sıradaki slot'u bul.
 
-    KKTC saatine göre (UTC+2) şu anki zamandan sonraki ilk slot.
+    KKTC saatine göre (UTC+3) şu anki zamandan sonraki ilk slot.
 
     Returns:
         {

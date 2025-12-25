@@ -680,36 +680,62 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             result["stages_completed"].append("visual_generation")
             self.log(f"[OTONOM] Görsel üretildi: {image_path or video_path}")
 
-            # ========== AŞAMA 4: Kalite Kontrol ==========
+            # ========== AŞAMA 4: Kalite Kontrol (Retry ile) ==========
             self.log("[OTONOM] Aşama 4: Kalite kontrol...")
             self.state = PipelineState.REVIEWING
 
-            review_result = await self.reviewer.execute({
-                "action": "review_post",
-                "post_text": content_result.get("post_text"),
-                "topic": topic_result.get("topic"),
-                "post_id": content_result.get("post_id")
-            })
+            MAX_REVIEW_RETRIES = 2
+            current_post_text = content_result.get("post_text")
 
-            self.current_data["review"] = review_result
+            for review_attempt in range(MAX_REVIEW_RETRIES):
+                review_result = await self.reviewer.execute({
+                    "action": "review_post",
+                    "post_text": current_post_text,
+                    "topic": topic_result.get("topic"),
+                    "post_id": content_result.get("post_id")
+                })
+
+                self.current_data["review"] = review_result
+                score = review_result.get("total_score", 0)
+                decision = review_result.get("decision") or "revise"
+                result["review_score"] = score
+
+                self.log(f"[OTONOM] Review ({review_attempt + 1}/{MAX_REVIEW_RETRIES}): {score}/10 - {decision}")
+
+                if score >= min_score:
+                    break  # Başarılı, döngüden çık
+
+                # Retry gerekli - feedback ile revize et
+                if review_attempt < MAX_REVIEW_RETRIES - 1:
+                    feedback = review_result.get("feedback", "İçeriği iyileştir")
+                    self.log(f"[OTONOM] Düşük puan, feedback ile revize ediliyor...")
+
+                    revision_result = await self.creator.execute({
+                        "action": "revise_post",
+                        "post_text": current_post_text,
+                        "feedback": feedback,
+                        "post_id": content_result.get("post_id")
+                    })
+
+                    if revision_result.get("revised_post"):
+                        current_post_text = revision_result.get("revised_post")
+                        content_result["post_text"] = current_post_text
+                        self.log(f"[OTONOM] İçerik revize edildi, tekrar review yapılıyor...")
+                    else:
+                        self.log(f"[OTONOM] Revizyon başarısız, eski içerikle devam...")
+
             result["stages_completed"].append("review")
 
-            score = review_result.get("total_score", 0)
-            decision = review_result.get("decision") or "revise"  # None-safe
-            result["review_score"] = score
-
-            self.log(f"[OTONOM] Review: {score}/10 - Karar: {decision}")
-
-            # Puan kontrolü
+            # Tüm denemeler sonrası puan kontrolü
             if score < min_score:
-                self.log(f"[OTONOM] Puan yetersiz ({score} < {min_score}), yayınlanmıyor!")
+                self.log(f"[OTONOM] {MAX_REVIEW_RETRIES} denemede de puan yetersiz ({score} < {min_score})")
                 await self.notify_telegram(
-                    message=f"⚠️ *OTONOM MOD* - Icerik Reddedildi\n\nPuan: {score}/10 (min: {min_score})\nKonu: {topic_result.get('topic')}\n\nIcerik kalite standardini karsilamiyor, yayinlanmadi.",
+                    message=f"⚠️ *OTONOM MOD* - Icerik Reddedildi\n\nPuan: {score}/10 (min: {min_score})\nKonu: {topic_result.get('topic')}\nDeneme: {MAX_REVIEW_RETRIES}\n\nIcerik kalite standardini karsilamiyor.",
                     data=review_result,
                     buttons=[]
                 )
                 self.state = PipelineState.IDLE
-                result["reason"] = f"Review puanı yetersiz: {score}/{min_score}"
+                result["reason"] = f"Review puanı yetersiz: {score}/{min_score} ({MAX_REVIEW_RETRIES} deneme)"
                 return result
 
             # ========== AŞAMA 5: Yayınla ==========

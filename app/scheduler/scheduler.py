@@ -9,8 +9,8 @@ from typing import Dict, Any, Callable, List
 import json
 
 def get_kktc_now():
-    """KKTC saatini al (UTC+2)"""
-    return datetime.utcnow() + timedelta(hours=2)
+    """KKTC saatini al (UTC+3)"""
+    return datetime.utcnow() + timedelta(hours=3)
 
 
 class ScheduledTask:
@@ -165,7 +165,7 @@ class ContentScheduler:
         now = get_kktc_now()
         print(f"[SCHEDULER] Starting... (check every {check_interval}s)")
         print(f"[SCHEDULER] Mode: FULL-AUTONOMOUS")
-        print(f"[SCHEDULER] KKTC Time (UTC+2): {now.strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"[SCHEDULER] KKTC Time (UTC+3): {now.strftime('%Y-%m-%d %H:%M:%S')}")
         self.running = True
         
         while self.running:
