@@ -383,7 +383,7 @@ python main.py
 
 ## Hakkinda
 
-**Olivenet Ltd.** - KKTC merkezli Endustriyel IoT sirketi
+**Olivenet** - KKTC merkezli Endustriyel IoT sirketi
 
 - Akilli Tarim & Sera Otomasyonu
 - Enerji Izleme Sistemleri
