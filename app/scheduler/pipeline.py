@@ -1007,7 +1007,9 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             # Model'e göre doğru prompt'u seç
             def get_video_prompt_for_model(prompt_result: dict, model: str) -> str:
                 """Model'e göre optimize edilmiş prompt seç"""
-                if model and model.startswith("kling"):
+                if model and model.startswith("hailuo"):
+                    return prompt_result.get("video_prompt_hailuo") or prompt_result.get("video_prompt_kling", "")
+                elif model and model.startswith("kling"):
                     return prompt_result.get("video_prompt_kling") or prompt_result.get("video_prompt_sora", "")
                 elif model and (model == "veo3" or model.startswith("veo")):
                     return prompt_result.get("video_prompt_veo") or prompt_result.get("video_prompt_sora", "")

@@ -542,6 +542,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 InlineKeyboardButton("🔊 Kling 2.6", callback_data="video_model:kling_26_pro"),
             ],
             [
+                InlineKeyboardButton("🌀 Hailuo Pro", callback_data="video_model:hailuo_pro"),
                 InlineKeyboardButton("💎 Kling Master", callback_data="video_model:kling_master"),
             ],
             [
@@ -554,6 +555,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "• *Sora 2*: OpenAI, 8s, yaratıcı\n"
             "• *Kling 2.5*: fal.ai, 10s, hızlı\n"
             "• *Kling 2.6*: fal.ai, 10s, 🔊 ambient sesli\n"
+            "• *Hailuo Pro*: 🌀 Dinamik hareketler, 6s\n"
             "• *Kling Master*: fal.ai, 10s, en iyi kalite\n\n"
             "💡 Tüm modeller 9:16 dikey format kullanır.",
             parse_mode="Markdown",
@@ -569,6 +571,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "sora2": "Sora 2 (OpenAI)",
             "kling_pro": "Kling 2.5 (fal.ai)",
             "kling_26_pro": "Kling 2.6 Pro (fal.ai)",
+            "hailuo_pro": "Hailuo 02 Pro (fal.ai)",
             "kling_master": "Kling Master (fal.ai)"
         }
         model_name = model_names.get(model, model)

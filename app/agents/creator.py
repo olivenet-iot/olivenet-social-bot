@@ -670,8 +670,9 @@ Sadece JSON döndür.
     "video_prompt_sora": "SORA 2 formatında detaylı İngilizce prompt (sahne + cinematography + lighting + actions + sound)",
     "video_prompt_veo": "VEO 3 timestamp formatında İngilizce prompt ([00:00-00:02] format)",
     "video_prompt_kling": "KLING formatında kısa İngilizce prompt (Subject + Movement + Scene + Camera + Lighting + Atmosphere, virgülle ayrılmış, max 200 karakter)",
+    "video_prompt_hailuo": "HAILUO formatında dinamik İngilizce prompt (Camera Motion + Subject + Action + Scene + Lighting + Style, aksiyon odaklı, max 200 karakter)",
     "complexity": "low|medium|high",
-    "recommended_model": "veo3|sora-2|sora-2-pro|kling_pro",
+    "recommended_model": "veo3|sora-2|sora-2-pro|kling_pro|hailuo_pro",
     "recommended_duration": 5,
     "hook_description": "İlk 2 saniyede ne görünecek (Türkçe)",
     "caption_ig": "Instagram Reels caption (Türkçe, max 50 kelime, hook+değer+CTA formatı, emoji'li)",
@@ -682,7 +683,7 @@ Sadece JSON döndür.
 ```
 
 ### ÖNEMLİ KURALLAR:
-1. video_prompt_sora, video_prompt_veo ve video_prompt_kling İNGİLİZCE olmalı
+1. video_prompt_sora, video_prompt_veo, video_prompt_kling ve video_prompt_hailuo İNGİLİZCE olmalı
 2. 9:16 dikey format belirt (720x1280)
 3. Süre 5-6 saniye hedefle (Kling için 10 saniyeye kadar olabilir)
 4. İlk 2 saniye HOOK olmalı - dikkat çekici
@@ -698,10 +699,18 @@ Sadece JSON döndür.
 - Karmaşık fiziksel hareket YOK (top sektirme, koşma vb.)
 - Örnek: "Medium shot, bokeh background, a technician in safety helmet, checking sensor readings, industrial factory, warm ambient lighting, professional documentary style."
 
+### HAILUO FORMAT KURALLARI (video_prompt_hailuo):
+- Dinamik kamera hareketleri: tracking shot, dolly, pan
+- Aksiyon fiilleri: running, spinning, transforming, flowing
+- Formül: [Camera Motion] + [Subject + Action] + [Scene] + [Lighting] + [Style]
+- Max 200 karakter
+- 6 saniyelik içerik için optimize et
+- Örnek: "Tracking shot, technician running through factory, sparks flying, industrial lighting, energetic cinematic style."
+
 ### COMPLEXITY KURALLARI:
 - LOW: Tek sahne, statik/basit hareket → veo3 veya kling_pro
-- MEDIUM: Kamera takibi, 2-3 element → sora-2
-- HIGH: Dönüşüm, kompleks hareket → sora-2-pro
+- MEDIUM: Kamera takibi, 2-3 element → sora-2 veya hailuo_pro (dinamik sahneler için)
+- HIGH: Dönüşüm, kompleks hareket → sora-2-pro veya hailuo_pro
 
 Sadece JSON döndür, başka açıklama ekleme.
 """

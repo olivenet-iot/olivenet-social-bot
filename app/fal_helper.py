@@ -49,6 +49,17 @@ class FalVideoGenerator:
             "name": "Kling 2.6 Pro",
             "max_duration": 10,
             "has_audio": True
+        },
+        # Minimax Hailuo 02 modelleri
+        "hailuo_standard": {
+            "text_to_video": "fal-ai/minimax/hailuo-2.3/standard/text-to-video",
+            "name": "Hailuo 02 Standard",
+            "max_duration": 6
+        },
+        "hailuo_pro": {
+            "text_to_video": "fal-ai/minimax/hailuo-2.3/pro/text-to-video",
+            "name": "Hailuo 02 Pro",
+            "max_duration": 6
         }
     }
 
@@ -69,7 +80,7 @@ class FalVideoGenerator:
 
         Args:
             prompt: Video icerigi icin metin aciklamasi
-            model: kling_standard, kling_pro, kling_master veya kling_26_pro
+            model: kling_standard, kling_pro, kling_master, kling_26_pro, hailuo_standard veya hailuo_pro
             duration: Video suresi (5 veya 10 saniye)
             aspect_ratio: Video orani ("9:16" dikey, "16:9" yatay, "1:1" kare)
             image_url: Opsiyonel - image-to-video icin kaynak gorsel URL

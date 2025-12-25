@@ -255,6 +255,31 @@ async def generate_video_smart(
             result["model_used"] = result.get("model", "veo-3")
         return result
 
+    # Hailuo modelleri icin fal.ai kullan
+    if model and model.startswith("hailuo"):
+        print(f"[VIDEO] → Hailuo AI ({model}) kullaniliyor...")
+        try:
+            from app.fal_helper import FalVideoGenerator
+            result = await FalVideoGenerator.generate_video(
+                prompt=prompt,
+                model=model,
+                duration=min(duration, 6),  # Hailuo max 6s
+                aspect_ratio="9:16"
+            )
+            if result.get("success"):
+                return result
+            print(f"[VIDEO] ⚠️ Hailuo basarisiz: {result.get('error')}, Veo'ya geciliyor...")
+        except Exception as e:
+            print(f"[VIDEO] ⚠️ Hailuo hatasi: {e}, Veo'ya geciliyor...")
+
+        # Fallback to Veo
+        from app.veo_helper import generate_video_veo3
+        result = await generate_video_veo3(prompt, aspect_ratio="9:16", duration_seconds=duration)
+        if result.get("success"):
+            result["fallback_from"] = model
+            result["model_used"] = result.get("model", "veo-3")
+        return result
+
     # Veo secildiyse direkt Veo'ya git
     if model == "veo3" or model.startswith("veo"):
         print(f"[VIDEO] → Veo kullaniliyor...")
