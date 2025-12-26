@@ -49,21 +49,50 @@ Sound:
 
 ---
 
-## VEO 3 PROMPT FORMATI
+## VEO 3.1 PROMPT FORMATI
 
-### Timestamp Yapısı:
+### Timestamp Yapısı (8 saniye):
 ```
-[00:00-00:02] [Shot tipi], [subject], [action]. Ambient: [ses].
-[00:02-00:04] [Shot tipi], [subject], [action]. SFX: [efekt].
-[00:04-00:06] [Shot tipi], [final görüntü]. Emotion: [duygu].
+[00:00-00:02] [HOOK] [Shot tipi], [subject], [dramatic action]. Audio: [impact sound].
+[00:02-00:04] [CONTEXT] [Camera movement], [subject detail], [environment]. Ambient: [atmosphere].
+[00:04-00:06] [DEVELOPMENT] [Transition], [new angle], [key visual]. SFX: [subtle effect].
+[00:06-00:08] [RESOLUTION] [Final shot], [emotional moment], [closing visual]. Music: [mood].
 ```
 
 ### 5-Part Formula:
 [CINEMATOGRAPHY] + [SUBJECT] + [ACTION] + [CONTEXT] + [STYLE]
 
-Örnek:
-"Slow dolly shot, IoT sensor device on greenhouse shelf, LED indicator blinking green, 
-morning sunlight through glass panels, professional documentary style, shallow depth of field"
+### Kamera Hareketleri (Veo 3.1):
+| Hareket | Prompt Terimi | Kullanım |
+|---------|--------------|----------|
+| Dolly | smooth dolly in/out | Yaklaşma/uzaklaşma |
+| Crane | crane shot rising/descending | Yükseklik değişimi |
+| Orbit | 180° arc around subject | Ürün etrafında dönme |
+| Tracking | lateral tracking shot | Yatay takip |
+| Rack focus | rack focus from A to B | Odak geçişi |
+| Handheld | subtle handheld movement | Organik his |
+
+### Audio Entegrasyonu:
+- Her shot için ses tanımı ekle
+- Audio: Impact sesleri (beep, click, whoosh)
+- Ambient: Ortam sesleri (ventilation, nature, city)
+- SFX: Spesifik efektler
+- Music: Duygu tonu (hopeful, dramatic, calm)
+
+### Veo 3.1 Örnek Prompt (8s):
+```
+[00:00-00:02] Medium close-up, IoT sensor device on industrial shelf, LED indicator
+suddenly activates with green pulse. Audio: subtle electronic beep.
+
+[00:02-00:04] Smooth dolly out reveals greenhouse environment, sensor connected to
+irrigation system, morning light through glass panels. Ambient: gentle ventilation hum.
+
+[00:04-00:06] Rack focus transition to water droplets on plant leaves, automated
+sprinkler activating precisely. SFX: soft water spray sound.
+
+[00:06-00:08] Wide establishing shot, thriving greenhouse with multiple sensor nodes
+glowing green, camera slowly rises with crane movement. Music: hopeful ambient tone.
+```
 
 ---
 

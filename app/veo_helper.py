@@ -23,10 +23,15 @@ OUTPUT_DIR = str(settings.outputs_dir)
 VIDEO_NO_TEXT_SUFFIX = """
 
 IMPORTANT VISUAL RULES:
-- NO TEXT in the video - avoid any written words, labels, or titles
-- NO LOGOS or brand names visible
-- Focus on visual storytelling without text overlays
-- Any signage or screens should be blurred or generic
+- NO TEXT, TITLES, or SUBTITLES anywhere in the video
+- NO watermarks, logos, or text overlays
+- NO on-screen captions or written words
+- NO signage with readable text (blur or use generic symbols)
+- Focus on pure visual storytelling
+
+NEGATIVE (avoid these elements):
+subtitles, captions, watermark, logo, text overlay, title card,
+written words, labels, signs with text, credits, lower thirds
 """
 
 # Google GenAI client
