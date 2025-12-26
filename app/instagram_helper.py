@@ -158,6 +158,245 @@ async def convert_video_for_instagram(input_path: str) -> Dict[str, Any]:
         return {"success": False, "error": str(e)}
 
 
+async def get_audio_duration(audio_path: str) -> float:
+    """
+    Audio dosyasının süresini al
+
+    Args:
+        audio_path: Audio dosya yolu
+
+    Returns:
+        Süre (saniye) veya 0.0 hata durumunda
+    """
+    try:
+        probe_cmd = [
+            "ffprobe", "-v", "error",
+            "-show_entries", "format=duration",
+            "-of", "csv=p=0",
+            audio_path
+        ]
+        result = subprocess.run(probe_cmd, capture_output=True, text=True)
+        duration_str = result.stdout.strip()
+        return float(duration_str) if duration_str else 0.0
+    except Exception as e:
+        print(f"[AUDIO PROBE] Hata: {e}")
+        return 0.0
+
+
+async def get_video_duration(video_path: str) -> float:
+    """
+    Video dosyasının süresini al
+
+    Args:
+        video_path: Video dosya yolu
+
+    Returns:
+        Süre (saniye) veya 0.0 hata durumunda
+    """
+    try:
+        probe_cmd = [
+            "ffprobe", "-v", "error",
+            "-show_entries", "format=duration",
+            "-of", "csv=p=0",
+            video_path
+        ]
+        result = subprocess.run(probe_cmd, capture_output=True, text=True)
+        duration_str = result.stdout.strip()
+        return float(duration_str) if duration_str else 0.0
+    except Exception as e:
+        print(f"[VIDEO PROBE] Hata: {e}")
+        return 0.0
+
+
+async def merge_audio_video(
+    video_path: str,
+    audio_path: str,
+    target_duration: Optional[float] = None,
+    audio_volume: float = 1.0,
+    fade_out: bool = True,
+    fade_duration: float = 1.0
+) -> Dict[str, Any]:
+    """
+    Video ve audio dosyalarını birleştir.
+
+    Instagram Reels gereksinimleri:
+    - H.264 video, AAC audio
+    - 720x1280 (9:16)
+    - 30 FPS
+    - Max 90 saniye
+
+    Strateji:
+    1. Audio süresi > Video süresi: Video'yu loop et
+    2. Video süresi > Audio süresi: Video'yu audio süresine kırp + fade out
+
+    Args:
+        video_path: Kaynak video
+        audio_path: Kaynak audio (MP3/AAC)
+        target_duration: Hedef süre (None ise audio süresine göre)
+        audio_volume: Ses seviyesi (0.0-2.0)
+        fade_out: Video sonunda fade-out efekti
+        fade_duration: Fade-out süresi (saniye)
+
+    Returns:
+        {
+            "success": bool,
+            "output_path": str,
+            "duration": float,
+            "file_size_mb": float,
+            "strategy": str  # "trim_video" veya "loop_video"
+        }
+    """
+    if not os.path.exists(video_path):
+        return {"success": False, "error": f"Video bulunamadı: {video_path}"}
+
+    if not os.path.exists(audio_path):
+        return {"success": False, "error": f"Audio bulunamadı: {audio_path}"}
+
+    print(f"[AUDIO-VIDEO MERGE] Video: {video_path}")
+    print(f"[AUDIO-VIDEO MERGE] Audio: {audio_path}")
+
+    # Süreleri al
+    video_duration = await get_video_duration(video_path)
+    audio_duration = await get_audio_duration(audio_path)
+
+    if video_duration <= 0:
+        return {"success": False, "error": "Video süresi alınamadı"}
+
+    if audio_duration <= 0:
+        return {"success": False, "error": "Audio süresi alınamadı"}
+
+    print(f"[AUDIO-VIDEO MERGE] Video süresi: {video_duration:.1f}s")
+    print(f"[AUDIO-VIDEO MERGE] Audio süresi: {audio_duration:.1f}s")
+
+    # Hedef süreyi belirle
+    if target_duration:
+        final_duration = min(target_duration, 90.0)  # Instagram max 90s
+    else:
+        final_duration = min(audio_duration, 90.0)
+
+    print(f"[AUDIO-VIDEO MERGE] Hedef süre: {final_duration:.1f}s")
+
+    # Strateji belirle
+    if video_duration >= final_duration:
+        strategy = "trim_video"
+        loop_video = False
+    else:
+        strategy = "loop_video"
+        loop_video = True
+        loop_count = int(final_duration / video_duration) + 1
+        print(f"[AUDIO-VIDEO MERGE] Video {loop_count}x loop edilecek")
+
+    # Output dosyası
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_path = f"{OUTPUT_DIR}/merged_{timestamp}.mp4"
+
+    # FFmpeg komutu oluştur
+    ffmpeg_cmd = ["ffmpeg", "-y"]
+
+    # Video input (audio disabled - TTS audio kullanılacak)
+    if loop_video:
+        ffmpeg_cmd.extend(["-stream_loop", "-1"])
+    ffmpeg_cmd.extend(["-an", "-i", video_path])  # -an: video'nun kendi sesini ignore et
+
+    # Audio input (TTS)
+    ffmpeg_cmd.extend(["-i", audio_path])
+
+    # Video codec
+    ffmpeg_cmd.extend([
+        "-c:v", "libx264",
+        "-preset", "medium",
+        "-crf", "23"
+    ])
+
+    # Audio codec
+    ffmpeg_cmd.extend([
+        "-c:a", "aac",
+        "-b:a", "128k",
+        "-ar", "44100"
+    ])
+
+    # Video filter (scale + pad + fade)
+    vf_parts = [
+        "scale=720:1280:force_original_aspect_ratio=decrease",
+        "pad=720:1280:(ow-iw)/2:(oh-ih)/2",
+        "setsar=1"
+    ]
+
+    # Fade-out efekti
+    if fade_out and final_duration > fade_duration:
+        fade_start = final_duration - fade_duration
+        vf_parts.append(f"fade=t=out:st={fade_start:.2f}:d={fade_duration:.2f}")
+
+    ffmpeg_cmd.extend(["-vf", ",".join(vf_parts)])
+
+    # Audio filter (volume + fade)
+    af_parts = []
+    if audio_volume != 1.0:
+        af_parts.append(f"volume={audio_volume}")
+    if fade_out and final_duration > fade_duration:
+        fade_start = final_duration - fade_duration
+        af_parts.append(f"afade=t=out:st={fade_start:.2f}:d={fade_duration:.2f}")
+
+    if af_parts:
+        ffmpeg_cmd.extend(["-af", ",".join(af_parts)])
+
+    # Frame rate
+    ffmpeg_cmd.extend(["-r", "30"])
+
+    # Duration limit
+    ffmpeg_cmd.extend(["-t", str(final_duration)])
+
+    # Stream mapping
+    ffmpeg_cmd.extend(["-map", "0:v:0", "-map", "1:a:0"])
+
+    # MP4 optimization
+    ffmpeg_cmd.extend(["-movflags", "+faststart"])
+
+    # Output
+    ffmpeg_cmd.append(output_path)
+
+    print(f"[AUDIO-VIDEO MERGE] FFmpeg komutu çalıştırılıyor...")
+    print(f"[AUDIO-VIDEO MERGE] Strateji: {strategy}")
+
+    try:
+        process = subprocess.run(
+            ffmpeg_cmd,
+            capture_output=True,
+            text=True,
+            timeout=300  # 5 dakika timeout
+        )
+
+        if process.returncode != 0:
+            print(f"[AUDIO-VIDEO MERGE] FFmpeg hatası: {process.stderr[:500]}")
+            return {"success": False, "error": f"FFmpeg error: {process.stderr[:200]}"}
+
+        if not os.path.exists(output_path):
+            return {"success": False, "error": "Output dosyası oluşturulamadı"}
+
+        # Sonuç bilgileri
+        file_size = os.path.getsize(output_path) / 1024 / 1024
+        actual_duration = await get_video_duration(output_path)
+
+        print(f"[AUDIO-VIDEO MERGE] Başarılı!")
+        print(f"[AUDIO-VIDEO MERGE] Çıktı: {output_path}")
+        print(f"[AUDIO-VIDEO MERGE] Süre: {actual_duration:.1f}s, Boyut: {file_size:.2f}MB")
+
+        return {
+            "success": True,
+            "output_path": output_path,
+            "duration": actual_duration,
+            "file_size_mb": round(file_size, 2),
+            "strategy": strategy
+        }
+
+    except subprocess.TimeoutExpired:
+        return {"success": False, "error": "FFmpeg timeout (5 min)"}
+    except Exception as e:
+        print(f"[AUDIO-VIDEO MERGE] Exception: {e}")
+        return {"success": False, "error": str(e)}
+
+
 async def get_account_info() -> Dict[str, Any]:
     """
     Instagram hesap bilgilerini al

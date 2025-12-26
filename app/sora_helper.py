@@ -29,12 +29,24 @@ IMPORTANT VISUAL RULES:
 - Any signage or screens should be blurred or generic
 """
 
+# Voice reels suffix - video will have TTS voiceover added
+VOICE_REELS_SUFFIX = """
+
+AUDIO/DIALOGUE RULES (voiceover will be added separately):
+- NO spoken dialogue or talking in the video
+- NO lip movements or talking heads
+- NO people speaking to camera
+- Cinematic ambient sounds only (nature, city, atmosphere)
+- Visual storytelling without on-screen narration
+"""
+
 
 async def generate_video_sora(
     prompt: str,
     duration: int = 8,
     size: str = "720x1280",
-    model: str = "sora-2"
+    model: str = "sora-2",
+    voice_mode: bool = False
 ) -> Dict[str, Any]:
     """
     Sora ile video uret
@@ -44,6 +56,7 @@ async def generate_video_sora(
         duration: 4, 8, veya 12 saniye
         size: "720x1280" (9:16) veya "1280x720" (16:9)
         model: "sora-2" veya "sora-2-pro"
+        voice_mode: True ise TTS voiceover eklenecek, video dialogue'suz olmalı
     """
 
     if not OPENAI_API_KEY:
@@ -52,6 +65,10 @@ async def generate_video_sora(
 
     # Add no-text suffix to avoid AI text rendering issues
     prompt = prompt + VIDEO_NO_TEXT_SUFFIX
+
+    # Voice mode için dialogue/talking kısıtlamaları ekle
+    if voice_mode:
+        prompt = prompt + VOICE_REELS_SUFFIX
 
     # Duration validation (4, 8, 12 only)
     valid_durations = [4, 8, 12]
@@ -202,9 +219,14 @@ async def generate_video_smart(
     prompt: str,
     topic: str = "",
     force_model: str = None,
-    duration: int = 8
+    duration: int = 8,
+    voice_mode: bool = False
 ) -> Dict[str, Any]:
-    """Akilli video uretimi - Kling / Sora / Veo secimi"""
+    """Akilli video uretimi - Kling / Sora / Veo secimi
+
+    Args:
+        voice_mode: True ise TTS voiceover eklenecek, Sora'ya NO dialogue suffix eklenir
+    """
 
     if force_model:
         model = force_model
@@ -321,7 +343,8 @@ async def generate_video_smart(
         prompt=prompt,
         duration=duration,
         size="720x1280",
-        model=model if model in ["sora-2", "sora-2-pro"] else "sora-2"
+        model=model if model in ["sora-2", "sora-2-pro"] else "sora-2",
+        voice_mode=voice_mode
     )
 
     if sora_result.get("success"):

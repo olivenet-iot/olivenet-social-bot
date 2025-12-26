@@ -115,6 +115,14 @@ class Settings(BaseSettings):
     # FAL.ai Settings (Kling video generation)
     fal_api_key: str = Field(default="", description="FAL API key for Kling video generation")
 
+    # ElevenLabs TTS Settings
+    elevenlabs_api_key: str = Field(default="", description="ElevenLabs API key for TTS")
+    elevenlabs_voice_id: str = Field(default="", description="Default Turkish voice ID")
+    elevenlabs_model: str = Field(default="eleven_multilingual_v2", description="TTS model")
+    tts_stability: float = Field(default=0.5, description="Voice stability (0.0-1.0)")
+    tts_similarity_boost: float = Field(default=0.75, description="Voice similarity boost (0.0-1.0)")
+    tts_speed: float = Field(default=1.0, description="Speech speed (0.5-2.0)")
+
     # Claude Code Settings
     claude_timeout_post: int = Field(default=60, description="Timeout for post generation (seconds)")
     claude_timeout_visual: int = Field(default=90, description="Timeout for visual generation (seconds)")

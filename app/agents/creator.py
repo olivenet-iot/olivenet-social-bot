@@ -39,6 +39,8 @@ class CreatorAgent(BaseAgent):
             return await self.revise_post(input_data)
         elif action == "create_ab_variants":
             return await self.create_ab_variants(input_data)
+        elif action == "create_speech_script":
+            return await self.create_speech_script(input_data)
         else:
             return {"error": f"Unknown action: {action}"}
 
@@ -639,10 +641,35 @@ Sadece JSON döndür.
         category = input_data.get("category", "tanitim")
         post_text = input_data.get("post_text", "")
         post_id = input_data.get("post_id")
+        speech_structure = input_data.get("speech_structure", [])
+        voice_mode = input_data.get("voice_mode", False)
 
         # Context yükle
         reels_guide = self.load_context("reels-prompts.md")
         company_profile = self.load_context("company-profile.md")
+
+        # Speech-Video senkronizasyon rehberi (voice_mode için)
+        sync_guide = ""
+        if voice_mode and speech_structure:
+            sync_guide = """
+
+### 🎙️ SPEECH-VIDEO SENKRONİZASYONU
+Bu video TTS voiceover ile birleştirilecek. Her shot, aşağıdaki speech içeriğine UYGUN görsel içermeli:
+
+"""
+            for shot in speech_structure:
+                sync_guide += f"**[{shot['time']}]**: \"{shot['concept']}\"\n"
+                if shot.get('keywords'):
+                    sync_guide += f"   → Keywords: {', '.join(shot['keywords'])}\n"
+                sync_guide += "\n"
+
+            sync_guide += """
+⚠️ ÖNEMLİ KURALLAR (Voice Mode):
+- Video'da KONUŞAN İNSAN olmamalı (voiceover dışarıdan eklenecek)
+- Lip sync / dudak hareketi YOK
+- Her shot'ın görseli, o anda söylenen kavrama uygun olmalı
+- Örnek: "Sensörler..." denirken → sensör close-up göster
+"""
 
         prompt = f"""
 ## GÖREV: Instagram Reels için Profesyonel Video Prompt Oluştur
@@ -661,7 +688,7 @@ Sadece JSON döndür.
 
 ### Profesyonel Prompting Rehberi
 {reels_guide[:3000]}
-
+{sync_guide}
 ---
 
 ## ÇIKTI FORMATI (JSON)
@@ -759,6 +786,209 @@ Sadece JSON döndür, başka açıklama ekleme.
         except json.JSONDecodeError as e:
             self.log(f"JSON parse hatası: {e}")
             return {"success": False, "error": f"JSON parse error: {e}", "raw_response": response[:500]}
+
+    async def create_speech_script(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Instagram Reels için Türkçe voiceover scripti üret.
+
+        ElevenLabs TTS ile seslendirilecek metin oluşturur.
+        Süre bazlı kelime hedefi ile çalışır (~2.5 kelime/saniye).
+
+        Args:
+            input_data: {
+                "topic": str - Konu
+                "target_duration": int - Hedef süre (12, 15, veya 20 saniye)
+                "tone": str - Ses tonu (professional, friendly, energetic)
+                "post_id": int (opsiyonel) - Güncellenecek post ID
+            }
+
+        Returns:
+            {
+                "success": bool,
+                "speech_script": str - Voiceover metni
+                "word_count": int - Kelime sayısı
+                "estimated_duration": float - Tahmini süre
+                "hook": str - İlk cümle
+                "key_points": List[str] - Ana noktalar
+                "cta": str - Kapanış çağrısı
+            }
+        """
+        self.log("Voiceover scripti oluşturuluyor...")
+
+        topic = input_data.get("topic", "")
+        target_duration = input_data.get("target_duration", 15)
+        tone = input_data.get("tone", "friendly")  # Samimi ton varsayılan
+        post_id = input_data.get("post_id")
+
+        # Süre bazlı kelime hedefi (Türkçe: ~2.5 kelime/saniye)
+        target_words = int(target_duration * 2.5)
+
+        company_profile = self.load_context("company-profile.md")
+
+        # Ton açıklamaları
+        tone_descriptions = {
+            "professional": "Profesyonel, güvenilir, bilgilendirici. Kurumsal ama soğuk değil.",
+            "friendly": "Samimi, sıcak, konuşma dili. Sanki bir arkadaşla sohbet.",
+            "energetic": "Enerjik, heyecanlı, motive edici. Dikkat çekici ve dinamik."
+        }
+        tone_desc = tone_descriptions.get(tone, tone_descriptions["friendly"])
+
+        prompt = f"""
+## GÖREV: Instagram Reels Voiceover Scripti Yaz
+
+### Konu
+{topic}
+
+### Hedefler
+- Süre: {target_duration} saniye
+- Kelime sayısı: ~{target_words} kelime (ASLA AŞMA!)
+- Ton: {tone} - {tone_desc}
+
+### Şirket Bilgisi
+{company_profile[:1500]}
+
+---
+
+## VOICEOVER SCRIPT KURALLARI:
+
+### YAPI (3 BÖLÜM):
+1. **HOOK (0-3 saniye)**: Dikkat çekici açılış
+   - Merak uyandıran soru VEYA
+   - Şaşırtıcı istatistik VEYA
+   - Cesur bir iddia
+
+2. **ANA İÇERİK ({target_duration-6} saniye)**: Değer sun
+   - 2-3 kısa nokta
+   - Somut fayda veya bilgi
+   - Pratik uygulama
+
+3. **CTA (son 3 saniye)**: Aksiyon çağrısı
+   - "Takip et" VEYA
+   - "Kaydet" VEYA
+   - Düşündürücü soru
+
+### FORMAT KURALLARI:
+- DOĞAL konuşma dili kullan (yazı dili değil!)
+- KISA cümleler (max 10-12 kelime)
+- Emoji KULLANMA (sesli okunacak)
+- Türkçe karakterler: ı, ş, ğ, ü, ö, ç
+- Sayıları YAZI ile yaz ("3" değil "üç")
+- Kısaltma KULLANMA (IoT → "ay o ti" veya "nesnelerin interneti")
+- Noktalama işaretleri doğru (virgül = kısa duraklama, nokta = uzun duraklama)
+
+### YASAK İFADELER:
+- "Merhaba", "Selam" (vakit kaybı)
+- "Bu videoda" (belli zaten)
+- Aşırı uzun cümleler
+- Jargon ve teknik terimler (basitleştir)
+
+### TON: {tone.upper()}
+{tone_desc}
+
+---
+
+## ÇIKTI FORMATI (JSON):
+```json
+{{
+    "speech_script": "Tam voiceover metni. Cümleler arası doğal akış. Hook ile başla, CTA ile bitir.",
+    "hook": "İlk cümle (3 saniye içinde söylenecek)",
+    "key_points": ["Nokta 1", "Nokta 2", "Nokta 3"],
+    "cta": "Kapanış cümlesi",
+    "word_count": {target_words},
+    "estimated_duration": {target_duration},
+    "tone_used": "{tone}"
+}}
+```
+
+### ÖNEMLİ:
+- word_count {target_words}'i AŞMAMALI
+- speech_script TAM ve AKICI olmalı (copy-paste ile TTS'e verilebilir)
+- Her cümle sesli okunduğunda doğal duyulmalı
+
+Sadece JSON döndür.
+"""
+
+        response = await self.call_claude(prompt, timeout=60)
+
+        try:
+            result = json.loads(self._clean_json_response(response))
+
+            # Kelime sayısı kontrolü
+            script = result.get("speech_script", "")
+            actual_words = len(script.split())
+
+            if actual_words > target_words * 1.3:  # %30 tolerans
+                self.log(f"⚠️ Script çok uzun ({actual_words} kelime), kısaltılıyor...")
+                script = await self._shorten_speech_script(script, target_words)
+                result["speech_script"] = script
+                result["word_count"] = len(script.split())
+
+            # Süre tahmini güncelle
+            result["estimated_duration"] = len(script.split()) / 2.5
+
+            # Post'u güncelle
+            if post_id:
+                update_post(post_id, speech_script=script)
+
+            log_agent_action(
+                agent_name=self.name,
+                action="create_speech_script",
+                input_data={"topic": topic, "target_duration": target_duration},
+                output_data={
+                    "word_count": result.get("word_count"),
+                    "estimated_duration": result.get("estimated_duration")
+                },
+                success=True
+            )
+
+            self.log(f"Voiceover scripti oluşturuldu")
+            self.log(f"   Kelime: {result.get('word_count')}")
+            self.log(f"   Süre: ~{result.get('estimated_duration'):.1f}s")
+
+            return {
+                "success": True,
+                **result
+            }
+
+        except json.JSONDecodeError as e:
+            self.log(f"JSON parse hatası: {e}")
+            log_agent_action(
+                agent_name=self.name,
+                action="create_speech_script",
+                success=False,
+                error_message=f"JSON parse error: {e}"
+            )
+            return {"success": False, "error": f"JSON parse error: {e}", "raw_response": response[:500]}
+
+    async def _shorten_speech_script(self, script: str, target_words: int) -> str:
+        """
+        Voiceover scriptini kısalt.
+
+        Args:
+            script: Kısaltılacak script
+            target_words: Hedef kelime sayısı
+
+        Returns:
+            Kısaltılmış script
+        """
+        prompt = f"""
+Aşağıdaki voiceover scriptini {target_words} kelimeye kısalt.
+
+KURALLAR:
+- Hook'u (ilk cümleyi) koru
+- Ana mesajı koru
+- CTA'yı (son cümleyi) koru
+- Gereksiz tekrarları çıkar
+- Doğal akışı bozma
+
+SCRIPT:
+{script}
+
+Sadece kısaltılmış scripti döndür, başka bir şey ekleme.
+"""
+
+        response = await self.call_claude(prompt, timeout=30)
+        return response.strip()
 
     async def create_carousel_content(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """

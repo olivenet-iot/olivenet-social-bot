@@ -112,13 +112,20 @@ class FalVideoGenerator:
         # Duration kontrolu
         duration = min(duration, model_config["max_duration"])
 
+        # Wan 2.6 sadece "5", "10", "15" kabul eder
+        if model == "wan_26":
+            wan_duration_map = {5: "5", 10: "10", 12: "15", 15: "15"}
+            duration_str = wan_duration_map.get(duration, "15")
+        else:
+            duration_str = str(duration)
+
         # Endpoint secimi (text-to-video veya image-to-video)
         if image_url:
             endpoint = model_config["image_to_video"]
             request_body = {
                 "prompt": prompt,
                 "image_url": image_url,
-                "duration": str(duration),
+                "duration": duration_str,
                 "aspect_ratio": aspect_ratio,
                 "negative_prompt": "blur, distort, low quality, static, frozen, text, watermark"
             }
@@ -126,7 +133,7 @@ class FalVideoGenerator:
             endpoint = model_config["text_to_video"]
             request_body = {
                 "prompt": prompt,
-                "duration": str(duration),
+                "duration": duration_str,
                 "aspect_ratio": aspect_ratio,
                 "negative_prompt": "blur, distort, low quality, static, frozen, text, watermark"
             }

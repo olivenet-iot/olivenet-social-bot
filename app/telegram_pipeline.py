@@ -549,6 +549,9 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 InlineKeyboardButton("💎 Kling Master", callback_data="video_model:kling_master"),
             ],
             [
+                InlineKeyboardButton("🎙️ Sesli Reels (TTS)", callback_data="voice_reels_menu"),
+            ],
+            [
                 InlineKeyboardButton("❌ İptal", callback_data="main_menu"),
             ]
         ])
@@ -561,6 +564,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "• *Hailuo Pro*: 🌀 Dinamik hareketler, 6s\n"
             "• *Wan 2.6*: 🎞️ Multi-shot, sinematik, 15s\n"
             "• *Kling Master*: fal.ai, 10s, en iyi kalite\n\n"
+            "🎙️ *Sesli Reels*: Türkçe voiceover + video\n\n"
             "💡 Tüm modeller 9:16 dikey format kullanır.",
             parse_mode="Markdown",
             reply_markup=video_model_keyboard
@@ -596,6 +600,54 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         # Reels pipeline'ı arka planda çalıştır - seçilen model ile
         asyncio.create_task(pipeline.run_reels_content(force_model=model))
+
+    # ===== SESLİ REELS MENÜSÜ =====
+    elif action == "voice_reels_menu":
+        voice_keyboard = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("🎙️ 8s Kısa", callback_data="voice_reels:8"),
+                InlineKeyboardButton("🎙️ 12s Standart ⭐", callback_data="voice_reels:12"),
+            ],
+            [
+                InlineKeyboardButton("⬅️ Geri", callback_data="create_reels"),
+            ]
+        ])
+
+        await query.edit_message_text(
+            "🎙️ *SESLİ REELS* - Süre Seçin\n\n"
+            "• *8 saniye*: Kısa hook + tek mesaj\n"
+            "• *12 saniye*: Standart (önerilen) ⭐\n\n"
+            "🔊 Türkçe voiceover ElevenLabs AI ile üretilir.\n"
+            "🎥 Video: Sora 2 (sinematik kalite)\n\n"
+            "💡 Script otomatik oluşturulur, video ile senkronize edilir.",
+            parse_mode="Markdown",
+            reply_markup=voice_keyboard
+        )
+
+    # ===== SESLİ REELS BAŞLAT =====
+    elif action.startswith("voice_reels:"):
+        duration = int(action.replace("voice_reels:", ""))
+
+        await query.edit_message_text(
+            f"🎙️ *SESLİ REELS* başlatılıyor...\n\n"
+            f"⏱️ *Süre:* {duration} saniye\n"
+            f"🔊 *Ses:* Türkçe AI voiceover\n"
+            f"🎥 *Video:* Sora 2 (sinematik)\n\n"
+            "Pipeline aşamaları:\n"
+            "1️⃣ Konu seçimi (AI)\n"
+            "2️⃣ Caption üretimi\n"
+            "3️⃣ Voiceover scripti\n"
+            "4️⃣ TTS ses üretimi\n"
+            "5️⃣ Video prompt\n"
+            "6️⃣ Video üretimi (Sora 2)\n"
+            "7️⃣ Audio-video birleştirme\n"
+            "8️⃣ Instagram Reels yayını\n\n"
+            "⏳ Bu işlem 5-10 dakika sürebilir...",
+            parse_mode="Markdown"
+        )
+
+        # Sesli reels pipeline'ı arka planda çalıştır
+        asyncio.create_task(pipeline.run_reels_voice_content(target_duration=duration))
 
     # ===== HAFTALIK PLAN =====
     elif action == "weekly_plan":

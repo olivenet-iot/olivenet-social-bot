@@ -57,7 +57,11 @@ def update_post(post_id: int, **kwargs) -> bool:
         'facebook_post_id', 'instagram_post_id', 'orchestrator_notes',
         'reviewer_feedback', 'revision_count', 'post_text_ig', 'post_text_fb',
         # Hook & A/B tracking
-        'hook_type', 'hook_text', 'tone', 'ab_test_id', 'is_ab_winner'
+        'hook_type', 'hook_text', 'tone', 'ab_test_id', 'is_ab_winner',
+        # Voice Reels (ElevenLabs TTS)
+        'speech_script', 'audio_path', 'voice_id', 'audio_duration', 'voice_mode',
+        # Topic category
+        'topic_category'
     ]
 
     updates = []

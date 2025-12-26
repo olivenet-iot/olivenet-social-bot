@@ -311,7 +311,15 @@ def init_database():
         "ALTER TABLE posts ADD COLUMN is_ab_winner BOOLEAN",
         # Prompt tracking
         "ALTER TABLE posts ADD COLUMN video_prompt TEXT",
-        "ALTER TABLE posts ADD COLUMN prompt_style TEXT"
+        "ALTER TABLE posts ADD COLUMN prompt_style TEXT",
+        # Voice Reels (ElevenLabs TTS)
+        "ALTER TABLE posts ADD COLUMN speech_script TEXT",
+        "ALTER TABLE posts ADD COLUMN audio_path TEXT",
+        "ALTER TABLE posts ADD COLUMN voice_id TEXT",
+        "ALTER TABLE posts ADD COLUMN audio_duration REAL DEFAULT 0",
+        "ALTER TABLE posts ADD COLUMN voice_mode BOOLEAN DEFAULT 0",
+        # Topic category tracking
+        "ALTER TABLE posts ADD COLUMN topic_category TEXT"
     ]
 
     for stmt in alter_statements:

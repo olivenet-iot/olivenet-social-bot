@@ -12,6 +12,46 @@ from enum import Enum
 from app.database import save_prompt
 from app.validators.text_validator import validate_html_content, fix_common_issues
 
+def extract_shot_structure(speech_script: str, target_duration: int) -> list:
+    """
+    Speech script'ten shot yapısı çıkar.
+    Her 4 saniye = 1 shot, video prompt ile senkronize edilecek.
+
+    Args:
+        speech_script: Voiceover metni
+        target_duration: Hedef süre (8 veya 12 saniye)
+
+    Returns:
+        [{"time": "0-4s", "concept": "...", "keywords": [...]}]
+    """
+    if not speech_script:
+        return []
+
+    words = speech_script.split()
+    num_shots = max(1, target_duration // 4)  # Her 4s = 1 shot
+    words_per_shot = max(1, len(words) // num_shots)
+
+    shots = []
+    for i in range(num_shots):
+        start_time = i * 4
+        end_time = min((i + 1) * 4, target_duration)
+
+        start_idx = i * words_per_shot
+        end_idx = min(start_idx + words_per_shot, len(words))
+        shot_words = words[start_idx:end_idx]
+
+        # Anahtar kelimeler: 4+ karakter, önemli kelimeler
+        keywords = [w.strip('.,!?') for w in shot_words if len(w) > 4][:3]
+
+        shots.append({
+            "time": f"{start_time}-{end_time}s",
+            "concept": " ".join(shot_words),
+            "keywords": keywords
+        })
+
+    return shots
+
+
 class PipelineState(Enum):
     """Pipeline durumları"""
     IDLE = "idle"
@@ -1174,6 +1214,356 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
 
             await self.notify_telegram(
                 message=f"❌ *REELS* - Hata\n\n{str(e)}",
+                data={"error": str(e)},
+                buttons=[]
+            )
+
+            return result
+
+    async def run_reels_voice_content(
+        self,
+        topic: str = None,
+        force_model: str = None,
+        target_duration: int = 15
+    ) -> Dict[str, Any]:
+        """
+        Sesli Instagram Reels içeriği üret ve yayınla.
+
+        ElevenLabs TTS + Video + FFmpeg merge pipeline.
+
+        Pipeline Akışı:
+        1. Konu seçimi (Planner)
+        2. Caption üretimi (Creator)
+        3. Speech script üretimi (Creator) ← YENİ
+        4. TTS ses üretimi (ElevenLabs) ← YENİ
+        5. Video prompt üretimi (Creator)
+        6. Video üretimi (Veo 3 varsayılan)
+        7. Audio-video birleştirme (FFmpeg) ← YENİ
+        8. Kalite kontrol (Reviewer)
+        9. Instagram Reels yayını (Publisher)
+
+        Args:
+            topic: Konu (None ise Planner'dan alınır)
+            force_model: Video modeli zorla (None ise veo3)
+            target_duration: Hedef süre (12, 15, veya 20 saniye)
+
+        Returns:
+            Pipeline sonucu
+        """
+        self.log("🎙️ SESLİ REELS MOD: Pipeline başlatılıyor...")
+        self.state = PipelineState.PLANNING
+
+        # Sora 2 max 12 saniye destekliyor
+        target_duration = min(target_duration, 12)
+
+        result = {
+            "success": False,
+            "stages_completed": [],
+            "final_state": None,
+            "reels": True,
+            "voice_enabled": True,
+            "target_duration": target_duration
+        }
+
+        try:
+            # ========== AŞAMA 1: Konu Seçimi ==========
+            if topic:
+                topic_data = {
+                    "topic": topic,
+                    "category": "tanitim",
+                    "suggested_visual": "video"
+                }
+                self.log(f"[VOICE REELS] Konu verildi: {topic[:50]}...")
+            else:
+                self.log("[VOICE REELS] Aşama 1: Konu seçiliyor...")
+                topic_result = await self.planner.execute({"action": "suggest_topic"})
+
+                if "error" in topic_result:
+                    raise Exception(f"Planner error: {topic_result['error']}")
+
+                topic_data = topic_result
+                topic = topic_data.get("topic", "IoT ve akıllı tarım")
+                self.log(f"[VOICE REELS] Konu: {topic}")
+
+            self.current_data["topic"] = topic_data
+            result["stages_completed"].append("topic_selection")
+            result["topic"] = topic
+
+            await self.notify_telegram(
+                message=f"🎙️ *SESLİ REELS* - Başlatıldı\n\n"
+                f"📝 Konu: {topic[:80]}...\n"
+                f"⏱️ Hedef: {target_duration}s",
+                data=topic_data,
+                buttons=[]
+            )
+
+            # ========== AŞAMA 2: Caption Üretimi ==========
+            self.log("[VOICE REELS] Aşama 2: Caption üretiliyor...")
+            self.state = PipelineState.CREATING_CONTENT
+
+            content_result = await self.creator.execute({
+                "action": "create_post_multiplatform",
+                "topic": topic,
+                "category": topic_data.get("category", "tanitim"),
+                "visual_type": "video"
+            })
+
+            if "error" in content_result:
+                raise Exception(f"Creator error: {content_result['error']}")
+
+            self.current_data["content"] = content_result
+            result["stages_completed"].append("caption")
+            result["post_id"] = content_result.get("post_id")
+
+            self.log(f"[VOICE REELS] Caption: IG {content_result.get('ig_word_count', 0)} kelime")
+
+            # ========== AŞAMA 3: Speech Script Üretimi ========== [YENİ]
+            self.log("[VOICE REELS] Aşama 3: Voiceover scripti oluşturuluyor...")
+
+            speech_result = await self.creator.execute({
+                "action": "create_speech_script",
+                "topic": topic,
+                "target_duration": target_duration,
+                "tone": "friendly",  # Samimi ton
+                "post_id": content_result.get("post_id")
+            })
+
+            if not speech_result.get("success"):
+                raise Exception(f"Speech script error: {speech_result.get('error', 'Unknown')}")
+
+            speech_script = speech_result.get("speech_script", "")
+            self.current_data["speech"] = speech_result
+            result["stages_completed"].append("speech_script")
+
+            self.log(f"[VOICE REELS] Script hazır: {speech_result.get('word_count')} kelime, ~{speech_result.get('estimated_duration'):.1f}s")
+
+            # ========== AŞAMA 4: TTS ile Ses Üretimi ========== [YENİ]
+            self.log("[VOICE REELS] Aşama 4: TTS ile ses üretiliyor...")
+
+            audio_path = None
+            audio_duration = 0
+            voice_fallback = False
+
+            try:
+                from app.elevenlabs_helper import generate_speech_with_retry, ElevenLabsError, QuotaExceededError
+
+                tts_result = await generate_speech_with_retry(
+                    text=speech_script,
+                    max_retries=3
+                )
+
+                if tts_result.get("success"):
+                    audio_path = tts_result.get("audio_path")
+                    audio_duration = tts_result.get("duration_seconds", 0)
+
+                    # Audio süresini target_duration ile sınırla (Sora max 12s)
+                    if audio_duration > target_duration:
+                        self.log(f"[VOICE REELS] Ses çok uzun ({audio_duration:.1f}s), {target_duration}s'ye kırpılacak")
+                        audio_duration = target_duration  # merge_audio_video -t ile kırpacak
+
+                    result["stages_completed"].append("tts_generation")
+                    self.log(f"[VOICE REELS] Ses hazır: {audio_duration:.1f}s")
+                else:
+                    error = tts_result.get("error", "Unknown TTS error")
+                    self.log(f"[VOICE REELS] TTS hatası: {error}")
+
+                    if tts_result.get("quota_exceeded"):
+                        await self.notify_telegram(
+                            message=f"⚠️ *ElevenLabs Kota Aşıldı*\n\nSessiz video ile devam ediliyor...",
+                            data={},
+                            buttons=[]
+                        )
+
+                    voice_fallback = True
+
+            except Exception as e:
+                self.log(f"[VOICE REELS] TTS exception: {e}")
+                voice_fallback = True
+
+            if voice_fallback:
+                self.log("[VOICE REELS] Sessiz video moduna geçiliyor...")
+                result["voice_fallback"] = True
+
+            # ========== AŞAMA 5: Video Prompt Üretimi ==========
+            self.log("[VOICE REELS] Aşama 5: Video prompt oluşturuluyor...")
+            self.state = PipelineState.CREATING_VISUAL
+
+            # Speech-Video senkronizasyonu için shot yapısı çıkar
+            speech_structure = extract_shot_structure(speech_script, target_duration)
+            self.log(f"[VOICE REELS] Shot yapısı: {len(speech_structure)} shot")
+
+            reels_prompt_result = await self.creator.execute({
+                "action": "create_reels_prompt",
+                "topic": topic,
+                "category": topic_data.get("category", "tanitim"),
+                "post_text": content_result.get("post_text_ig", ""),
+                "post_id": content_result.get("post_id"),
+                "speech_structure": speech_structure,  # Senkronizasyon için
+                "voice_mode": True  # Sesli reels modu
+            })
+
+            if not reels_prompt_result.get("success"):
+                raise Exception(f"Reels prompt error: {reels_prompt_result.get('error', 'Unknown')}")
+
+            self.current_data["reels_prompt"] = reels_prompt_result
+            result["stages_completed"].append("video_prompt")
+
+            # Sora 2 varsayılan (sesli reels için sinematik kalite, max 12s)
+            model_to_use = force_model or "sora-2"
+            video_prompt = reels_prompt_result.get("video_prompt_sora") or reels_prompt_result.get("video_prompt_wan") or reels_prompt_result.get("video_prompt_veo", "")
+            complexity = reels_prompt_result.get("complexity", "medium")
+
+            # Video prompt'u kaydet
+            if video_prompt and content_result.get("post_id"):
+                prompt_style = reels_prompt_result.get("camera_movement") or complexity
+                save_prompt(
+                    post_id=content_result.get("post_id"),
+                    prompt_text=video_prompt,
+                    prompt_type='video',
+                    style=prompt_style
+                )
+
+            self.log(f"[VOICE REELS] Prompt hazır (model: {model_to_use})")
+
+            # ========== AŞAMA 6: Video Üretimi ==========
+            self.log("[VOICE REELS] Aşama 6: Video üretiliyor...")
+
+            from app.sora_helper import generate_video_smart
+
+            video_result = await generate_video_smart(
+                prompt=video_prompt,
+                topic=topic,
+                force_model=model_to_use,
+                duration=target_duration,  # Sora max 12s
+                voice_mode=True  # TTS voiceover için NO dialogue suffix
+            )
+
+            if not video_result.get("success"):
+                raise Exception(f"Video generation failed: {video_result.get('error', 'Unknown')}")
+
+            video_path = video_result.get("video_path")
+            model_used = video_result.get("model_used", "unknown")
+
+            self.current_data["video_result"] = video_result
+            result["stages_completed"].append("video_generation")
+            result["model_used"] = model_used
+
+            self.log(f"[VOICE REELS] Video üretildi ({model_used})")
+
+            # ========== AŞAMA 7: Audio-Video Birleştirme ========== [YENİ]
+            final_video_path = video_path
+
+            if audio_path and not voice_fallback:
+                self.log("[VOICE REELS] Aşama 7: Video ve ses birleştiriliyor...")
+
+                from app.instagram_helper import merge_audio_video
+
+                merge_result = await merge_audio_video(
+                    video_path=video_path,
+                    audio_path=audio_path,
+                    target_duration=audio_duration,
+                    fade_out=True
+                )
+
+                if merge_result.get("success"):
+                    final_video_path = merge_result.get("output_path")
+                    result["stages_completed"].append("audio_merge")
+                    result["final_duration"] = merge_result.get("duration")
+                    self.log(f"[VOICE REELS] Merge tamamlandı: {merge_result.get('duration'):.1f}s")
+                else:
+                    self.log(f"[VOICE REELS] Merge hatası: {merge_result.get('error')}")
+                    self.log("[VOICE REELS] Sessiz video ile devam ediliyor...")
+                    result["merge_fallback"] = True
+            else:
+                self.log("[VOICE REELS] Audio yok, sessiz video kullanılacak")
+
+            await self.notify_telegram(
+                message=f"🎥 *SESLİ REELS* - Video Hazır\n\n"
+                f"Model: {model_used}\n"
+                f"Ses: {'✅ Eklendi' if audio_path and not voice_fallback else '❌ Yok (fallback)'}\n"
+                f"Complexity: {complexity}",
+                data={"video_path": final_video_path},
+                buttons=[]
+            )
+
+            # ========== AŞAMA 8: Kalite Kontrol ==========
+            self.log("[VOICE REELS] Aşama 8: Kalite kontrol...")
+            self.state = PipelineState.REVIEWING
+
+            review_result = await self.reviewer.execute({
+                "action": "review_post",
+                "post_text": content_result.get("post_text_ig", ""),
+                "topic": topic,
+                "post_id": content_result.get("post_id")
+            })
+
+            score = review_result.get("total_score", 0)
+            result["review_score"] = score
+            result["stages_completed"].append("review")
+
+            self.log(f"[VOICE REELS] Review: {score}/10")
+
+            # Düşük puan ise revizyon
+            if score < 7:
+                self.log("[VOICE REELS] Puan düşük, caption revize ediliyor...")
+                revision_result = await self.creator.execute({
+                    "action": "revise_post",
+                    "post_text": content_result.get("post_text_ig", ""),
+                    "feedback": review_result.get("feedback", "Daha kısa ve etkili yaz"),
+                    "post_id": content_result.get("post_id")
+                })
+                content_result["post_text_ig"] = revision_result.get("revised_post", content_result.get("post_text_ig"))
+
+            # ========== AŞAMA 9: Yayınla ==========
+            self.log("[VOICE REELS] Aşama 9: Yayınlanıyor...")
+            self.state = PipelineState.PUBLISHING
+
+            publish_result = await self.publisher.execute({
+                "action": "publish",
+                "post_id": content_result.get("post_id"),
+                "post_text": content_result.get("post_text_ig", ""),
+                "post_text_ig": content_result.get("post_text_ig", ""),
+                "video_path": final_video_path,
+                "platform": "instagram"
+            })
+
+            if publish_result.get("success"):
+                result["stages_completed"].append("published")
+                result["success"] = True
+                result["instagram_post_id"] = publish_result.get("instagram_post_id")
+
+                self.log(f"[VOICE REELS] Başarıyla yayınlandı! Instagram Reels")
+
+                voice_status = "🔊 Sesli" if (audio_path and not voice_fallback) else "🔇 Sessiz"
+
+                await self.notify_telegram(
+                    message=f"🎉 *SESLİ REELS* - Yayınlandı!\n\n"
+                    f"📝 Konu: {topic[:50]}...\n"
+                    f"🎥 Model: {model_used}\n"
+                    f"🎙️ Ses: {voice_status}\n"
+                    f"⏱️ Süre: ~{target_duration}s\n"
+                    f"📱 Platform: Instagram Reels\n"
+                    f"⭐ Puan: {score}/10",
+                    data=publish_result,
+                    buttons=[]
+                )
+            else:
+                raise Exception(f"Publish error: {publish_result.get('error')}")
+
+            self.state = PipelineState.COMPLETED
+            result["final_state"] = self.state.value
+
+            self.log("[VOICE REELS] Pipeline tamamlandı!")
+            return result
+
+        except Exception as e:
+            self.log(f"[VOICE REELS] Pipeline hatası: {str(e)}")
+            self.state = PipelineState.ERROR
+            result["error"] = str(e)
+            result["final_state"] = self.state.value
+
+            await self.notify_telegram(
+                message=f"❌ *SESLİ REELS* - Hata\n\n{str(e)}",
                 data={"error": str(e)},
                 buttons=[]
             )
