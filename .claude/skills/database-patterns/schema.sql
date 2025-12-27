@@ -11,8 +11,7 @@ CREATE TABLE IF NOT EXISTS posts (
     -- Content
     topic TEXT NOT NULL,
     post_text TEXT NOT NULL,
-    post_text_ig TEXT,      -- Instagram-specific text
-    post_text_fb TEXT,      -- Facebook-specific text
+    post_text_ig TEXT,      -- Instagram-specific text (platform optimize)
     visual_type TEXT,       -- infographic, gemini, flux, video, carousel
     visual_path TEXT,
     visual_prompt TEXT,
@@ -24,8 +23,7 @@ CREATE TABLE IF NOT EXISTS posts (
     rejection_reason TEXT,
 
     -- Platform
-    platform TEXT DEFAULT 'facebook',  -- facebook, instagram, both
-    facebook_post_id TEXT,
+    platform TEXT DEFAULT 'instagram',  -- instagram (primary platform)
     instagram_post_id TEXT,
 
     -- Hook & A/B Tracking
@@ -137,7 +135,7 @@ CREATE TABLE IF NOT EXISTS hook_performance (
     -- Hook Info
     hook_type TEXT NOT NULL,  -- question, statistic, bold_claim, problem, value, fear, before_after, list, comparison, local
     topic_category TEXT,
-    platform TEXT,            -- instagram, facebook, both
+    platform TEXT DEFAULT 'instagram',  -- instagram (primary platform)
 
     -- Aggregated Metrics
     usage_count INTEGER DEFAULT 0,

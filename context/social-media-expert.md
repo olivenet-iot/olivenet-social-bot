@@ -16,9 +16,11 @@
 - Merak: "Iste kimsenin bahsetmedigi detay..."
 
 ### 3. Sosyal Kanit
-- Rakamlar: "3000+ cihaz", "10+ basarili proje"
-- Sonuclar: "%35 tasarruf saglandi"
+- Somut sonuclar: "%35 tasarruf saglandi", "3 ayda geri donus"
+- Referans projeleri: "Sera otomasyonu projemizde..."
 - Testimonyaller (varsa)
+
+> **NOT:** Olivenet yeni baslayan bir girisimdir. "Binlerce cihaz", "yuzlerce proje" gibi abartili rakamlar KULLANILMAMALIDIR. Gercekci ve dogrulanabilir rakamlar tercih edilmeli.
 
 ### 4. Gorsel Cekicilik
 - Kontrast ve renk kullanimi

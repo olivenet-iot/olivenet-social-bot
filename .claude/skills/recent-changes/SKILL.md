@@ -9,6 +9,33 @@ Son commit'ler ve onemli degisiklikler. Debugging ve context icin referans.
 
 ## 2024-12 Son Commit'ler
 
+### Kapsamli Dokumantasyon Refaktoru (TBD)
+**Degisiklikler:**
+- 7 yeni dokumantasyon dosyasi eklendi
+- Renk paleti tutarsizligi duzeltildi
+- Facebook referanslari tamamen temizlendi
+- Duplicate topic listeleri birlestirildi
+- README.md tamamen yeniden yazildi
+- .env.example kapsamli sekilde guncellendi
+
+**Yeni Dosyalar:**
+- `ARCHITECTURE.md` - Sistem mimarisi, agent workflow
+- `DATABASE.md` - 11 tablo semasi ve ER diagram
+- `API_INTEGRATIONS.md` - 10+ API entegrasyonu detaylari
+- `CONFIGURATION.md` - Tum environment variables
+- `QUICKSTART.md` - Kurulum ve ilk calistirma
+- `USAGE_EXAMPLES.md` - Python API ornekleri
+- `TROUBLESHOOTING.md` - Sik hatalar ve cozumler
+
+**Guncellenen Dosyalar:**
+- `.claude/skills/template-system/SKILL.md` - renk paleti fix
+- `.claude/skills/database-patterns/schema.sql` - Facebook sutunlari kaldirildi
+- `.claude/skills/olivenet-brand/topics.md` - context/topics.md'ye referans
+- `context/schedule-strategy.md` - Facebook referanslari temizlendi
+- `context/social-media-expert.md` - rakam catismasi duzeltildi
+
+---
+
 ### KAYDET Sorunu Fix (f0d7d2f)
 **Problem:** Carousel cover slide'da "KAYDET" button metni gorunuyordu.
 **Cozum:** 4 katmanli savunma eklendi:

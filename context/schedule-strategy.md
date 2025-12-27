@@ -7,7 +7,8 @@
 | Instagram Reels | 7 | **58%** |
 | Instagram Carousel | 2 | 17% |
 | Instagram Post | 3 | 25% |
-| Facebook | 3 | (Post'larla birlikte) |
+
+> **Not:** Facebook devre dışı bırakıldı. Tüm içerikler sadece Instagram'a yayınlanıyor.
 
 **Neden %58 Reels?**
 - Non-follower reach Reels'de 3x daha yüksek
@@ -20,7 +21,7 @@
 
 ### Pazartesi - Hafta Başı Momentum
 - 10:00 -> **Reels** (Instagram) - Hafta başı motivasyon
-- 19:00 -> Post (Instagram + Facebook)
+- 19:00 -> Post (Instagram)
 
 ### Salı - Yoğun Gün
 - 10:00 -> **Reels** (Instagram)
@@ -28,7 +29,7 @@
 
 ### Çarşamba - Orta Hafta
 - 10:00 -> **Reels** (Instagram)
-- 19:00 -> Post (Instagram + Facebook)
+- 19:00 -> Post (Instagram)
 
 ### Perşembe - Etkileşim Zirvesi
 - 10:00 -> **Reels** (Instagram) - Teknik demo
@@ -36,7 +37,7 @@
 
 ### Cuma - Hafta Sonu Öncesi
 - 10:00 -> **Reels** (Instagram)
-- 19:00 -> Post (Instagram + Facebook)
+- 19:00 -> Post (Instagram)
 
 ### Cumartesi - Rahat İzleme
 - 14:00 -> **Carousel** (Instagram) - Showcase
@@ -106,26 +107,26 @@
 ### content_calendar Yapısı
 - day_of_week: 0=Pazartesi, 6=Pazar
 - visual_type_suggestion: "post" | "reels" | "carousel"
-- platform: "instagram" | "facebook" | "both"
+- platform: "instagram" (tek platform)
 
 ### OrchestratorAgent Haftalık Plan (Güncel)
 ```python
 WEEKLY_SCHEDULE = [
     # Pazartesi - Hafta başı momentum
     {"day": 0, "time": "10:00", "type": "reels", "platform": "instagram"},
-    {"day": 0, "time": "19:00", "type": "post", "platform": "both"},
+    {"day": 0, "time": "19:00", "type": "post", "platform": "instagram"},
     # Salı - Yoğun gün
     {"day": 1, "time": "10:00", "type": "reels", "platform": "instagram"},
     {"day": 1, "time": "19:00", "type": "carousel", "platform": "instagram"},
     # Çarşamba - Orta hafta
     {"day": 2, "time": "10:00", "type": "reels", "platform": "instagram"},
-    {"day": 2, "time": "19:00", "type": "post", "platform": "both"},
+    {"day": 2, "time": "19:00", "type": "post", "platform": "instagram"},
     # Perşembe - Etkileşim zirvesi (çift Reels!)
     {"day": 3, "time": "10:00", "type": "reels", "platform": "instagram"},
     {"day": 3, "time": "19:00", "type": "reels", "platform": "instagram"},
     # Cuma - Hafta sonu öncesi
     {"day": 4, "time": "10:00", "type": "reels", "platform": "instagram"},
-    {"day": 4, "time": "19:00", "type": "post", "platform": "both"},
+    {"day": 4, "time": "19:00", "type": "post", "platform": "instagram"},
     # Cumartesi - Rahat izleme
     {"day": 5, "time": "14:00", "type": "carousel", "platform": "instagram"},
     # Pazar - Hafta özeti
@@ -136,4 +137,4 @@ WEEKLY_SCHEDULE = [
 ### İçerik Dağılımı
 - Reels: 7 (%58) - Non-follower reach maksimizasyonu
 - Carousel: 2 (%17) - Save rate artışı
-- Post: 3 (%25) - Detaylı bilgi ve Facebook paylaşımı
+- Post: 3 (%25) - Detaylı bilgi paylaşımı

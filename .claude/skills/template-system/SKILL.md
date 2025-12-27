@@ -54,23 +54,27 @@ html_path, png_path = await save_html_and_render(
 
 ### Renkler
 ```css
-/* Ana Renkler */
---olive-900: #1a2e19;  /* Koyu arka plan */
---olive-800: #2d4a2a;
---olive-700: #3d6139;
---olive-600: #4a7c45;  /* Primary */
---olive-500: #5a9654;
---olive-100: #e8f5e6;
---olive-50: #f5faf4;
+/* Ana Renkler - visual-guidelines.md ve templates ile senkron */
+--olive-900: #1a2e1a;  /* En koyu arka plan */
+--olive-800: #243524;  /* Koyu arka plan */
+--olive-700: #2d4a2d;  /* Primary button */
+--olive-600: #3a5f3a;  /* Hover durumlari */
+--olive-500: #4a7c4a;  /* Ana marka rengi */
+--olive-400: #5e9a5e;  /* Vurgu elementleri */
+--olive-300: #7ab87a;  /* Acik vurgular */
+--olive-200: #a3d4a3;  /* Hafif arka planlar */
+--olive-100: #d1e8d1;  /* Cok acik arka plan */
+--olive-50: #e8f4e8;   /* En acik arka plan */
 
 /* Vurgu */
---sky-500: #38bdf8;    /* Teknoloji mavisi */
---sky-400: #5ecefc;
+--sky-500: #0ea5e9;    /* Teknoloji mavisi */
+--sky-400: #38bdf8;    /* Acik mavi vurgu */
+--sky-300: #7dd3fc;    /* Hafif mavi vurgu */
 
 /* Sektor Renkleri */
---tarim: #2E7D32;      /* Yesil */
---fabrika: #1565C0;    /* Mavi */
---enerji: #F57C00;     /* Turuncu */
+--emerald-500: #10b981;  /* Tarim/Sera */
+--amber-500: #f59e0b;    /* Enerji */
+--violet-500: #8b5cf6;   /* Kestirimci Bakim */
 ```
 
 ### Font
