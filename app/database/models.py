@@ -278,6 +278,62 @@ def init_database():
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_prompt_type ON prompt_history(prompt_type)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_prompt_created ON prompt_history(created_at)')
 
+    # Ad Campaigns tablosu - Meta Ads performans verileri
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS ad_campaigns (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            post_id INTEGER,
+
+            -- Meta IDs
+            campaign_id TEXT,
+            campaign_name TEXT,
+            adset_id TEXT,
+            adset_name TEXT,
+            ad_id TEXT UNIQUE,
+            ad_name TEXT,
+
+            -- Performans metrikleri
+            impressions INTEGER DEFAULT 0,
+            reach INTEGER DEFAULT 0,
+            clicks INTEGER DEFAULT 0,
+            spend REAL DEFAULT 0.0,
+
+            -- Aksiyonlar
+            follows INTEGER DEFAULT 0,
+            saves INTEGER DEFAULT 0,
+            shares INTEGER DEFAULT 0,
+            likes INTEGER DEFAULT 0,
+            engagements INTEGER DEFAULT 0,
+            video_views INTEGER DEFAULT 0,
+
+            -- Maliyetler
+            cpc REAL DEFAULT 0.0,
+            cpm REAL DEFAULT 0.0,
+            cost_per_follow REAL DEFAULT 0.0,
+            cost_per_save REAL DEFAULT 0.0,
+            frequency REAL DEFAULT 0.0,
+
+            -- Video metrikleri
+            video_25_pct INTEGER DEFAULT 0,
+            video_50_pct INTEGER DEFAULT 0,
+            video_75_pct INTEGER DEFAULT 0,
+            video_100_pct INTEGER DEFAULT 0,
+
+            -- Tarihler
+            date_start DATE,
+            date_stop DATE,
+            synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+            FOREIGN KEY (post_id) REFERENCES posts(id)
+        )
+    ''')
+
+    # Ad campaigns index'leri
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_ad_campaign_id ON ad_campaigns(campaign_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_ad_ad_id ON ad_campaigns(ad_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_ad_synced ON ad_campaigns(synced_at)')
+
     conn.commit()
 
     # Analytics kolonlarını posts tablosuna ekle (migration)

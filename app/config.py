@@ -92,6 +92,10 @@ class Settings(BaseSettings):
     instagram_user_id: str = Field(default="", description="Instagram User ID")
     instagram_business_id: str = Field(default="", description="Instagram Business Account ID")
 
+    # Meta Ads API Settings (for paid campaign tracking)
+    meta_ad_account_id: str = Field(default="", description="Meta Ad Account ID (format: act_XXXXXXXXXX)")
+    meta_business_id: str = Field(default="", description="Meta Business Manager ID")
+
     # Gemini AI Settings
     gemini_api_key: str = Field(default="", description="Gemini API Key for realistic image generation")
 
