@@ -198,10 +198,13 @@ async def get_instagram_reels_insights(media_id: str) -> Dict[str, Any]:
             except Exception as e:
                 print(f"[IG_REELS] Basic info warning for {media_id}: {e}")
 
-            # Engagement rate
-            reach = result["reach"] if result["reach"] > 0 else 1
+            # Engagement rate - reach yeterli değilse 0 döndür (anlamsız %700+ değerler önlenir)
+            reach = result["reach"]
             total_engagement = result["likes"] + result["comments"] + result["saves"] + result["shares"]
-            result["engagement_rate"] = round((total_engagement / reach) * 100, 2)
+            if reach >= 10:  # Minimum 10 reach gerekli anlamlı engagement için
+                result["engagement_rate"] = round((total_engagement / reach) * 100, 2)
+            else:
+                result["engagement_rate"] = 0.0  # Yetersiz veri
 
             if result["total_interactions"] == 0:
                 result["total_interactions"] = total_engagement
@@ -273,11 +276,13 @@ async def get_instagram_image_insights(media_id: str) -> Dict[str, Any]:
                 result["caption"] = (basic_data.get("caption") or "")[:100]
                 result["timestamp"] = basic_data.get("timestamp")
 
-            # Engagement rate
+            # Engagement rate - yetersiz reach/impressions varsa 0 döndür
             denominator = result["reach"] if result["reach"] > 0 else result["impressions"]
-            denominator = denominator if denominator > 0 else 1
             total_engagement = result["likes"] + result["comments"] + result["saves"]
-            result["engagement_rate"] = round((total_engagement / denominator) * 100, 2)
+            if denominator >= 10:  # Minimum 10 reach/impression gerekli
+                result["engagement_rate"] = round((total_engagement / denominator) * 100, 2)
+            else:
+                result["engagement_rate"] = 0.0  # Yetersiz veri
 
             return result
 

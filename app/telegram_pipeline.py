@@ -1016,9 +1016,9 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             if result.get('success'):
                 text = "✅ *Senkronizasyon Tamamlandı*\n\n"
-                text += f"📊 Güncellenen post: {result.get('updated', 0)}\n"
-                if result.get('duration'):
-                    text += f"⏱️ Süre: {result.get('duration', 0):.1f}s\n"
+                text += f"📊 Güncellenen post: {result.get('synced', 0)}\n"
+                text += f"❌ Hata: {result.get('errors', 0)}\n"
+                text += f"📋 Toplam: {result.get('total', 0)}\n"
             else:
                 text = f"❌ *Senkronizasyon Hatası*\n\n{result.get('error', 'Bilinmeyen hata')}"
         except ImportError:

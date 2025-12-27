@@ -172,27 +172,39 @@ def get_post_analytics(post_id: int) -> List[Dict]:
     return [dict(row) for row in rows]
 
 def get_analytics_summary(days: int = 30) -> Dict:
-    """Son X günün analitik özeti"""
+    """
+    Son X günün analitik özeti.
+    NOT: posts tablosundaki ig_* alanlarından okur (analytics tablosu değil).
+    """
     conn = get_connection()
     cursor = conn.cursor()
     since = datetime.now() - timedelta(days=days)
 
+    # Posts tablosundan Instagram metriklerini çek
     cursor.execute('''
         SELECT
-            COUNT(DISTINCT post_id) as total_posts,
-            SUM(views) as total_views,
-            SUM(likes) as total_likes,
-            SUM(comments) as total_comments,
-            SUM(shares) as total_shares,
-            AVG(engagement_rate) as avg_engagement_rate,
-            AVG(reach) as avg_reach
-        FROM analytics
-        WHERE recorded_at > ?
+            COUNT(*) as total_posts,
+            SUM(COALESCE(ig_reach, 0)) as total_reach,
+            SUM(COALESCE(ig_likes, 0)) as total_likes,
+            SUM(COALESCE(ig_comments, 0)) as total_comments,
+            SUM(COALESCE(ig_saves, 0)) as total_saves,
+            SUM(COALESCE(ig_shares, 0)) as total_shares,
+            AVG(CASE WHEN ig_reach >= 10 THEN ig_engagement_rate ELSE NULL END) as avg_engagement_rate,
+            AVG(CASE WHEN ig_reach > 0 THEN ig_reach ELSE NULL END) as avg_reach
+        FROM posts
+        WHERE status = 'published'
+        AND published_at > ?
     ''', (since,))
 
     row = cursor.fetchone()
     conn.close()
-    return dict(row) if row else {}
+
+    if row:
+        result = dict(row)
+        # Legacy uyumluluk için views = reach
+        result['total_views'] = result.get('total_reach', 0)
+        return result
+    return {}
 
 # ============ STRATEGY ============
 
