@@ -22,8 +22,8 @@ Tüm ayarlar `.env` dosyasından okunur. Dosya konumu: `/opt/olivenet-social-bot
 4. Admin chat ID'yi bulmak için @userinfobot'a mesaj gönderin
 
 ```bash
-TELEGRAM_BOT_TOKEN=8177342869:AAGbfz1HPd0VO1cfp6VUk6kMgDVE5BLbBao
-TELEGRAM_ADMIN_CHAT_ID=8226514113
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+TELEGRAM_ADMIN_CHAT_ID=your_admin_chat_id
 ```
 
 ---
@@ -44,9 +44,9 @@ TELEGRAM_ADMIN_CHAT_ID=8226514113
 4. Token'ı long-lived'a çevir (60 gün)
 
 ```bash
-INSTAGRAM_ACCESS_TOKEN=IGAAQvIrkVC25BZAGI4c2lEWktQZATd2VF9CRDl...
-INSTAGRAM_USER_ID=26028300420089697
-INSTAGRAM_BUSINESS_ID=17841478810806901
+INSTAGRAM_ACCESS_TOKEN=your_instagram_access_token
+INSTAGRAM_USER_ID=your_instagram_user_id
+INSTAGRAM_BUSINESS_ID=your_instagram_business_id
 ```
 
 ---
@@ -60,7 +60,7 @@ INSTAGRAM_BUSINESS_ID=17841478810806901
 | `OPENAI_API_KEY` | ✓ | OpenAI API key (Sora erişimi) |
 
 ```bash
-OPENAI_API_KEY=sk-proj-znaziPASisSsi4nsWIGx...
+OPENAI_API_KEY=your_openai_api_key
 ```
 
 ### Google Veo (Gemini)
@@ -70,7 +70,7 @@ OPENAI_API_KEY=sk-proj-znaziPASisSsi4nsWIGx...
 | `GEMINI_API_KEY` | ✓ | Google AI Studio API key |
 
 ```bash
-GEMINI_API_KEY=AIzaSyDuVmBjiKT-ed7hNA9W2EFY4GvVw7Q2w7U
+GEMINI_API_KEY=your_gemini_api_key
 ```
 
 ### fal.ai (Kling AI)
@@ -80,7 +80,7 @@ GEMINI_API_KEY=AIzaSyDuVmBjiKT-ed7hNA9W2EFY4GvVw7Q2w7U
 | `FAL_API_KEY` | ✓ | fal.ai API key |
 
 ```bash
-FAL_API_KEY=f13ca27d-cc4f-419c-91d5-c60ce253d941:3d99c2c1...
+FAL_API_KEY=your_fal_api_key
 ```
 
 ---
@@ -94,7 +94,7 @@ FAL_API_KEY=f13ca27d-cc4f-419c-91d5-c60ce253d941:3d99c2c1...
 | `FLUX_API_KEY` | ✓ | BFL API key |
 
 ```bash
-FLUX_API_KEY=42db71ec-e560-45e3-9e12-b2adf465084f
+FLUX_API_KEY=your_flux_api_key
 ```
 
 ### Gemini Image
@@ -114,8 +114,8 @@ Aynı `GEMINI_API_KEY` kullanılır.
 | `ELEVENLABS_MODEL` | - | `eleven_multilingual_v2` | Model |
 
 ```bash
-ELEVENLABS_API_KEY=sk_65fa5b13b108f9a7fe472f72bb2179e91a0dbe5b
-ELEVENLABS_VOICE_ID=IuRRIAcbQK5AQk1XevPj
+ELEVENLABS_API_KEY=your_elevenlabs_api_key
+ELEVENLABS_VOICE_ID=your_voice_id
 ELEVENLABS_MODEL=eleven_multilingual_v2
 ```
 
@@ -132,9 +132,9 @@ ELEVENLABS_MODEL=eleven_multilingual_v2
 | `CLOUDINARY_API_SECRET` | ✓ | API secret |
 
 ```bash
-CLOUDINARY_CLOUD_NAME=drv2mqxbj
-CLOUDINARY_API_KEY=116624223336358
-CLOUDINARY_API_SECRET=svwWLMv6VfYtIc1zbG1dqMo4D2o
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_cloudinary_api_key
+CLOUDINARY_API_SECRET=your_cloudinary_api_secret
 ```
 
 ### imgbb (Görsel)
@@ -144,7 +144,7 @@ CLOUDINARY_API_SECRET=svwWLMv6VfYtIc1zbG1dqMo4D2o
 | `IMGBB_API_KEY` | ✓ | imgbb API key |
 
 ```bash
-IMGBB_API_KEY=ef6aab263ac18b8b16fc65efc1fc9550
+IMGBB_API_KEY=your_imgbb_api_key
 ```
 
 ---
@@ -157,7 +157,7 @@ IMGBB_API_KEY=ef6aab263ac18b8b16fc65efc1fc9550
 | `META_BUSINESS_ID` | - | Business Manager ID |
 
 ```bash
-META_AD_ACCOUNT_ID=act_1712025420199803
+META_AD_ACCOUNT_ID=act_your_ad_account_id
 ```
 
 ---
