@@ -1793,25 +1793,81 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             self.log("[CAROUSEL] Aşama 4: Kalite kontrolü...")
             self.state = PipelineState.REVIEWING
 
-            review_result = await self.reviewer.execute({
-                "action": "review_post",
-                "post_text": carousel_content.get("caption", ""),
-                "content_type": "carousel",
-                "slide_count": len(image_urls),
-                "topic": topic
-            })
+            MAX_CAROUSEL_RETRIES = 2
+            MIN_CAROUSEL_SCORE = 6.5
 
-            score = review_result.get("total_score", 7)
-            result["review_score"] = score
-            result["stages_completed"].append("review")
+            for attempt in range(MAX_CAROUSEL_RETRIES + 1):
+                review_result = await self.reviewer.execute({
+                    "action": "review_post",
+                    "post_text": carousel_content.get("caption", ""),
+                    "content_type": "carousel",
+                    "slide_count": len(image_urls),
+                    "topic": topic
+                })
 
-            self.log(f"[CAROUSEL] Review score: {score}/10")
+                score = review_result.get("total_score", 7)
+                feedback = review_result.get("feedback", "")
+                weaknesses = review_result.get("weaknesses", [])
+                suggestions = review_result.get("revision_suggestions", [])
 
-            if score < 6:
-                self.log("[CAROUSEL] Düşük puan - paylaşım durduruldu")
-                result["error"] = f"Kalite skoru düşük: {score}/10"
-                result["final_state"] = "review_failed"
-                return result
+                result["review_score"] = score
+                result["review_feedback"] = feedback
+                result["stages_completed"].append("review")
+
+                self.log(f"[CAROUSEL] Review score: {score}/10 (Deneme {attempt + 1}/{MAX_CAROUSEL_RETRIES + 1})")
+
+                if feedback:
+                    self.log(f"[CAROUSEL] Feedback: {feedback[:200]}...")
+                if weaknesses:
+                    self.log(f"[CAROUSEL] Zayıf yönler: {', '.join(weaknesses[:3])}")
+
+                if score >= MIN_CAROUSEL_SCORE:
+                    self.log(f"[CAROUSEL] Kalite onaylandı: {score}/10")
+                    break  # Yeterli puan, devam et
+
+                if attempt < MAX_CAROUSEL_RETRIES:
+                    # Düşük puan - caption'ı revize et
+                    self.log(f"[CAROUSEL] Düşük puan ({score}/10), caption revize ediliyor...")
+
+                    revision_feedback = feedback or "Daha kısa, etkili ve dikkat çekici yaz"
+                    if suggestions:
+                        revision_feedback += f". Öneriler: {', '.join(suggestions[:2])}"
+
+                    revision_result = await self.creator.execute({
+                        "action": "revise_post",
+                        "post_text": carousel_content.get("caption", ""),
+                        "feedback": revision_feedback,
+                        "post_id": carousel_content.get("post_id")
+                    })
+
+                    if revision_result.get("revised_post"):
+                        carousel_content["caption"] = revision_result.get("revised_post")
+                        self.log("[CAROUSEL] Caption revize edildi, tekrar değerlendiriliyor...")
+                else:
+                    # Son deneme de başarısız
+                    self.log(f"[CAROUSEL] {MAX_CAROUSEL_RETRIES + 1} deneme sonrası hala düşük puan: {score}/10")
+
+                    # Admin'e detaylı bildirim gönder
+                    feedback_msg = f"❌ *CAROUSEL* - Düşük Kalite Puanı\n\n"
+                    feedback_msg += f"📝 Konu: {topic[:50]}...\n"
+                    feedback_msg += f"⭐ Puan: {score}/10\n"
+                    feedback_msg += f"🔄 Deneme: {MAX_CAROUSEL_RETRIES + 1}\n\n"
+                    if feedback:
+                        feedback_msg += f"📋 *Feedback:*\n{feedback[:300]}\n\n"
+                    if weaknesses:
+                        feedback_msg += f"⚠️ *Zayıf Yönler:*\n• " + "\n• ".join(weaknesses[:3]) + "\n\n"
+                    if suggestions:
+                        feedback_msg += f"💡 *Öneriler:*\n• " + "\n• ".join(suggestions[:3])
+
+                    await self.notify_telegram(
+                        message=feedback_msg,
+                        data={"score": score, "feedback": feedback},
+                        buttons=[]
+                    )
+
+                    result["error"] = f"Kalite skoru düşük: {score}/10 - {feedback[:100] if feedback else 'Detay yok'}"
+                    result["final_state"] = "review_failed"
+                    return result
 
             # ========== AŞAMA 5: Instagram'a Paylaş ==========
             self.log("[CAROUSEL] Aşama 5: Instagram'a paylaşılıyor...")
