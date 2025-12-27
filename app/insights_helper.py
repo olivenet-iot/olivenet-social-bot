@@ -113,11 +113,15 @@ async def get_instagram_reels_insights(media_id: str) -> Dict[str, Any]:
                 "comments": 0,
                 "likes": 0,
                 "total_interactions": 0,
+                "avg_watch_time": 0.0,  # Reels ortalama izleme süresi (ms)
                 "engagement_rate": 0.0
             }
 
-            # Reels metrikleri
-            reels_metrics = ["plays", "reach", "saved", "shares", "comments", "likes", "total_interactions"]
+            # Reels metrikleri (2025 güncel - impressions deprecated)
+            reels_metrics = [
+                "plays", "reach", "saved", "shares", "comments", "likes",
+                "total_interactions", "ig_reels_avg_watch_time"
+            ]
 
             insights_response = await client.get(
                 f"{GRAPH_API_URL}/{media_id}/insights",
@@ -148,6 +152,8 @@ async def get_instagram_reels_insights(media_id: str) -> Dict[str, Any]:
                         result["likes"] = value
                     elif name == "total_interactions":
                         result["total_interactions"] = value
+                    elif name == "ig_reels_avg_watch_time":
+                        result["avg_watch_time"] = value  # milliseconds
             else:
                 # Fallback: temel metrikler
                 fallback_response = await client.get(
@@ -405,11 +411,19 @@ async def sync_insights_to_database() -> Dict[str, Any]:
             try:
                 ig_insights = await get_instagram_media_insights(ig_post_id)
                 if ig_insights.get("success"):
+                    # Temel metrikler
                     analytics_data["ig_reach"] = ig_insights.get("reach", 0)
                     analytics_data["ig_likes"] = ig_insights.get("likes", 0)
                     analytics_data["ig_comments"] = ig_insights.get("comments", 0)
                     analytics_data["ig_saves"] = ig_insights.get("saves", 0)
+                    analytics_data["ig_shares"] = ig_insights.get("shares", 0)
                     analytics_data["ig_engagement_rate"] = ig_insights.get("engagement_rate", 0)
+
+                    # Reels/Video metrikleri
+                    if ig_insights.get("plays", 0) > 0:
+                        analytics_data["ig_plays"] = ig_insights.get("plays", 0)
+                    if ig_insights.get("avg_watch_time", 0) > 0:
+                        analytics_data["ig_avg_watch_time"] = ig_insights.get("avg_watch_time", 0)
 
                     # Update database
                     update_post_analytics(post.get("id"), analytics_data)

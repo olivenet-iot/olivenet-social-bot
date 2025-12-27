@@ -189,8 +189,12 @@ def get_analytics_summary(days: int = 30) -> Dict:
             SUM(COALESCE(ig_comments, 0)) as total_comments,
             SUM(COALESCE(ig_saves, 0)) as total_saves,
             SUM(COALESCE(ig_shares, 0)) as total_shares,
+            SUM(COALESCE(ig_plays, 0)) as total_plays,
             AVG(CASE WHEN ig_reach >= 10 THEN ig_engagement_rate ELSE NULL END) as avg_engagement_rate,
-            AVG(CASE WHEN ig_reach > 0 THEN ig_reach ELSE NULL END) as avg_reach
+            AVG(CASE WHEN ig_reach > 0 THEN ig_reach ELSE NULL END) as avg_reach,
+            AVG(CASE WHEN ig_reach > 0 THEN ig_saves ELSE NULL END) as avg_saves,
+            AVG(CASE WHEN ig_reach > 0 THEN ig_shares ELSE NULL END) as avg_shares,
+            AVG(CASE WHEN ig_avg_watch_time > 0 THEN ig_avg_watch_time ELSE NULL END) as avg_watch_time
         FROM posts
         WHERE status = 'published'
         AND published_at > ?
@@ -203,6 +207,18 @@ def get_analytics_summary(days: int = 30) -> Dict:
         result = dict(row)
         # Legacy uyumluluk için views = reach
         result['total_views'] = result.get('total_reach', 0)
+
+        # Save rate ve share rate hesapla (kalite göstergesi)
+        total_reach = result.get('total_reach', 0) or 0
+        total_saves = result.get('total_saves', 0) or 0
+        total_shares = result.get('total_shares', 0) or 0
+        if total_reach > 0:
+            result['save_rate'] = round((total_saves / total_reach) * 100, 2)
+            result['share_rate'] = round((total_shares / total_reach) * 100, 2)
+        else:
+            result['save_rate'] = 0.0
+            result['share_rate'] = 0.0
+
         return result
     return {}
 
