@@ -1456,13 +1456,19 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             if audio_path and not voice_fallback:
                 self.log("[VOICE REELS] Aşama 7: Video ve ses birleştiriliyor...")
 
-                from app.instagram_helper import merge_audio_video
+                from app.instagram_helper import merge_audio_video, get_video_duration
+
+                # Video süresini kontrol et
+                video_duration = await get_video_duration(video_path)
+                if audio_duration > video_duration:
+                    self.log(f"[VOICE REELS] ⚠️ Audio ({audio_duration:.1f}s) > Video ({video_duration:.1f}s) - video loop edilecek")
 
                 merge_result = await merge_audio_video(
                     video_path=video_path,
                     audio_path=audio_path,
                     target_duration=audio_duration,
-                    fade_out=True
+                    fade_out=True,
+                    fade_duration=0.5  # Daha kısa fade-out, kesinti yumuşak biter
                 )
 
                 if merge_result.get("success"):

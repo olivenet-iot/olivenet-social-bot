@@ -214,7 +214,7 @@ async def merge_audio_video(
     target_duration: Optional[float] = None,
     audio_volume: float = 1.0,
     fade_out: bool = True,
-    fade_duration: float = 1.0
+    fade_duration: float = 0.5  # 0.5s fade-out - audio kesilse bile yumuşak biter
 ) -> Dict[str, Any]:
     """
     Video ve audio dosyalarını birleştir.

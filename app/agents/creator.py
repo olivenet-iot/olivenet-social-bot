@@ -820,8 +820,8 @@ Sadece JSON döndür, başka açıklama ekleme.
         tone = input_data.get("tone", "friendly")  # Samimi ton varsayılan
         post_id = input_data.get("post_id")
 
-        # Süre bazlı kelime hedefi (Türkçe: ~2.5 kelime/saniye)
-        target_words = int(target_duration * 2.5)
+        # Süre bazlı kelime hedefi (Türkçe: ~2.2 kelime/saniye - güvenli margin)
+        target_words = int(target_duration * 2.2)  # 12s için 26 kelime
 
         company_profile = self.load_context("company-profile.md")
 
