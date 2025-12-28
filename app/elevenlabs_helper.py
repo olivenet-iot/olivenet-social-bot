@@ -105,8 +105,8 @@ class ElevenLabsHelper:
         """
         Metin uzunluğundan ses süresini tahmin et.
 
-        Türkçe için ortalama: ~3 karakter/saniye (boşluksuz)
-        veya ~2.5 kelime/saniye
+        Türkçe için ortalama: ~1.8 kelime/saniye
+        (ElevenLabs TTS gerçek ölçümlere göre ayarlandı)
 
         Args:
             text: Metin
@@ -115,10 +115,11 @@ class ElevenLabsHelper:
         Returns:
             Tahmini süre (saniye)
         """
-        # Boşlukları çıkararak karakter sayısı
-        char_count = len(text.replace(" ", ""))
-        # ~3 karakter/saniye baz alarak
-        base_duration = char_count / 3.0
+        # Kelime bazlı hesaplama (daha doğru)
+        word_count = len(text.split())
+        # ~1.8 kelime/saniye baz alarak (ElevenLabs Türkçe TTS gerçek ölçüm)
+        # NOT: Eski 2.5 wps tahmini %30-40 eksik kalıyordu
+        base_duration = word_count / 1.8
         return base_duration / speed
 
     @staticmethod

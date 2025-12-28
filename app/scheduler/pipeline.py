@@ -1224,7 +1224,8 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
         self,
         topic: str = None,
         force_model: str = None,
-        target_duration: int = 15
+        target_duration: int = 15,
+        manual_topic_mode: bool = False
     ) -> Dict[str, Any]:
         """
         Sesli Instagram Reels içeriği üret ve yayınla.
@@ -1232,13 +1233,13 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
         ElevenLabs TTS + Video + FFmpeg merge pipeline.
 
         Pipeline Akışı:
-        1. Konu seçimi (Planner)
+        1. Konu seçimi (Planner) veya manuel konu işleme (Creator)
         2. Caption üretimi (Creator)
-        3. Speech script üretimi (Creator) ← YENİ
-        4. TTS ses üretimi (ElevenLabs) ← YENİ
+        3. Speech script üretimi (Creator)
+        4. TTS ses üretimi (ElevenLabs)
         5. Video prompt üretimi (Creator)
         6. Video üretimi (Veo 3 varsayılan)
-        7. Audio-video birleştirme (FFmpeg) ← YENİ
+        7. Audio-video birleştirme (FFmpeg)
         8. Kalite kontrol (Reviewer)
         9. Instagram Reels yayını (Publisher)
 
@@ -1246,6 +1247,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             topic: Konu (None ise Planner'dan alınır)
             force_model: Video modeli zorla (None ise veo3)
             target_duration: Hedef süre (12, 15, veya 20 saniye)
+            manual_topic_mode: True ise topic Creator ile profesyonelleştirilir
 
         Returns:
             Pipeline sonucu
@@ -1267,7 +1269,28 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
 
         try:
             # ========== AŞAMA 1: Konu Seçimi ==========
-            if topic:
+            if topic and manual_topic_mode:
+                # Manuel topic: Creator ile profesyonelleştir
+                self.log(f"[VOICE REELS] Manuel konu işleniyor: {topic[:50]}...")
+
+                topic_result = await self.creator.execute({
+                    "action": "process_manual_topic",
+                    "user_input": topic
+                })
+
+                processed_topic = topic_result.get("processed_topic", topic)
+                topic_data = {
+                    "topic": processed_topic,
+                    "category": topic_result.get("category", "tanitim"),
+                    "suggested_visual": "video",
+                    "hook_suggestion": topic_result.get("hook_suggestion", ""),
+                    "key_points": topic_result.get("key_points", []),
+                    "original_input": topic
+                }
+                topic = processed_topic
+                self.log(f"[VOICE REELS] İşlenmiş konu: {topic[:50]}...")
+
+            elif topic:
                 topic_data = {
                     "topic": topic,
                     "category": "tanitim",
@@ -1354,7 +1377,15 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
 
                 if tts_result.get("success"):
                     audio_path = tts_result.get("audio_path")
-                    audio_duration = tts_result.get("duration_seconds", 0)
+                    estimated_duration = tts_result.get("duration_seconds", 0)
+
+                    # GERÇEK audio süresini ffprobe ile ölç (tahmini değil!)
+                    from app.instagram_helper import get_audio_duration
+                    actual_audio_duration = await get_audio_duration(audio_path)
+                    self.log(f"[VOICE REELS] TTS süre karşılaştırma - Tahmini: {estimated_duration:.1f}s, Gerçek: {actual_audio_duration:.1f}s")
+
+                    # Gerçek süreyi kullan (tahmini değil)
+                    audio_duration = actual_audio_duration if actual_audio_duration > 0 else estimated_duration
 
                     # Audio süresini target_duration ile sınırla (Sora max 12s)
                     if audio_duration > target_duration:
@@ -1362,7 +1393,8 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                         audio_duration = target_duration  # merge_audio_video -t ile kırpacak
 
                     result["stages_completed"].append("tts_generation")
-                    self.log(f"[VOICE REELS] Ses hazır: {audio_duration:.1f}s")
+                    result["actual_audio_duration"] = actual_audio_duration  # Gerçek süreyi kaydet
+                    self.log(f"[VOICE REELS] Ses hazır: {audio_duration:.1f}s (gerçek: {actual_audio_duration:.1f}s)")
                 else:
                     error = tts_result.get("error", "Unknown TTS error")
                     self.log(f"[VOICE REELS] TTS hatası: {error}")
@@ -1392,6 +1424,8 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             speech_structure = extract_shot_structure(speech_script, target_duration)
             self.log(f"[VOICE REELS] Shot yapısı: {len(speech_structure)} shot")
 
+            self.log(f"[VOICE REELS] create_reels_prompt cagriliyior: topic={topic[:50]}..., shots={len(speech_structure)}")
+
             reels_prompt_result = await self.creator.execute({
                 "action": "create_reels_prompt",
                 "topic": topic,
@@ -1403,6 +1437,11 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             })
 
             if not reels_prompt_result.get("success"):
+                # Hata detaylarını logla
+                self.log(f"[VOICE REELS] HATA DETAY: {reels_prompt_result}")
+                raw_resp = reels_prompt_result.get('raw_response', 'YOK')
+                if raw_resp and raw_resp != 'YOK':
+                    self.log(f"[VOICE REELS] Raw Response: {raw_resp[:500]}")
                 raise Exception(f"Reels prompt error: {reels_prompt_result.get('error', 'Unknown')}")
 
             self.current_data["reels_prompt"] = reels_prompt_result
@@ -1412,6 +1451,10 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             model_to_use = force_model or "sora-2"
             video_prompt = reels_prompt_result.get("video_prompt_sora") or reels_prompt_result.get("video_prompt_wan") or reels_prompt_result.get("video_prompt_veo", "")
             complexity = reels_prompt_result.get("complexity", "medium")
+
+            # Boş video prompt kontrolü - alakasız video üretimini önle
+            if not video_prompt or not video_prompt.strip():
+                raise Exception("Video prompt boş! LLM geçerli bir prompt üretemedi.")
 
             # Video prompt'u kaydet
             if video_prompt and content_result.get("post_id"):
@@ -1430,11 +1473,26 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
 
             from app.sora_helper import generate_video_smart
 
+            # Video süresini GERÇEK audio süresine göre belirle
+            # Sora desteklenen süreler: 4, 8, 12 saniye
+            actual_dur = result.get("actual_audio_duration", target_duration)
+            if actual_dur <= 6:
+                video_gen_duration = 8  # Biraz buffer için
+            elif actual_dur <= 10:
+                video_gen_duration = 12
+            else:
+                video_gen_duration = 12  # Max Sora süresi
+
+            if actual_dur > 12:
+                self.log(f"[VOICE REELS] ⚠️ Audio {actual_dur:.1f}s > 12s max, video loop gerekecek")
+
+            self.log(f"[VOICE REELS] Video süresi: {video_gen_duration}s (audio: {actual_dur:.1f}s)")
+
             video_result = await generate_video_smart(
                 prompt=video_prompt,
                 topic=topic,
                 force_model=model_to_use,
-                duration=target_duration,  # Sora max 12s
+                duration=video_gen_duration,  # Gerçek audio süresine göre
                 voice_mode=True  # TTS voiceover için NO dialogue suffix
             )
 

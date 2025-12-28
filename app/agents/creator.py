@@ -4,6 +4,7 @@ Post metni ve görsel prompt'u üretir
 """
 
 import json
+import asyncio
 from datetime import datetime
 from typing import Dict, Any, Optional
 from .base_agent import BaseAgent
@@ -41,6 +42,8 @@ class CreatorAgent(BaseAgent):
             return await self.create_ab_variants(input_data)
         elif action == "create_speech_script":
             return await self.create_speech_script(input_data)
+        elif action == "process_manual_topic":
+            return await self.process_manual_topic(input_data)
         else:
             return {"error": f"Unknown action: {action}"}
 
@@ -681,13 +684,13 @@ Bu video TTS voiceover ile birleştirilecek. Her shot, aşağıdaki speech içer
 {category}
 
 ### Post Metni (varsa)
-{post_text[:500] if post_text else "Yok"}
+{post_text[:300] if post_text else "Yok"}
 
 ### Şirket Bilgisi
-{company_profile[:1500]}
+{company_profile[:800]}
 
 ### Profesyonel Prompting Rehberi
-{reels_guide[:3000]}
+{reels_guide[:1500]}
 {sync_guide}
 ---
 
@@ -751,41 +754,88 @@ Bu video TTS voiceover ile birleştirilecek. Her shot, aşağıdaki speech içer
 Sadece JSON döndür, başka açıklama ekleme.
 """
 
-        response = await self.call_claude(prompt, timeout=90)
+        # Agresif logging - LLM çağrısı öncesi
+        self.log(f"[REELS PROMPT] LLM cagriliyior - voice_mode: {voice_mode}, shots: {len(speech_structure)}")
+        self.log(f"[REELS PROMPT] Prompt: {len(prompt)} chars")
 
-        try:
-            result = json.loads(self._clean_json_response(response))
+        # Retry mekanizması - boş JSON için de retry yap
+        MAX_RETRIES = 3
+        response = None
+        result = None
+        video_prompt = None
+        last_error = None
 
-            # Post'u güncelle
-            if post_id:
-                # Sora prompt'u visual_prompt olarak kaydet
-                video_prompt = result.get("video_prompt_sora") or result.get("video_prompt_veo", "")
-                update_post(post_id, visual_prompt=video_prompt)
+        for attempt in range(MAX_RETRIES):
+            try:
+                response = await self.call_claude_with_retry(prompt, timeout=90, max_retries=2)
+                self.log(f"[REELS PROMPT] Attempt {attempt + 1}/{MAX_RETRIES} - Response: {len(response) if response else 0} chars")
 
-            complexity = result.get("complexity", "medium")
-            model = result.get("recommended_model", "veo3")
+                if not response or not response.strip() or response.strip() == "{}":
+                    last_error = "Empty or {} response"
+                    self.log(f"[REELS PROMPT] Bos response, retry...")
+                    if attempt < MAX_RETRIES - 1:
+                        await asyncio.sleep(3)  # 3 saniye bekle
+                    continue
 
-            self.log(f"Reels prompt oluşturuldu")
-            self.log(f"   Complexity: {complexity}")
-            self.log(f"   Model: {model}")
-            self.log(f"   Duration: {result.get('recommended_duration', 5)}s")
+                # JSON parse
+                result = json.loads(self._clean_json_response(response))
 
-            log_agent_action(
-                agent_name=self.name,
-                action="create_reels_prompt",
-                input_data={"topic": topic, "category": category},
-                output_data={"complexity": complexity, "model": model},
-                success=True
-            )
+                # Video prompt var mı kontrol et
+                video_prompt = result.get("video_prompt_sora") or result.get("video_prompt_veo") or result.get("video_prompt_wan", "")
 
-            return {
-                "success": True,
-                **result
-            }
+                if video_prompt and video_prompt.strip():
+                    self.log(f"[REELS PROMPT] Basarili! Video prompt: {len(video_prompt)} chars")
+                    break  # Başarılı
+                else:
+                    last_error = f"Video prompt bos, keys: {list(result.keys())}"
+                    self.log(f"[REELS PROMPT] {last_error}, retry...")
+                    if attempt < MAX_RETRIES - 1:
+                        await asyncio.sleep(3)
 
-        except json.JSONDecodeError as e:
-            self.log(f"JSON parse hatası: {e}")
-            return {"success": False, "error": f"JSON parse error: {e}", "raw_response": response[:500]}
+            except json.JSONDecodeError as e:
+                last_error = f"JSON parse error: {e}"
+                self.log(f"[REELS PROMPT] {last_error}")
+                self.log(f"[REELS PROMPT] Raw response: {response[:500] if response else 'EMPTY'}...")
+                if attempt < MAX_RETRIES - 1:
+                    await asyncio.sleep(3)
+
+            except Exception as e:
+                last_error = f"Exception: {type(e).__name__}: {e}"
+                self.log(f"[REELS PROMPT] {last_error}")
+                if attempt < MAX_RETRIES - 1:
+                    await asyncio.sleep(3)
+
+        # Tüm denemeler başarısız
+        if not video_prompt or not video_prompt.strip():
+            self.log(f"WARNING: Tum {MAX_RETRIES} deneme basarisiz: {last_error}")
+            self.log(f"[DEBUG] Result keys: {list(result.keys()) if result else 'None'}")
+            self.log(f"[DEBUG] Raw response preview: {response[:300] if response else 'EMPTY'}...")
+            return {"success": False, "error": f"LLM failed after {MAX_RETRIES} retries: {last_error}", "raw_response": response[:500] if response else "EMPTY"}
+
+        # Başarılı - Post'u güncelle
+        if post_id:
+            update_post(post_id, visual_prompt=video_prompt)
+
+        complexity = result.get("complexity", "medium")
+        model = result.get("recommended_model", "veo3")
+
+        self.log(f"Reels prompt oluşturuldu")
+        self.log(f"   Complexity: {complexity}")
+        self.log(f"   Model: {model}")
+        self.log(f"   Duration: {result.get('recommended_duration', 5)}s")
+
+        log_agent_action(
+            agent_name=self.name,
+            action="create_reels_prompt",
+            input_data={"topic": topic, "category": category},
+            output_data={"complexity": complexity, "model": model},
+            success=True
+        )
+
+        return {
+            "success": True,
+            **result
+        }
 
     async def create_speech_script(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -820,8 +870,9 @@ Sadece JSON döndür, başka açıklama ekleme.
         tone = input_data.get("tone", "friendly")  # Samimi ton varsayılan
         post_id = input_data.get("post_id")
 
-        # Süre bazlı kelime hedefi (Türkçe: ~2.2 kelime/saniye - güvenli margin)
-        target_words = int(target_duration * 2.2)  # 12s için 26 kelime
+        # Süre bazlı kelime hedefi (Türkçe: ~1.8 kelime/saniye - TTS gerçek süreye uyumlu)
+        # NOT: ElevenLabs Türkçe TTS tahminlerden %30-40 daha yavaş okuyor
+        target_words = int(target_duration * 1.8)  # 12s için ~21 kelime
 
         company_profile = self.load_context("company-profile.md")
 
@@ -1314,3 +1365,95 @@ Sadece prompt'u döndür, başka açıklama ekleme.
         except Exception as e:
             self.log(f"Yeniden oluşturma hatası: {e}")
             return None
+
+    async def process_manual_topic(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Kullanıcının ham input'unu profesyonel voice reels konusuna dönüştür.
+
+        Ham input'u Olivenet marka sesine uygun, hook potansiyeli yüksek,
+        profesyonel bir Instagram Reels başlığına çevirir.
+
+        Input: "akıllı tarım solenoid vanaların uzaktan kontrolü"
+        Output: {
+            "processed_topic": "Akıllı Tarımda Solenoid Vana Kontrolü: Uzaktan Sulama Nasıl Çalışır?",
+            "hook_suggestion": "Tarlaya gitmeden sulama yapmak mümkün mü?",
+            "key_points": ["Uzaktan erişim", "Su tasarrufu", "LoRaWAN bağlantısı"]
+        }
+        """
+        user_input = input_data.get("user_input", "")
+        self.log(f"Manuel topic işleniyor: {user_input[:50]}...")
+
+        # Load context
+        company_profile = self.load_context("company-profile.md")
+        brand_voice = self.load_context("social-media-expert.md")
+
+        prompt = f"""
+Kullanıcı şu konuda sesli Instagram Reels istiyor:
+"{user_input}"
+
+Bu ham input'u profesyonel bir Instagram Reels konusuna dönüştür.
+
+OLIVENET PROFİLİ:
+{company_profile[:1500]}
+
+MARKA SESİ:
+{brand_voice[:1000]}
+
+KURALLAR:
+1. Olivenet'in uzmanlık alanına uygun olmalı (IoT, sensörler, otomasyon, akıllı tarım)
+2. Hook potansiyeli yüksek olmalı (soru formatı veya şaşırtıcı bilgi/istatistik)
+3. 8-12 kelime arasında başlık
+4. Somut değer/fayda içermeli
+5. Türkçe ve profesyonel ton
+
+ÖRNEK DÖNÜŞÜMLER:
+- "sera sulama" → "Sera Sulama Otomasyonu: %40 Su Tasarrufu Nasıl Sağlanır?"
+- "motor arıza" → "Motorunuz Arıza Yapmadan 2 Hafta Önce Sizi Uyarsa?"
+- "sıcaklık takibi" → "Seranızda Sıcaklık 1°C Artınca Verim %15 Düşer mi?"
+- "LoRaWAN sensör" → "LoRaWAN ile 10km Mesafeden Sensör Verisi Nasıl Alınır?"
+
+JSON formatında yanıt ver:
+{{
+    "processed_topic": "Profesyonel başlık (8-12 kelime)",
+    "hook_suggestion": "Video için önerilen hook cümlesi (dikkat çekici)",
+    "key_points": ["Ana nokta 1", "Ana nokta 2", "Ana nokta 3"],
+    "category": "egitici veya tanitim"
+}}
+
+Sadece JSON döndür.
+"""
+
+        try:
+            response = await self.call_claude(prompt, timeout=60)
+            result = json.loads(self._clean_json_response(response))
+
+            self.log(f"Manuel topic işlendi: {result.get('processed_topic', '')[:50]}...")
+
+            return {
+                "success": True,
+                "processed_topic": result.get("processed_topic", user_input),
+                "hook_suggestion": result.get("hook_suggestion", ""),
+                "key_points": result.get("key_points", []),
+                "category": result.get("category", "egitici"),
+                "original_input": user_input
+            }
+
+        except json.JSONDecodeError as e:
+            self.log(f"JSON parse hatası: {e}")
+            # Fallback: ham input'u kullan
+            return {
+                "success": True,
+                "processed_topic": user_input,
+                "hook_suggestion": "",
+                "key_points": [],
+                "category": "egitici",
+                "original_input": user_input
+            }
+        except Exception as e:
+            self.log(f"Manuel topic işleme hatası: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "processed_topic": user_input,
+                "original_input": user_input
+            }
