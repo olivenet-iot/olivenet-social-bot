@@ -28,13 +28,13 @@ class FalVideoGenerator:
         "kling_standard": {
             "text_to_video": "fal-ai/kling-video/v2.5-turbo/standard/text-to-video",
             "image_to_video": "fal-ai/kling-video/v2.1/standard/image-to-video",
-            "name": "Kling 2.5 Turbo Standard",
+            "name": "Kling 2.5 Standard",
             "max_duration": 10
         },
         "kling_pro": {
             "text_to_video": "fal-ai/kling-video/v2.5-turbo/pro/text-to-video",
             "image_to_video": "fal-ai/kling-video/v2.1/pro/image-to-video",
-            "name": "Kling 2.5 Turbo Pro",
+            "name": "Kling 2.5 Pro",
             "max_duration": 10
         },
         "kling_master": {

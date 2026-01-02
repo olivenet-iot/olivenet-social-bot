@@ -206,11 +206,11 @@ def analyze_prompt_complexity(prompt: str, topic: str = "") -> Dict[str, Any]:
 
     for kw in high_keywords:
         if kw in combined:
-            return {"complexity": "high", "model": "sora-2-pro", "duration": 8}
+            return {"complexity": "high", "model": "veo3", "duration": 8}
 
     for kw in medium_keywords:
         if kw in combined:
-            return {"complexity": "medium", "model": "sora-2", "duration": 8}
+            return {"complexity": "medium", "model": "veo3", "duration": 8}
 
     return {"complexity": "low", "model": "veo3", "duration": 6}
 
@@ -236,11 +236,18 @@ async def generate_video_smart(
         model = complexity.get("model", "veo3")
         duration = complexity.get("duration", duration)
 
-    # Model isim normalizasyonu (UI'dan gelen kısa isimler)
+    # Model isim normalizasyonu (UI'dan gelen kısa isimler ve video_models.py ID'leri)
     model_aliases = {
         "sora2": "sora-2",
         "sora2-pro": "sora-2-pro",
-        "veo": "veo3"
+        "veo": "veo3",
+        # Multi-model voice reels ID'leri (video_models.py → fal_helper.py)
+        "kling-2.5-pro": "kling_pro",
+        "kling-2.6-pro": "kling_26_pro",
+        "kling-2.1": "kling_pro",  # Backward compatibility
+        "wan-2.1": "wan_26",
+        "veo-2": "veo3",
+        "minimax": "hailuo_pro"
     }
     if model in model_aliases:
         model = model_aliases[model]
@@ -253,12 +260,17 @@ async def generate_video_smart(
         print(f"[VIDEO] → Kling AI ({model}) kullaniliyor...")
         try:
             from app.fal_helper import FalVideoGenerator
-            # Kling 2.6 için audio aktif
-            generate_audio = True if model == "kling_26_pro" else None
+            # Voice mode'da native audio KAPATILIR (TTS voiceover eklenecek)
+            # Kling 2.6 için normalde audio aktif, ama voice_mode'da kapalı
+            if voice_mode:
+                generate_audio = False  # TTS voiceover için native audio kapat
+                print(f"[VIDEO] → Voice mode: Native audio KAPALI")
+            else:
+                generate_audio = True if model == "kling_26_pro" else None
             result = await FalVideoGenerator.generate_video(
                 prompt=prompt,
                 model=model,
-                duration=10,  # Kling 10 saniyeye kadar destekliyor
+                duration=min(duration, 10),  # Kling 10 saniyeye kadar destekliyor
                 aspect_ratio="9:16",
                 generate_audio=generate_audio
             )

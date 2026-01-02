@@ -24,6 +24,7 @@ from app.database import (
     get_recent_prompts, get_top_performing_prompts, get_prompt_style_stats
 )
 from app.config import settings
+from app.video_models import VIDEO_MODELS, get_model_config, get_model_durations
 
 # Global değişkenler
 pipeline: ContentPipeline = None
@@ -546,7 +547,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 InlineKeyboardButton("🎞️ Wan 2.6", callback_data="video_model:wan_26"),
             ],
             [
-                InlineKeyboardButton("💎 Kling Master", callback_data="video_model:kling_master"),
+                InlineKeyboardButton("💎 Kling 2.1 Master", callback_data="video_model:kling_master"),
             ],
             [
                 InlineKeyboardButton("🎙️ Sesli Reels (TTS)", callback_data="voice_reels_menu"),
@@ -559,11 +560,11 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "🎬 *Video Modeli Seçin*\n\n"
             "• *Veo 3*: Google, 8s, yüksek kalite\n"
             "• *Sora 2*: OpenAI, 8s, yaratıcı\n"
-            "• *Kling 2.5*: fal.ai, 10s, hızlı\n"
-            "• *Kling 2.6*: fal.ai, 10s, 🔊 ambient sesli\n"
+            "• *Kling 2.5 Pro*: fal.ai, 10s, hızlı\n"
+            "• *Kling 2.6 Pro*: fal.ai, 10s, 🔊 ambient sesli\n"
             "• *Hailuo Pro*: 🌀 Dinamik hareketler, 6s\n"
             "• *Wan 2.6*: 🎞️ Multi-shot, sinematik, 15s\n"
-            "• *Kling Master*: fal.ai, 10s, en iyi kalite\n\n"
+            "• *Kling 2.1 Master*: fal.ai, 10s, en iyi kalite\n\n"
             "🎙️ *Sesli Reels*: Türkçe voiceover + video\n\n"
             "💡 Tüm modeller 9:16 dikey format kullanır.",
             parse_mode="Markdown",
@@ -577,11 +578,11 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         model_names = {
             "veo3": "Veo 3 (Google)",
             "sora2": "Sora 2 (OpenAI)",
-            "kling_pro": "Kling 2.5 (fal.ai)",
+            "kling_pro": "Kling 2.5 Pro (fal.ai)",
             "kling_26_pro": "Kling 2.6 Pro (fal.ai)",
             "hailuo_pro": "Hailuo 02 Pro (fal.ai)",
             "wan_26": "Wan 2.6 (fal.ai)",
-            "kling_master": "Kling Master (fal.ai)"
+            "kling_master": "Kling 2.1 Master (fal.ai)"
         }
         model_name = model_names.get(model, model)
 
@@ -601,15 +602,152 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Reels pipeline'ı arka planda çalıştır - seçilen model ile
         asyncio.create_task(pipeline.run_reels_content(force_model=model))
 
-    # ===== SESLİ REELS MENÜSÜ =====
+    # ===== SESLİ REELS MENÜSÜ - MODEL SEÇİMİ =====
     elif action == "voice_reels_menu":
+        # Model seçim menüsü
+        keyboard = []
+        for model_id, config in VIDEO_MODELS.items():
+            emoji = config["emoji"]
+            name = config["name"]
+            max_dur = config["max_duration"]
+            desc = config["description"]
+            # Wan 2.1 için yıldız ekle (en uzun video)
+            star = " ⭐" if model_id == "wan-2.1" else ""
+            button_text = f"{emoji} {name} (max {max_dur}s){star}"
+            keyboard.append([InlineKeyboardButton(button_text, callback_data=f"voice_model:{model_id}")])
+
+        keyboard.append([InlineKeyboardButton("❌ İptal", callback_data="create_reels")])
+
+        await query.edit_message_text(
+            "🎬 *SESLİ REELS* - Model Seç\n\n"
+            "Hangi AI modeli ile video oluşturmak istersin?\n\n"
+            "🌟 *Sora 2* - En yüksek kalite, gerçekçi (max 12s)\n"
+            "🎥 *Veo 2* - Google, hızlı ve tutarlı (max 8s)\n"
+            "🎬 *Kling 2.5 Pro* - Hızlı üretim (max 10s)\n"
+            "🎥 *Kling 2.6 Pro* - Cinematic 1080p kalite ⭐ (max 10s)\n"
+            "🌊 *Wan 2.1* - En uzun video! (max 15s)\n"
+            "🎯 *Minimax* - Hızlı ve ekonomik (max 5s)\n\n"
+            "🔊 Tüm modellerde Türkçe AI voiceover eklenir.",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+
+    # ===== SESLİ REELS - MODEL SEÇİLDİ → SÜRE MENÜSÜ =====
+    elif action.startswith("voice_model:"):
+        model_id = action.replace("voice_model:", "")
+        config = get_model_config(model_id)
+        durations = get_model_durations(model_id)
+
+        keyboard = []
+        for duration in durations:
+            is_default = duration == config.get("default_duration")
+            emoji = "⭐" if is_default else "⏱️"
+            suffix = " (önerilen)" if is_default else ""
+            button_text = f"{emoji} {duration} saniye{suffix}"
+            keyboard.append([InlineKeyboardButton(button_text, callback_data=f"voice_duration:{model_id}:{duration}")])
+
+        keyboard.append([InlineKeyboardButton("⬅️ Geri", callback_data="voice_reels_menu")])
+
+        await query.edit_message_text(
+            f"⏱️ *{config['emoji']} {config['name']}* - Süre Seç\n\n"
+            f"_{config['description']}_\n\n"
+            "Kaç saniyelik video oluşturmak istersin?",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+
+    # ===== SESLİ REELS - SÜRE SEÇİLDİ → KONU MENÜSÜ =====
+    elif action.startswith("voice_duration:"):
+        parts = action.split(":")
+        model_id = parts[1]
+        duration = int(parts[2])
+        config = get_model_config(model_id)
+
+        keyboard = [
+            [InlineKeyboardButton("🎲 Otomatik Konu", callback_data=f"voice_topic:{model_id}:{duration}:auto")],
+            [InlineKeyboardButton("✏️ Manuel Konu", callback_data=f"voice_topic:{model_id}:{duration}:manual")],
+            [InlineKeyboardButton("⬅️ Geri", callback_data=f"voice_model:{model_id}")]
+        ]
+
+        await query.edit_message_text(
+            f"📝 *Konu Seç*\n\n"
+            f"🎬 Model: {config['emoji']} {config['name']}\n"
+            f"⏱️ Süre: {duration} saniye\n\n"
+            "Konu nasıl belirlensin?",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+
+    # ===== SESLİ REELS - KONU SEÇİLDİ =====
+    elif action.startswith("voice_topic:") and ":" in action[12:]:
+        # Yeni format: voice_topic:{model}:{duration}:{auto|manual}
+        parts = action.split(":")
+        model_id = parts[1]
+        duration = int(parts[2])
+        topic_mode = parts[3]
+        config = get_model_config(model_id)
+
+        if topic_mode == "auto":
+            # Otomatik konu ile pipeline başlat
+            await query.edit_message_text(
+                f"🎙️ *SESLİ REELS* başlatılıyor...\n\n"
+                f"🎬 *Model:* {config['emoji']} {config['name']}\n"
+                f"⏱️ *Süre:* {duration} saniye\n"
+                f"🔊 *Ses:* Türkçe AI voiceover\n\n"
+                "Pipeline aşamaları:\n"
+                "1️⃣ Konu seçimi (AI)\n"
+                "2️⃣ Caption üretimi\n"
+                "3️⃣ Voiceover scripti\n"
+                "4️⃣ TTS ses üretimi\n"
+                "5️⃣ Video prompt\n"
+                f"6️⃣ Video üretimi ({config['name']})\n"
+                "7️⃣ Audio-video birleştirme\n"
+                "8️⃣ Instagram Reels yayını\n\n"
+                "⏳ Bu işlem 5-10 dakika sürebilir...",
+                parse_mode="Markdown"
+            )
+            # Pipeline başlat
+            asyncio.create_task(pipeline.run_reels_voice_content(
+                target_duration=duration,
+                model_id=model_id
+            ))
+        else:
+            # Manuel konu girişi bekle
+            pending_input["type"] = "voice_topic_manual"
+            pending_input["model_id"] = model_id
+            pending_input["duration"] = duration
+            pending_input["user_id"] = query.from_user.id
+            pending_input["username"] = query.from_user.username or query.from_user.first_name
+
+            cancel_keyboard = InlineKeyboardMarkup([
+                [InlineKeyboardButton("❌ İptal", callback_data="voice_reels_menu")]
+            ])
+
+            await query.edit_message_text(
+                f"✏️ *MANUEL KONU GİRİŞİ*\n\n"
+                f"🎬 Model: {config['emoji']} {config['name']}\n"
+                f"⏱️ Süre: {duration}s\n\n"
+                "Sesli Reels için konu veya anahtar kelimeler yaz:\n\n"
+                "💡 *Örnekler:*\n"
+                "• Sera sulama otomasyonu\n"
+                "• Akıllı tarım solenoid vana kontrolü\n"
+                "• Fabrikada enerji izleme sistemi\n\n"
+                "📝 Konunuzu yazın (en az 5 karakter):",
+                parse_mode="Markdown",
+                reply_markup=cancel_keyboard
+            )
+
+    # ===== ESKİ CALLBACK'LER - BACKWARD COMPATIBILITY =====
+    # Eski: voice_topic:auto (model bilgisi yok, Sora 2 default)
+    elif action == "voice_topic:auto":
+        # Eski format - Sora 2 ile süre seçimi
         voice_keyboard = InlineKeyboardMarkup([
             [
                 InlineKeyboardButton("🎙️ 8s Kısa", callback_data="voice_reels:8"),
                 InlineKeyboardButton("🎙️ 12s Standart ⭐", callback_data="voice_reels:12"),
             ],
             [
-                InlineKeyboardButton("⬅️ Geri", callback_data="create_reels"),
+                InlineKeyboardButton("⬅️ Geri", callback_data="voice_reels_menu"),
             ]
         ])
 
@@ -617,11 +755,36 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "🎙️ *SESLİ REELS* - Süre Seçin\n\n"
             "• *8 saniye*: Kısa hook + tek mesaj\n"
             "• *12 saniye*: Standart (önerilen) ⭐\n\n"
-            "🔊 Türkçe voiceover ElevenLabs AI ile üretilir.\n"
-            "🎥 Video: Sora 2 (sinematik kalite)\n\n"
-            "💡 Script otomatik oluşturulur, video ile senkronize edilir.",
+            "🎯 Konu: AI tarafından seçilecek\n"
+            "💡 Script otomatik oluşturulur.\n"
+            "🎥 Video: Sora 2",
             parse_mode="Markdown",
             reply_markup=voice_keyboard
+        )
+
+    # Eski: voice_topic:manual (model bilgisi yok, Sora 2 default)
+    elif action == "voice_topic:manual":
+        pending_input["type"] = "voice_topic_manual"
+        pending_input["model_id"] = "sora-2"  # Default model
+        pending_input["duration"] = None  # Sonra seçilecek
+        pending_input["user_id"] = query.from_user.id
+        pending_input["username"] = query.from_user.username or query.from_user.first_name
+
+        cancel_keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("❌ İptal", callback_data="voice_reels_menu")]
+        ])
+
+        await query.edit_message_text(
+            "✏️ *MANUEL KONU GİRİŞİ*\n\n"
+            "Sesli Reels için konu yazın:\n\n"
+            "💡 *Örnekler:*\n"
+            "• Sera sulama otomasyonu\n"
+            "• Akıllı tarım solenoid vana kontrolü\n"
+            "• Fabrikada enerji izleme sistemi\n"
+            "• LoRaWAN ile uzaktan sensör takibi\n\n"
+            "📝 Konunuzu yazın (en az 5 karakter):",
+            parse_mode="Markdown",
+            reply_markup=cancel_keyboard
         )
 
     # ===== SESLİ REELS BAŞLAT =====
@@ -646,8 +809,56 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="Markdown"
         )
 
-        # Sesli reels pipeline'ı arka planda çalıştır
-        asyncio.create_task(pipeline.run_reels_voice_content(target_duration=duration))
+        # Sesli reels pipeline'ı arka planda çalıştır (otomatik konu, Sora 2 default)
+        asyncio.create_task(pipeline.run_reels_voice_content(
+            target_duration=duration,
+            model_id="sora-2"  # Backward compatibility
+        ))
+
+    # ===== SESLİ REELS - MANUEL KONU İLE BAŞLAT =====
+    elif action.startswith("voice_reels_manual:"):
+        duration = int(action.replace("voice_reels_manual:", ""))
+
+        # Saklanan manuel konuyu al
+        topic = pending_input.get("manual_topic", "")
+        pending_input.clear()  # State'i temizle
+
+        if not topic:
+            await query.edit_message_text(
+                "⚠️ Konu bulunamadı. Lütfen tekrar deneyin.",
+                parse_mode="Markdown",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🔄 Tekrar Dene", callback_data="voice_reels_menu")]
+                ])
+            )
+            return
+
+        await query.edit_message_text(
+            f"🎙️ *SESLİ REELS* başlatılıyor...\n\n"
+            f"📝 *Konu:* {topic[:60]}{'...' if len(topic) > 60 else ''}\n"
+            f"⏱️ *Süre:* {duration} saniye\n"
+            f"🔊 *Ses:* Türkçe AI voiceover\n"
+            f"🎥 *Video:* Sora 2 (sinematik)\n\n"
+            "Pipeline aşamaları:\n"
+            "1️⃣ Konu işleme (AI)\n"
+            "2️⃣ Caption üretimi\n"
+            "3️⃣ Voiceover scripti\n"
+            "4️⃣ TTS ses üretimi\n"
+            "5️⃣ Video prompt\n"
+            "6️⃣ Video üretimi (Sora 2)\n"
+            "7️⃣ Audio-video birleştirme\n"
+            "8️⃣ Instagram Reels yayını\n\n"
+            "⏳ Bu işlem 5-10 dakika sürebilir...",
+            parse_mode="Markdown"
+        )
+
+        # Manuel konu ile sesli reels pipeline'ı başlat (Sora 2 default)
+        asyncio.create_task(pipeline.run_reels_voice_content(
+            topic=topic,
+            target_duration=duration,
+            model_id="sora-2",  # Backward compatibility
+            manual_topic_mode=True
+        ))
 
     # ===== HAFTALIK PLAN =====
     elif action == "weekly_plan":
@@ -1276,8 +1487,73 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pending_input = {}
             await update.message.reply_text("✏️ İçerik revizyon talebi alındı, metin düzenleniyor...")
 
+    elif pending_input.get("type") == "voice_topic_manual":
+        # Sesli Reels için manuel konu girişi
+        topic = text.strip()
+
+        # Validasyon: minimum 5 karakter
+        if len(topic) < 5:
+            await update.message.reply_text(
+                "⚠️ *Konu çok kısa!*\n\n"
+                "En az 5 karakter olmalı.\n"
+                "Daha detaylı bir konu yazın.",
+                parse_mode="Markdown"
+            )
+            return  # State'i koru, yeni input bekle
+
+        # Multi-model flow: model_id ve duration zaten pending_input'ta mı?
+        model_id = pending_input.get("model_id")
+        duration = pending_input.get("duration")
+
+        if model_id and duration:
+            # YENİ FLOW: Model ve süre zaten seçildi, direkt pipeline başlat
+            config = get_model_config(model_id)
+            pending_input.clear()
+
+            await update.message.reply_text(
+                f"🎙️ *SESLİ REELS* başlatılıyor...\n\n"
+                f"📝 *Konu:* {topic[:60]}{'...' if len(topic) > 60 else ''}\n"
+                f"🎬 *Model:* {config['emoji']} {config['name']}\n"
+                f"⏱️ *Süre:* {duration} saniye\n"
+                f"🔊 *Ses:* Türkçe AI voiceover\n\n"
+                "⏳ Bu işlem 5-10 dakika sürebilir...",
+                parse_mode="Markdown"
+            )
+
+            # Pipeline başlat
+            asyncio.create_task(pipeline.run_reels_voice_content(
+                topic=topic,
+                target_duration=duration,
+                model_id=model_id,
+                manual_topic_mode=True
+            ))
+        else:
+            # ESKİ FLOW (backward compatibility): Süre henüz seçilmedi
+            pending_input["manual_topic"] = topic
+            pending_input["type"] = None  # Text bekleme durumunu kapat
+
+            duration_keyboard = InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton("🎙️ 8s Kısa", callback_data="voice_reels_manual:8"),
+                    InlineKeyboardButton("🎙️ 12s Standart ⭐", callback_data="voice_reels_manual:12"),
+                ],
+                [
+                    InlineKeyboardButton("❌ İptal", callback_data="voice_reels_menu"),
+                ]
+            ])
+
+            await update.message.reply_text(
+                f"✅ *Konu kabul edildi:*\n_{topic[:80]}{'...' if len(topic) > 80 else ''}_\n\n"
+                "🎙️ *Süre seçin:*\n"
+                "• *8s*: Kısa, tek mesajlı\n"
+                "• *12s*: Standart (önerilen)\n"
+                "🎥 Video: Sora 2",
+                parse_mode="Markdown",
+                reply_markup=duration_keyboard
+            )
+
     elif pending_input.get("type") == "manual_topic":
-        # Manuel konu ile pipeline başlat
+        # Manuel konu ile pipeline başlat (genel içerik için)
         pending_input = {}
         await update.message.reply_text("🚀 İçerik oluşturuluyor...")
         # TODO: Manuel topic ile pipeline
