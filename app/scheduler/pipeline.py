@@ -488,7 +488,8 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                         buttons=[
                             {"text": "🚀 YAYINLA", "callback": "publish_now"},
                             {"text": "⏰ Zamanla", "callback": "schedule"},
-                            {"text": "✏️ Revize Et", "callback": "revise"},
+                            {"text": "✏️ Metni Revize Et", "callback": "revise"},
+                            {"text": "🎨 Görseli Değiştir", "callback": "regenerate_visual"},
                             {"text": "❌ İptal", "callback": "cancel"}
                         ]
                     )

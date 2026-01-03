@@ -1581,23 +1581,10 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"✅ {text} için zamanlandı.")
 
     elif pending_input.get("type") == "revise_feedback":
-        # Akıllı yönlendirme: feedback'e göre hangi aşamaya dönülecek
-        feedback_lower = text.lower()
-
-        # Görsel ile ilgili anahtar kelimeler
-        visual_keywords = ["görsel", "resim", "image", "foto", "fotoğraf", "grafik",
-                          "renk", "tasarım", "design", "infografik", "video", "animasyon"]
-
-        if any(word in feedback_lower for word in visual_keywords):
-            # Görsel revize talebi -> görsel üretimine dön
-            pipeline.set_approval({"action": "regenerate", "feedback": text})
-            pending_input = {}
-            await update.message.reply_text("🎨 Görsel revizyon talebi alındı, yeni görsel üretiliyor...")
-        else:
-            # Metin/içerik revize talebi -> içerik düzenleme
-            pipeline.set_approval({"action": "revise_content", "feedback": text})
-            pending_input = {}
-            await update.message.reply_text("✏️ İçerik revizyon talebi alındı, metin düzenleniyor...")
+        # Direkt metin revizesi yap - görsel değiştirmek için ayrı buton var
+        pipeline.set_approval({"action": "revise_content", "feedback": text})
+        pending_input = {}
+        await update.message.reply_text("✏️ İçerik revize ediliyor...")
 
     elif pending_input.get("type") == "daily_manual_topic":
         # ATOMIC: Race condition önlemek için hemen pop et
