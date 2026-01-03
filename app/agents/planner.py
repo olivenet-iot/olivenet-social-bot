@@ -9,6 +9,7 @@ Performance-aware topic selection:
 """
 
 import json
+import random
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 from .base_agent import BaseAgent
@@ -203,13 +204,21 @@ class PlannerAgent(BaseAgent):
         }
 
         keywords = {
-            "tarim": ["sera", "tarım", "sulama", "tarla", "hasat", "bitki", "toprak", "don", "nem"],
+            "tarim": ["sera", "tarım", "sulama", "tarla", "hasat", "bitki", "toprak", "don", "nem",
+                     "antalya", "zeytinlik", "fındık", "damla sulama", "örtü altı", "seracılık",
+                     "su kalitesi", "ph", "ec"],  # Türkiye + Su Kalitesi
             "fabrika": ["fabrika", "üretim", "makine", "oee", "bakım", "kalite", "endüstri",
-                       "hat", "duruş", "arıza", "titreşim", "motor", "plc", "scada", "modbus"],
+                       "hat", "duruş", "arıza", "titreşim", "motor", "plc", "scada", "modbus",
+                       "yolo", "yolov8", "görüntü işleme", "hata tespiti", "konveyör", "kalite kontrol",
+                       "jetson", "hailo", "edge ai", "nesne tespiti", "kamera"],  # Edge AI
             "enerji": ["enerji", "güneş", "solar", "elektrik", "sayaç", "tüketim", "pik",
-                      "fatura", "peak", "kompresör", "hvac", "watt", "kwh"],
+                      "fatura", "peak", "kompresör", "hvac", "watt", "kwh",
+                      "hava kalitesi", "co2", "pm2.5", "nem ölçüm"],  # Hava Kalitesi
             "genel": ["lorawan", "iot", "sensör", "gateway", "edge", "mqtt", "thingsboard",
-                     "dashboard", "api", "veri", "protokol", "wifi", "bulut", "cloud"]
+                     "dashboard", "api", "veri", "protokol", "wifi", "bulut", "cloud",
+                     "stm32", "esp32", "firmware", "ota", "deep sleep", "low power",
+                     "tinyml", "gömülü", "mikroişlemci", "uart", "spi", "i2c",
+                     "opc-ua", "bacnet", "zigbee"]  # Firmware + Protokoller
         }
 
         for topic in topics:
@@ -237,12 +246,12 @@ class PlannerAgent(BaseAgent):
         """
         total = sum(counts.values()) or 1
 
-        # Hedef oranlar
+        # Hedef oranlar (Türkiye pazarı için tarım artırıldı)
         targets = {
-            "tarim": 0.25,
+            "tarim": 0.30,      # Artırıldı - Türkiye tarım pazarı
             "fabrika": 0.25,
             "enerji": 0.20,
-            "genel": 0.30
+            "genel": 0.25       # Azaltıldı
         }
 
         # Her sektörün açık oranını hesapla
@@ -346,6 +355,23 @@ Hedef dağılım: Tarım %25-30, Fabrika %25, Enerji %20, Genel %25-30
         """Tek bir konu öner - Performance-aware"""
         self.log("Konu önerisi oluşturuluyor...")
 
+        # Exploration kategorileri - yeni/az denenen konular
+        exploration_categories = [
+            "Edge AI",
+            "Gömülü Sistemler",
+            "Türkiye Tarım",
+            "IoT Protokolleri",
+            "Hava Kalitesi",
+            "Su Kalitesi"
+        ]
+
+        # %20 ihtimalle exploration mode
+        if random.random() < 0.20:
+            exploration_category = random.choice(exploration_categories)
+            self.log(f"[PLANNER] 🔍 Keşif modu aktif - {exploration_category} deneniyor")
+            input_data["exploration_mode"] = True
+            input_data["exploration_category"] = exploration_category
+
         # Parametreler
         category = input_data.get("category")  # Belirli kategori istendi mi?
         exclude_topics = input_data.get("exclude", [])  # Hariç tutulacak konular
@@ -370,6 +396,17 @@ Hedef dağılım: Tarım %25-30, Fabrika %25, Enerji %20, Genel %25-30
         day_name = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"][today.weekday()]
         month_name = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
                       "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"][today.month - 1]
+
+        # Exploration hint (keşif modu aktifse)
+        exploration_hint = ""
+        if input_data.get("exploration_mode"):
+            exp_cat = input_data.get("exploration_category", "yeni kategori")
+            exploration_hint = f"""
+### 🔍 KEŞİF MODU AKTİF!
+Bu sefer **{exp_cat}** kategorisinden konu SEÇ.
+Performance data'yı göz ardı et, YENİ bir konu dene.
+topics.md'deki bu kategoriden rastgele bir konu seç.
+"""
 
         prompt = f"""
 ## GÖREV: İçerik Konusu Öner
@@ -402,7 +439,7 @@ Hedef dağılım: Tarım %25-30, Fabrika %25, Enerji %20, Genel %25-30
 {json.dumps(exclude_topics, ensure_ascii=False)}
 
 {"### İstenen Kategori: " + category if category else ""}
-
+{exploration_hint}
 ---
 
 Yukarıdaki bilgilere dayanarak bugün için EN UYGUN tek bir konu öner.
