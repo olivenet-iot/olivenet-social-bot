@@ -545,6 +545,35 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="Markdown"
         )
 
+    # ===== GÜNLÜK İÇERİK - GÖRSEL TİPİ SEÇİMİ =====
+    elif action.startswith("daily_visual:"):
+        visual_type = action.replace("daily_visual:", "")
+        topic = pending_input.get("topic")
+        pending_input.clear()
+
+        if not topic:
+            await query.edit_message_text("❌ Konu bulunamadı, tekrar deneyin.")
+            return
+
+        visual_names = {
+            "infographic": "Infographic (HTML)",
+            "carousel": "Carousel (Flux AI)",
+            "single": "Tek Görsel (Flux AI)"
+        }
+
+        await query.edit_message_text(
+            f"🚀 *Günlük içerik başlatılıyor...*\n\n"
+            f"📝 *Konu:* {topic[:60]}{'...' if len(topic) > 60 else ''}\n"
+            f"🖼️ *Görsel:* {visual_names.get(visual_type, visual_type)}",
+            parse_mode="Markdown"
+        )
+
+        asyncio.create_task(pipeline.run_daily_content(
+            topic=topic,
+            manual_topic_mode=True,
+            visual_type=visual_type
+        ))
+
     # ===== OTONOM İÇERİK BAŞLAT =====
     elif action == "start_autonomous":
         await query.edit_message_text(
@@ -1571,10 +1600,16 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("✏️ İçerik revizyon talebi alındı, metin düzenleniyor...")
 
     elif pending_input.get("type") == "daily_manual_topic":
-        # Günlük içerik için manuel konu girişi
+        # ATOMIC: Race condition önlemek için hemen pop et
+        input_type = pending_input.pop("type", None)
+        if input_type != "daily_manual_topic":
+            return  # Başka thread zaten işledi
+
         topic = text.strip()
 
         if len(topic) < 5:
+            # Hata durumunda type'ı geri koy
+            pending_input["type"] = "daily_manual_topic"
             await update.message.reply_text(
                 "⚠️ *Konu çok kısa!*\n\n"
                 "En az 5 karakter olmalı.",
@@ -1582,19 +1617,37 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
-        pending_input.clear()
+        # Görsel tipi seçim menüsü göster
+        pending_input["topic"] = topic
+
+        keyboard = [
+            [InlineKeyboardButton("🖼️ Infographic", callback_data="daily_visual:infographic"),
+             InlineKeyboardButton("🎨 Carousel", callback_data="daily_visual:carousel")],
+            [InlineKeyboardButton("📸 Tek Görsel", callback_data="daily_visual:single")],
+            [InlineKeyboardButton("❌ İptal", callback_data="cancel")]
+        ]
+
         await update.message.reply_text(
-            f"🚀 *Günlük içerik başlatılıyor...*\n\n"
-            f"📝 *Konu:* {topic[:80]}{'...' if len(topic) > 80 else ''}",
-            parse_mode="Markdown"
+            f"📝 *Konu:* {topic[:60]}{'...' if len(topic) > 60 else ''}\n\n"
+            "Görsel tipi seçin:\n"
+            "• *Infographic*: HTML şablon\n"
+            "• *Carousel*: Flux AI çoklu görsel\n"
+            "• *Tek Görsel*: Flux AI single post",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup(keyboard)
         )
-        asyncio.create_task(pipeline.run_daily_content(topic=topic, manual_topic_mode=True))
 
     elif pending_input.get("type") == "reels_manual_topic":
-        # Normal reels için manuel konu girişi
+        # ATOMIC: Race condition önlemek için hemen pop et
+        input_type = pending_input.pop("type", None)
+        if input_type != "reels_manual_topic":
+            return  # Başka thread zaten işledi
+
         topic = text.strip()
+        model = pending_input.get("model", "kling_pro")
 
         if len(topic) < 5:
+            pending_input["type"] = "reels_manual_topic"
             await update.message.reply_text(
                 "⚠️ *Konu çok kısa!*\n\n"
                 "En az 5 karakter olmalı.",
@@ -1602,7 +1655,6 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
-        model = pending_input.get("model", "kling_pro")
         model_names = {
             "veo3": "Veo 3",
             "sora2": "Sora 2",

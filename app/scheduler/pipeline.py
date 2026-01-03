@@ -132,7 +132,7 @@ class ContentPipeline:
             "visual_type": visual.get("visual_type", "post")
         }
 
-    async def run_daily_content(self, topic: str = None, manual_topic_mode: bool = False) -> Dict[str, Any]:
+    async def run_daily_content(self, topic: str = None, manual_topic_mode: bool = False, visual_type: str = None) -> Dict[str, Any]:
         """Günlük içerik pipeline'ı çalıştır"""
         self.log("Günlük içerik pipeline'ı başlatılıyor...")
         self.state = PipelineState.PLANNING
@@ -149,11 +149,11 @@ class ContentPipeline:
 
             # Manuel konu modunda planner'ı atla
             if manual_topic_mode and topic:
-                self.log(f"Manuel konu kullanılıyor: {topic}")
+                self.log(f"Manuel konu kullanılıyor: {topic}, görsel: {visual_type or 'infographic'}")
                 topic_result = {
                     "topic": topic,
                     "category": "manuel",
-                    "suggested_visual": "infographic",
+                    "suggested_visual": visual_type or "infographic",
                     "best_time": "10:00",
                     "reasoning": "Manuel olarak belirlenen konu",
                     "suggested_hooks": [f"🔥 {topic}"],
