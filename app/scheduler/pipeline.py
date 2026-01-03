@@ -314,7 +314,7 @@ class ContentPipeline:
                     video_path = None
                     visual_result = None
 
-                    if visual_type == "flux":
+                    if visual_type in ["flux", "single"]:
                         from app.flux_helper import generate_image_flux
                         visual_result = await generate_image_flux(
                             prompt=visual_prompt_result.get("visual_prompt"),
@@ -680,7 +680,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             image_path = None
             video_path = None
 
-            if visual_type == "flux":
+            if visual_type in ["flux", "single"]:
                 from app.flux_helper import generate_image_flux
                 visual_result = await generate_image_flux(
                     prompt=visual_prompt_result.get("visual_prompt"),
@@ -905,7 +905,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             image_path = None
             video_path = None
 
-            if visual_type == "flux":
+            if visual_type in ["flux", "single"]:
                 from app.flux_helper import generate_image_flux
                 visual_result = await generate_image_flux(
                     prompt=visual_prompt_result.get("visual_prompt"),
@@ -2245,7 +2245,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             image_path = None
             video_path = None
 
-            if visual_type == "flux":
+            if visual_type in ["flux", "single"]:
                 from app.flux_helper import generate_image_flux
                 visual_result = await generate_image_flux(
                     prompt=visual_prompt_result.get("visual_prompt"),
