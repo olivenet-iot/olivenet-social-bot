@@ -511,12 +511,39 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=reply_markup
         )
 
-    # ===== GÜNLÜK İÇERİK BAŞLAT (ONAYLI) =====
+    # ===== GÜNLÜK İÇERİK - KONU SEÇİM MENÜSÜ =====
     elif action == "start_daily":
-        await query.edit_message_text("🚀 *Günlük içerik pipeline'ı başlatılıyor (Onaylı Mod)...*", parse_mode="Markdown")
+        keyboard = [
+            [InlineKeyboardButton("🤖 Otomatik Konu", callback_data="daily_auto"),
+             InlineKeyboardButton("✏️ Manuel Konu", callback_data="daily_manual")],
+            [InlineKeyboardButton("❌ İptal", callback_data="cancel")]
+        ]
+        await query.edit_message_text(
+            "📋 *Günlük İçerik*\n\n"
+            "Konu seçimi:\n"
+            "• *Otomatik*: AI en uygun konuyu seçer\n"
+            "• *Manuel*: Kendi konunu yaz",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
 
-        # Pipeline'ı arka planda çalıştır
+    # ===== GÜNLÜK İÇERİK - OTOMATİK KONU =====
+    elif action == "daily_auto":
+        await query.edit_message_text("🚀 *Günlük içerik pipeline'ı başlatılıyor...*", parse_mode="Markdown")
         asyncio.create_task(pipeline.run_daily_content())
+
+    # ===== GÜNLÜK İÇERİK - MANUEL KONU =====
+    elif action == "daily_manual":
+        pending_input["type"] = "daily_manual_topic"
+        pending_input["user_id"] = query.from_user.id
+        await query.edit_message_text(
+            "✏️ *Manuel Konu Girişi*\n\n"
+            "Günlük içerik için konu yazın:\n\n"
+            "Örnek:\n"
+            "• `Jetson Nano ile fabrikada hata tespiti`\n"
+            "• `Antalya seralarında akıllı sulama`",
+            parse_mode="Markdown"
+        )
 
     # ===== OTONOM İÇERİK BAŞLAT =====
     elif action == "start_autonomous":
@@ -571,9 +598,39 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=video_model_keyboard
         )
 
-    # ===== VIDEO MODEL SEÇİMİ =====
+    # ===== VIDEO MODEL SEÇİMİ - KONU SEÇİM MENÜSÜ =====
     elif action.startswith("video_model:"):
         model = action.replace("video_model:", "")
+
+        model_names = {
+            "veo3": "Veo 3 (Google)",
+            "sora2": "Sora 2 (OpenAI)",
+            "kling_pro": "Kling 2.5 Pro (fal.ai)",
+            "kling_26_pro": "Kling 2.6 Pro (fal.ai)",
+            "hailuo_pro": "Hailuo 02 Pro (fal.ai)",
+            "wan_26": "Wan 2.6 (fal.ai)",
+            "kling_master": "Kling 2.1 Master (fal.ai)"
+        }
+        model_name = model_names.get(model, model)
+
+        # Konu seçim menüsü göster
+        keyboard = [
+            [InlineKeyboardButton("🤖 Otomatik Konu", callback_data=f"reels_auto:{model}"),
+             InlineKeyboardButton("✏️ Manuel Konu", callback_data=f"reels_manual:{model}")],
+            [InlineKeyboardButton("◀️ Geri", callback_data="create_reels")]
+        ]
+        await query.edit_message_text(
+            f"🎬 *Reels - {model_name}*\n\n"
+            "Konu seçimi:\n"
+            "• *Otomatik*: AI trend konuyu seçer\n"
+            "• *Manuel*: Kendi konunu yaz",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+
+    # ===== REELS - OTOMATİK KONU =====
+    elif action.startswith("reels_auto:"):
+        model = action.replace("reels_auto:", "")
 
         model_names = {
             "veo3": "Veo 3 (Google)",
@@ -598,9 +655,35 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "⏳ Bu işlem 5-10 dakika sürebilir...",
             parse_mode="Markdown"
         )
-
-        # Reels pipeline'ı arka planda çalıştır - seçilen model ile
         asyncio.create_task(pipeline.run_reels_content(force_model=model))
+
+    # ===== REELS - MANUEL KONU =====
+    elif action.startswith("reels_manual:"):
+        model = action.replace("reels_manual:", "")
+
+        model_names = {
+            "veo3": "Veo 3 (Google)",
+            "sora2": "Sora 2 (OpenAI)",
+            "kling_pro": "Kling 2.5 Pro (fal.ai)",
+            "kling_26_pro": "Kling 2.6 Pro (fal.ai)",
+            "hailuo_pro": "Hailuo 02 Pro (fal.ai)",
+            "wan_26": "Wan 2.6 (fal.ai)",
+            "kling_master": "Kling 2.1 Master (fal.ai)"
+        }
+        model_name = model_names.get(model, model)
+
+        pending_input["type"] = "reels_manual_topic"
+        pending_input["model"] = model
+        pending_input["user_id"] = query.from_user.id
+        await query.edit_message_text(
+            f"✏️ *Manuel Konu Girişi*\n\n"
+            f"🎬 Model: {model_name}\n\n"
+            "Reels için konu yazın:\n\n"
+            "Örnek:\n"
+            "• `YOLOv8 ile kalite kontrol`\n"
+            "• `LoRaWAN gateway kurulumu`",
+            parse_mode="Markdown"
+        )
 
     # ===== SESLİ REELS MENÜSÜ - MODEL SEÇİMİ =====
     elif action == "voice_reels_menu":
@@ -1486,6 +1569,60 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pipeline.set_approval({"action": "revise_content", "feedback": text})
             pending_input = {}
             await update.message.reply_text("✏️ İçerik revizyon talebi alındı, metin düzenleniyor...")
+
+    elif pending_input.get("type") == "daily_manual_topic":
+        # Günlük içerik için manuel konu girişi
+        topic = text.strip()
+
+        if len(topic) < 5:
+            await update.message.reply_text(
+                "⚠️ *Konu çok kısa!*\n\n"
+                "En az 5 karakter olmalı.",
+                parse_mode="Markdown"
+            )
+            return
+
+        pending_input.clear()
+        await update.message.reply_text(
+            f"🚀 *Günlük içerik başlatılıyor...*\n\n"
+            f"📝 *Konu:* {topic[:80]}{'...' if len(topic) > 80 else ''}",
+            parse_mode="Markdown"
+        )
+        asyncio.create_task(pipeline.run_daily_content(topic=topic, manual_topic_mode=True))
+
+    elif pending_input.get("type") == "reels_manual_topic":
+        # Normal reels için manuel konu girişi
+        topic = text.strip()
+
+        if len(topic) < 5:
+            await update.message.reply_text(
+                "⚠️ *Konu çok kısa!*\n\n"
+                "En az 5 karakter olmalı.",
+                parse_mode="Markdown"
+            )
+            return
+
+        model = pending_input.get("model", "kling_pro")
+        model_names = {
+            "veo3": "Veo 3",
+            "sora2": "Sora 2",
+            "kling_pro": "Kling 2.5 Pro",
+            "kling_26_pro": "Kling 2.6 Pro",
+            "hailuo_pro": "Hailuo 02 Pro",
+            "wan_26": "Wan 2.6",
+            "kling_master": "Kling 2.1 Master"
+        }
+        model_name = model_names.get(model, model)
+
+        pending_input.clear()
+        await update.message.reply_text(
+            f"🎬 *REELS* başlatılıyor...\n\n"
+            f"📝 *Konu:* {topic[:80]}{'...' if len(topic) > 80 else ''}\n"
+            f"🎯 *Model:* {model_name}\n\n"
+            "⏳ Bu işlem 5-10 dakika sürebilir...",
+            parse_mode="Markdown"
+        )
+        asyncio.create_task(pipeline.run_reels_content(force_model=model, topic=topic, manual_topic_mode=True))
 
     elif pending_input.get("type") == "voice_topic_manual":
         # Sesli Reels için manuel konu girişi

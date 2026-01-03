@@ -11,6 +11,7 @@ from enum import Enum
 
 from app.database import save_prompt
 from app.validators.text_validator import validate_html_content, fix_common_issues
+from app.video_models import get_model_config, get_prompt_key, validate_duration, should_disable_audio
 
 def extract_shot_structure(speech_script: str, target_duration: int) -> list:
     """
@@ -131,7 +132,7 @@ class ContentPipeline:
             "visual_type": visual.get("visual_type", "post")
         }
 
-    async def run_daily_content(self) -> Dict[str, Any]:
+    async def run_daily_content(self, topic: str = None, manual_topic_mode: bool = False) -> Dict[str, Any]:
         """Günlük içerik pipeline'ı çalıştır"""
         self.log("Günlük içerik pipeline'ı başlatılıyor...")
         self.state = PipelineState.PLANNING
@@ -146,7 +147,20 @@ class ContentPipeline:
             # ========== AŞAMA 1: Konu Önerisi ==========
             self.log("Aşama 1: Konu önerisi alınıyor...")
 
-            topic_result = await self.planner.execute({"action": "suggest_topic"})
+            # Manuel konu modunda planner'ı atla
+            if manual_topic_mode and topic:
+                self.log(f"Manuel konu kullanılıyor: {topic}")
+                topic_result = {
+                    "topic": topic,
+                    "category": "manuel",
+                    "suggested_visual": "infographic",
+                    "best_time": "10:00",
+                    "reasoning": "Manuel olarak belirlenen konu",
+                    "suggested_hooks": [f"🔥 {topic}"],
+                    "manual": True
+                }
+            else:
+                topic_result = await self.planner.execute({"action": "suggest_topic"})
 
             if "error" in topic_result:
                 raise Exception(f"Planner error: {topic_result['error']}")
@@ -980,7 +994,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             result["error"] = str(e)
             return result
 
-    async def run_reels_content(self, topic: str = None, force_model: str = None) -> Dict[str, Any]:
+    async def run_reels_content(self, topic: str = None, force_model: str = None, manual_topic_mode: bool = False) -> Dict[str, Any]:
         """
         Instagram Reels içeriği üret ve yayınla
         Sora 2 Pro → Sora 2 → Veo 3 fallback zinciri ile
@@ -988,11 +1002,13 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
         Args:
             topic: Konu (None ise Planner'dan alınır)
             force_model: Model zorla ("sora-2", "sora-2-pro", "veo3")
+            manual_topic_mode: Manuel konu modu (planner atlanır)
 
         Returns:
             Pipeline sonucu
         """
-        self.log("REELS MOD: Pipeline başlatılıyor...")
+        mode_text = "Manuel Konu" if manual_topic_mode else "Otomatik"
+        self.log(f"REELS MOD ({mode_text}): Pipeline başlatılıyor...")
         self.state = PipelineState.PLANNING
 
         result = {
@@ -1225,12 +1241,14 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
         topic: str = None,
         force_model: str = None,
         target_duration: int = 15,
-        manual_topic_mode: bool = False
+        manual_topic_mode: bool = False,
+        model_id: str = "sora-2"
     ) -> Dict[str, Any]:
         """
         Sesli Instagram Reels içeriği üret ve yayınla.
 
         ElevenLabs TTS + Video + FFmpeg merge pipeline.
+        Multi-model desteği: Sora 2, Veo 2, Kling 2.1, Wan 2.1, Minimax
 
         Pipeline Akışı:
         1. Konu seçimi (Planner) veya manuel konu işleme (Creator)
@@ -1238,25 +1256,32 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
         3. Speech script üretimi (Creator)
         4. TTS ses üretimi (ElevenLabs)
         5. Video prompt üretimi (Creator)
-        6. Video üretimi (Veo 3 varsayılan)
+        6. Video üretimi (model_id'ye göre)
         7. Audio-video birleştirme (FFmpeg)
         8. Kalite kontrol (Reviewer)
         9. Instagram Reels yayını (Publisher)
 
         Args:
             topic: Konu (None ise Planner'dan alınır)
-            force_model: Video modeli zorla (None ise veo3)
-            target_duration: Hedef süre (12, 15, veya 20 saniye)
+            force_model: Video modeli zorla (backward compat, deprecated)
+            target_duration: Hedef süre (modele göre max sınır uygulanır)
             manual_topic_mode: True ise topic Creator ile profesyonelleştirilir
+            model_id: Video model ID (sora-2, veo-2, kling-2.1, wan-2.1, minimax)
 
         Returns:
             Pipeline sonucu
         """
-        self.log("🎙️ SESLİ REELS MOD: Pipeline başlatılıyor...")
+        # Model konfigürasyonunu al
+        model_config = get_model_config(model_id)
+        model_name = model_config.get("name", model_id)
+
+        self.log(f"🎙️ SESLİ REELS MOD: Pipeline başlatılıyor... (Model: {model_name})")
         self.state = PipelineState.PLANNING
 
-        # Sora 2 max 12 saniye destekliyor
-        target_duration = min(target_duration, 12)
+        # Model'in max süresine göre duration'ı sınırla
+        max_duration = model_config.get("max_duration", 12)
+        target_duration = min(target_duration, max_duration)
+        target_duration = validate_duration(model_id, target_duration)
 
         result = {
             "success": False,
@@ -1264,7 +1289,9 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             "final_state": None,
             "reels": True,
             "voice_enabled": True,
-            "target_duration": target_duration
+            "target_duration": target_duration,
+            "model_id": model_id,
+            "model_name": model_name
         }
 
         try:
@@ -1447,9 +1474,20 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             self.current_data["reels_prompt"] = reels_prompt_result
             result["stages_completed"].append("video_prompt")
 
-            # Sora 2 varsayılan (sesli reels için sinematik kalite, max 12s)
-            model_to_use = force_model or "sora-2"
-            video_prompt = reels_prompt_result.get("video_prompt_sora") or reels_prompt_result.get("video_prompt_wan") or reels_prompt_result.get("video_prompt_veo", "")
+            # Model'e göre video prompt seç
+            # force_model varsa onu kullan (backward compat), yoksa model_id
+            model_to_use = force_model or model_id
+            prompt_key = get_prompt_key(model_to_use)
+            video_prompt = reels_prompt_result.get(prompt_key)
+
+            # Fallback: Ana prompt yoksa alternatiflere bak
+            if not video_prompt:
+                video_prompt = (
+                    reels_prompt_result.get("video_prompt_sora") or
+                    reels_prompt_result.get("video_prompt_wan") or
+                    reels_prompt_result.get("video_prompt_veo", "")
+                )
+
             complexity = reels_prompt_result.get("complexity", "medium")
 
             # Boş video prompt kontrolü - alakasız video üretimini önle
@@ -1466,27 +1504,29 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                     style=prompt_style
                 )
 
-            self.log(f"[VOICE REELS] Prompt hazır (model: {model_to_use})")
+            self.log(f"[VOICE REELS] Prompt hazır (model: {model_to_use}, prompt_key: {prompt_key})")
 
             # ========== AŞAMA 6: Video Üretimi ==========
-            self.log("[VOICE REELS] Aşama 6: Video üretiliyor...")
+            self.log(f"[VOICE REELS] Aşama 6: Video üretiliyor ({model_name})...")
 
             from app.sora_helper import generate_video_smart
 
             # Video süresini GERÇEK audio süresine göre belirle
-            # Sora desteklenen süreler: 4, 8, 12 saniye
             actual_dur = result.get("actual_audio_duration", target_duration)
-            if actual_dur <= 6:
-                video_gen_duration = 8  # Biraz buffer için
-            elif actual_dur <= 10:
-                video_gen_duration = 12
-            else:
-                video_gen_duration = 12  # Max Sora süresi
 
-            if actual_dur > 12:
-                self.log(f"[VOICE REELS] ⚠️ Audio {actual_dur:.1f}s > 12s max, video loop gerekecek")
+            # Model'in desteklediği sürelere göre video_gen_duration belirle
+            model_durations = model_config.get("durations", [8, 12])
 
-            self.log(f"[VOICE REELS] Video süresi: {video_gen_duration}s (audio: {actual_dur:.1f}s)")
+            # Audio süresine en yakın desteklenen süreyi seç
+            video_gen_duration = min(model_durations, key=lambda x: abs(x - actual_dur) if x >= actual_dur else float('inf'))
+            if video_gen_duration < actual_dur:
+                # Tüm süreler audio'dan kısa, en uzunu seç
+                video_gen_duration = max(model_durations)
+
+            if actual_dur > max_duration:
+                self.log(f"[VOICE REELS] ⚠️ Audio {actual_dur:.1f}s > {max_duration}s max, video loop gerekecek")
+
+            self.log(f"[VOICE REELS] Video süresi: {video_gen_duration}s (audio: {actual_dur:.1f}s, model: {model_name})")
 
             video_result = await generate_video_smart(
                 prompt=video_prompt,
