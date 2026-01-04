@@ -527,6 +527,9 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 if regenerate_visual:
                     self.log("Görsel regenerate talebi, görsel döngüsüne dönülüyor...")
                     continue  # Dış while True loop'una dön
+                else:
+                    # publish_now veya schedule - dış loop'tan çık
+                    break
 
             # ========== AŞAMA 6: Yayınla ==========
             if approval.get("action") in ["publish_now", "schedule"]:
