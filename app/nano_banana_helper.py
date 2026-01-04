@@ -44,6 +44,7 @@ AVOID:
 - Cluttered layouts
 - Small unreadable text
 - Stock photo style imagery
+- Hashtags, social media tags, or # symbols
 
 OUTPUT: High quality infographic suitable for Instagram post
 """
@@ -387,27 +388,33 @@ def _build_infographic_prompt(
     style: str,
     language: str
 ) -> str:
-    """Build the infographic generation prompt"""
+    """Guide-optimized infographic prompt builder for daily content"""
 
-    lang_instruction = "Turkish (Türkçe)" if language == "tr" else "English"
+    lang_instruction = "All text in the image must be in Turkish with proper characters (ğ, ş, ı, ö, ü, ç)." if language == "tr" else "All text should be in English."
+
+    content_summary = content_text[:400] if content_text else f"Key information about {topic}"
 
     prompt = f"""
 {INFOGRAPHIC_STYLE_PROMPT}
 
-TOPIC: {topic}
+CREATE AN INFOGRAPHIC ABOUT: "{topic}"
 
-CONTENT TO VISUALIZE:
-{content_text if content_text else 'Create a compelling infographic about the topic'}
+KEY CONTENT TO VISUALIZE:
+{content_summary}
 
-STYLE: {style.upper()} - {'Clean minimal tech' if style == 'minimal' else 'Modern with gradients' if style == 'modern' else 'Vibrant colorful'}
+COMPOSITION INSTRUCTIONS:
+First, create a bold headline at the top that captures "{topic}" in 3-5 words.
+Then, organize the main content into 3-4 visual blocks using icons and short text.
+Use curved arrows or flow lines to connect related concepts.
+Finally, add a key takeaway or conclusion at the bottom.
 
-LANGUAGE: {lang_instruction}
+STYLE: {style.upper()} - {"Clean minimal with white space" if style == "minimal" else "Modern with subtle gradients" if style == "modern" else "Vibrant and dynamic"}
 
-Create a professional infographic that effectively communicates the key points about "{topic}".
-Use icons, arrows, and visual elements to make the information easy to understand at a glance.
+{lang_instruction}
+
+CRITICAL: Do not include any hashtags, # symbols, or social media tags in the image. This is purely an informational infographic.
 """
-
-    return prompt
+    return prompt.strip()
 
 
 def _build_carousel_slide_prompt(
