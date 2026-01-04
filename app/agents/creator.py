@@ -434,6 +434,9 @@ Sadece post metnini yaz, başka açıklama ekleme.
         fb_response = await self.call_claude(fb_prompt, timeout=60)
         fb_text = fb_response.strip()
 
+        # Text-based prompt, hook_type çıkarılamıyor
+        hook_type = None
+
         # Database'e kaydet
         post_id = create_post(
             topic=topic,
