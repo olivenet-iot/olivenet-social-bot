@@ -27,7 +27,8 @@ def create_post(
     platform: str = "both",
     post_text_ig: str = None,
     post_text_fb: str = None,
-    topic_category: str = None
+    topic_category: str = None,
+    hook_type: str = None
 ) -> int:
     """Yeni post oluştur - platform-specific text destekli"""
     conn = get_connection()
@@ -37,9 +38,9 @@ def create_post(
     final_post_text = post_text or post_text_fb
 
     cursor.execute('''
-        INSERT INTO posts (topic, post_text, visual_type, scheduled_at, platform, status, post_text_ig, post_text_fb)
-        VALUES (?, ?, ?, ?, ?, 'draft', ?, ?)
-    ''', (topic, final_post_text, visual_type, scheduled_at, platform, post_text_ig, post_text_fb))
+        INSERT INTO posts (topic, post_text, visual_type, scheduled_at, platform, status, post_text_ig, post_text_fb, topic_category, hook_type)
+        VALUES (?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?)
+    ''', (topic, final_post_text, visual_type, scheduled_at, platform, post_text_ig, post_text_fb, topic_category, hook_type))
 
     post_id = cursor.lastrowid
     conn.commit()

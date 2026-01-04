@@ -19,6 +19,26 @@ Olivenet Ltd., Kuzey Kıbrıs (KKTC) merkezli bir Endüstriyel IoT şirketidir. 
 - Merkez: Kuzey Kıbrıs Türk Cumhuriyeti (KKTC)
 - Hedef Pazar: KKTC, Türkiye, Orta Doğu
 
+## Hizmet Bölgeleri
+
+### Kuzey Kıbrıs (KKTC)
+- Yerel IoT altyapı kurulumu
+- LoRaWAN network deployment
+- Yerinde teknik destek
+
+### Türkiye
+- **Antalya Bölgesi**: Sera otomasyonu, örtü altı tarım IoT çözümleri
+- **Ege Bölgesi**: Zeytinlik ve bağ izleme sistemleri
+- **İç Anadolu**: Tarla tarımı ve sulama otomasyonu
+- **Marmara**: Endüstriyel IoT ve fabrika çözümleri
+
+### Hedef Sektörler (Türkiye)
+- Sera ve örtü altı tarım (Antalya, Mersin, Muğla)
+- Zeytinyağı üretim tesisleri
+- Tekstil fabrikaları (enerji izleme)
+- Gıda işleme tesisleri
+- Otel ve turizm tesisleri (Antalya, Bodrum)
+
 ## Hedef Kitle
 - Sera sahipleri ve tarım işletmeleri
 - Fabrika ve üretim tesisleri

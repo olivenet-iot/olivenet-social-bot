@@ -300,7 +300,9 @@ Sadece JSON döndür.
             post_id = create_post(
                 topic=topic,
                 post_text=result.get("post_text", ""),
-                visual_type=visual_type
+                visual_type=visual_type,
+                topic_category=category,
+                hook_type=result.get("hook_type")
             )
             result["post_id"] = post_id
 
@@ -438,7 +440,8 @@ Sadece post metnini yaz, başka açıklama ekleme.
             post_text_ig=ig_text,
             post_text_fb=fb_text,
             visual_type=visual_type,
-            topic_category=category
+            topic_category=category,
+            hook_type=hook_type
         )
 
         ig_words = len(ig_text.split())
@@ -1200,7 +1203,8 @@ Sadece JSON döndür.
                 post_text_ig=caption,
                 visual_type="carousel",
                 platform="instagram",
-                topic_category=category
+                topic_category=category,
+                hook_type=result.get("hook_type")
             )
 
             slides = result.get("slides", [])

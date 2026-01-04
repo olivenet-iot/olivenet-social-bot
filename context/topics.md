@@ -57,43 +57,65 @@ Bu dosya, sosyal medya içerikleri için konu çeşitliliğini sağlar.
 
 ### 1. Nesne Tespiti (Object Detection)
 - YOLO ile gerçek zamanlı tespit
+- YOLOv8 ile üretim hattında hata tespiti
 - Hatalı ürün/kalite kontrolü
 - Araç/insan sayımı
 - Güvenlik kamerası analitiği
+- PPE (kask, yelek) tespit sistemi iş güvenliği
+- Araç plaka tanıma ile otopark yönetimi
+- Ürün sayım otomasyonu konveyör bant
+- Barkod ve QR kod okuma sistemi
 
 ### 2. Edge vs Cloud AI
 - Neden görüntü işlemeyi yerelde yapmalısınız?
 - Latency karşılaştırması (ms vs saniye)
 - Bandwidth tasarrufu (%90+ azalma)
 - Veri gizliliği avantajları
+- Düşük güçlü AI: TinyML vs Cloud AI karşılaştırma
 
 ### 3. Endüstriyel Görüntü İşleme
 - Üretim hattında hata tespiti
 - Etiket/barkod okuma
 - Boyut/renk kontrolü
 - Yüzey kusuru tespiti
+- Gerçek zamanlı kalite kontrol otomasyonu
 
 ### 4. Donanım Seçenekleri
-- Jetson Nano/Xavier/Orin
+- Jetson Nano ile gerçek zamanlı nesne tespiti
+- Jetson Orin NX vs Raspberry Pi 5 karşılaştırması
+- Hailo-8 AI akseleratör ile düşük güç tüketimli inference
+- Google Coral TPU ile edge ML
 - Raspberry Pi 5 + Hailo AI Kit
 - Intel NCS (Neural Compute Stick)
 - Endüstriyel vs tüketici kamera seçimi
 - GPU vs NPU vs TPU farkları
+- NVIDIA Jetson kurulum ve optimizasyon rehberi
+- Jetson'da Docker ile AI deployment
 
 ### 5. TinyML & Gömülü AI
 - Mikrodenetleyicide makine öğrenmesi
 - TensorFlow Lite for Microcontrollers
+- TensorFlow Lite ile STM32 üzerinde ML
+- ESP32-CAM ile basit görüntü sınıflandırma
 - Edge Impulse platform
+- Edge Impulse ile vibrasyon anomali tespiti
 - Anomaly detection algoritmaları
+- Ses anomali tespiti ile makine arıza tahmini
+- Akıllı sensör: Veri yerine karar gönder
 
 ### Örnek Başlıklar:
 - "Fabrikanızda Hatalı Ürünü 0.1 Saniyede Tespit Edin"
 - "Edge AI: Buluta Göndermeden Yerelde Karar Verin"
 - "Jetson ile Gerçek Zamanlı Nesne Tespiti"
+- "Jetson Nano ile Fabrikada Gerçek Zamanlı Hata Tespiti"
+- "YOLOv8: Üretim Hattında Kalite Kontrol Otomasyonu"
+- "Hailo-8 vs Jetson: Edge AI Akseleratör Karşılaştırması"
 - "Görüntü İşleme için Hangi Kamerayı Seçmeli?"
 - "YOLO vs Bulut API: Maliyet Karşılaştırması"
+- "TinyML Nedir? Mikrodenetleyicide Yapay Zeka"
+- "ESP32-CAM ile Düşük Maliyetli Görüntü İşleme"
 
-### Reels: "Jetson ile canlı nesne tespiti", "Bulut vs Edge: 100x hız farkı", "TinyML demo: Sensör + AI"
+### Reels: "Jetson ile canlı nesne tespiti", "Jetson hata tespiti demo", "YOLO kalite kontrol", "Bulut vs Edge: 100x hız farkı", "TinyML demo: Sensör + AI", "Edge AI vs Cloud AI"
 
 ---
 
@@ -281,25 +303,51 @@ ThingsBoard, ChirpStack ve diğer IoT yönetim platformları.
 
 ## 🔌 GÖMÜLÜ SİSTEMLER & FİRMWARE
 
-### 1. Mikrodenetleyici Platformları
+### 1. STM32 Geliştirme
 - STM32 ile IoT cihaz geliştirme
-- ESP32 vs STM32 karşılaştırma
-- nRF52 (BLE + LoRa)
+- STM32 ile LoRaWAN node tasarımı
+- STM32CubeIDE ile IoT firmware geliştirme
+- Low power modları: Stop, Standby, Shutdown
+- RTC ve watchdog timer kullanımı
+- STM32 ile Modbus RTU slave implementasyonu
+- DMA ile verimli veri transferi
 - Low-power tasarım ipuçları
 
-### 2. Protokoller & Haberleşme
+### 2. ESP32 & WiFi IoT
+- ESP32 vs STM32 karşılaştırma
+- ESP32 ile MQTT bağlantısı kurma
+- ESP-NOW ile mesh network oluşturma
+- ESP32 deep sleep ve batarya optimizasyonu
+- OTA (Over-the-Air) firmware güncelleme
+- ESP32 vs STM32: Hangi projede hangisi?
+- ESP32 ile BLE beacon uygulamaları
+- nRF52 (BLE + LoRa)
+
+### 3. Protokoller & Haberleşme
 - Modbus RTU/TCP implementasyonu
 - MQTT client geliştirme
 - LoRaWAN stack entegrasyonu
 - CoAP ve LwM2M
 
-### 3. Firmware Best Practices
+### 4. Firmware Best Practices
 - OTA güncelleme stratejileri
-- Watchdog ve hata yönetimi
+- Bootloader tasarımı ve güvenli güncelleme
+- Firmware versiyonlama stratejileri
+- Watchdog ve hata kurtarma mekanizmaları
 - Power management (deep sleep)
+- Flash bellek yönetimi ve wear leveling
 - Flash/EEPROM veri yönetimi
+- Debug ve logging stratejileri production'da
+- Unit test IoT firmware için
 
-### 4. Geliştirme Araçları
+### 5. LoRa Modül Entegrasyonu
+- SX1276/SX1262 modül karşılaştırması
+- RAK3172 ile hızlı LoRaWAN prototipleme
+- Ebyte E22 serisi LoRa modül kullanımı
+- Anten seçimi ve RF performans optimizasyonu
+- RSSI ve SNR ile kapsama analizi
+
+### 6. Geliştirme Araçları
 - STM32CubeIDE/PlatformIO
 - JTAG/SWD debugging
 - Logic analyzer kullanımı
@@ -307,12 +355,17 @@ ThingsBoard, ChirpStack ve diğer IoT yönetim platformları.
 
 ### Örnek Başlıklar:
 - "STM32 ile İlk LoRaWAN Cihazınızı Yapın"
+- "STM32 Deep Sleep: Batarya Ömrünü 10 Kat Uzatma"
 - "IoT Cihazında Pil Ömrünü 3 Yıla Çıkarın"
+- "ESP32 OTA: Sahada Firmware Güncelleme Rehberi"
 - "Modbus ile PLC Haberleşmesi"
 - "Firmware OTA: Sahada Güncelleme"
+- "Watchdog Timer: IoT Cihazlarda Hata Kurtarma"
 - "ESP32 vs STM32: Hangisi Sizin İçin?"
+- "STM32 vs ESP32: Hangi Projede Hangisini Seçmeli?"
+- "LoRa Modül Seçimi: SX1276 vs SX1262 Karşılaştırma"
 
-### Reels: "STM32 blink demo", "Power consumption ölçümü", "OTA güncelleme live demo"
+### Reels: "STM32 blink demo", "STM32 low power demo", "ESP32 OTA tutorial", "Power consumption ölçümü", "OTA güncelleme live demo", "Firmware debug teknikleri"
 
 ---
 
@@ -409,8 +462,9 @@ ThingsBoard, ChirpStack ve diğer IoT yönetim platformları.
 
 ### Hedef Kitle:
 1. KKTC işletme sahipleri (sera, fabrika, otel)
-2. IoT/LoRaWAN profesyoneller
-3. Sürdürülebilirlik yöneticileri
+2. Türkiye sera ve tarım işletmeleri (Antalya, Ege, İç Anadolu)
+3. IoT/LoRaWAN profesyoneller
+4. Sürdürülebilirlik yöneticileri
 
 ---
 
@@ -444,3 +498,92 @@ Carousel formatı için optimize edilmiş, adım adım veya karşılaştırmalı
 - İlk slide dikkat çekici hook
 - Son slide CTA içermeli
 - Tutarlı görsel stili (aynı renk paleti)
+
+---
+
+## 🇹🇷 TÜRKİYE TARIM & SERA OTOMASYONU
+
+### Antalya Bölgesi Sera Çözümleri
+- Antalya seralarında akıllı sulama sistemleri
+- Akdeniz ikliminde sera kliması optimizasyonu
+- Domates seralarında nem ve sıcaklık kontrolü
+- Örtü altı tarımda enerji tasarrufu
+- Jeotermal ısıtmalı seralarda IoT entegrasyonu
+
+### Türkiye Tarım IoT
+- Türkiye'de damla sulama otomasyonu
+- Zeytinliklerde toprak nem takibi
+- Fındık bahçelerinde don uyarı sistemi
+- Buğday tarlalarında akıllı sulama
+- Çay bahçelerinde nem ve sıcaklık izleme
+
+### Tarımsal IoT ROI
+- Sera otomasyonunda yatırım geri dönüşü
+- Su tasarrufu: Manuel vs otomatik sulama
+- İşçilik maliyeti azaltma hesaplamaları
+- Verim artışı case study'leri
+
+### Örnek Başlıklar:
+- "Antalya Seralarında %40 Su Tasarrufu Nasıl Sağlanır?"
+- "Türkiye'de Akıllı Tarım: Damla Sulama Otomasyonu"
+- "Zeytinliklerde Toprak Nem İzleme ile Verim Artışı"
+- "Sera Otomasyonu ROI: Ne Zaman Kendini Amorti Eder?"
+
+### Reels: "Antalya sera projesi", "Türkiye tarım IoT", "Damla sulama otomasyon demo"
+
+---
+
+## 📶 IoT PROTOKOLLERİ - İLERİ SEVİYE
+
+### MQTT Derinlik
+- MQTT QoS seviyeleri: 0, 1, 2 farkları
+- MQTT retained message ve last will
+- MQTT over WebSocket
+- MQTT bridge ve federation
+- Mosquitto vs EMQX vs HiveMQ
+
+### Endüstriyel Protokoller Detay
+- Modbus RTU vs Modbus TCP karşılaştırma
+- OPC-UA ile SCADA entegrasyonu
+- BACnet ile bina otomasyonu
+- CANbus ile araç IoT
+- Profinet ve endüstriyel ethernet
+
+### LoRaWAN İleri Seviye
+- LoRaWAN Class A, B, C farkları
+- ADR (Adaptive Data Rate) optimizasyonu
+- Downlink stratejileri ve sınırlamaları
+- Multicast ve firmware OTA
+- LoRaWAN güvenlik: AppKey, NwkKey, DevEUI
+
+### Örnek Başlıklar:
+- "MQTT QoS Seviyeleri: Hangisini Ne Zaman Kullanmalı?"
+- "Modbus RTU vs TCP: Endüstriyel Haberleşme Rehberi"
+- "LoRaWAN Class A, B, C: Farkları Nedir?"
+
+### Reels: "MQTT QoS demo", "Modbus RTU oscilloscope", "LoRaWAN class karşılaştırma"
+
+---
+
+## 🌊 HAVA & SU KALİTESİ İZLEME
+
+### Hava Kalitesi Sensörleri
+- CO2 izleme ile iç mekan havalandırma kontrolü
+- VOC sensörleri ile endüstriyel güvenlik
+- PM2.5/PM10 izleme sistemleri
+- Sera içi CO2 zenginleştirme kontrolü
+- IAQ (Indoor Air Quality) skorlama
+
+### Su Kalitesi Sensörleri
+- pH sensörü ile sulama suyu kontrolü
+- EC (iletkenlik) ile gübre dozajlama
+- Çözünmüş oksijen izleme (balık çiftlikleri)
+- Turbidite sensörü ile su berraklığı
+- ORP sensörü ile dezenfeksiyon kontrolü
+
+### Örnek Başlıklar:
+- "Serada CO2 Zenginleştirme: Verim %30 Artışı"
+- "Su pH'ı Neden Önemli? Sulama Kalitesi Kontrolü"
+- "Fabrikada Hava Kalitesi: VOC ve PM2.5 İzleme"
+
+### Reels: "CO2 sensör kurulum", "pH metre kalibrasyon", "Hava kalitesi dashboard"

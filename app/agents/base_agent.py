@@ -131,8 +131,9 @@ class BaseAgent(ABC):
 
     def _clean_json_response(self, text: str) -> str:
         """Claude yanıtından JSON'u çıkar - markdown code block'ları temizle"""
-        if not text:
-            return text
+        if not text or not text.strip():
+            self.log("WARNING: LLM returned empty response")
+            return "{}"  # Boş JSON döndür, parse hatası yerine fallback
 
         text = text.strip()
 
