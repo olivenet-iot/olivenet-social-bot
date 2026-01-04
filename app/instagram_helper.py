@@ -437,10 +437,12 @@ async def create_media_container(
     video_url: Optional[str] = None,
     caption: str = "",
     media_type: str = "IMAGE",
-    is_carousel_item: bool = False
+    is_carousel_item: bool = False,
+    max_retries: int = 3
 ) -> Optional[str]:
     """
     Instagram Media Container oluştur (2-aşamalı yükleme için)
+    Retry mekanizması ile timeout hatalarını handle eder.
 
     Args:
         image_url: Görsel URL'i (public erişilebilir, direkt .jpg/.png)
@@ -448,6 +450,7 @@ async def create_media_container(
         caption: Post caption'ı
         media_type: IMAGE, REELS, veya CAROUSEL
         is_carousel_item: Carousel child item mi?
+        max_retries: Maksimum deneme sayısı
 
     Returns:
         Container ID veya None
@@ -479,39 +482,61 @@ async def create_media_container(
     if is_carousel_item:
         data["is_carousel_item"] = "true"
 
-    try:
-        timeout = aiohttp.ClientTimeout(total=30)
-        async with aiohttp.ClientSession(timeout=timeout) as session:
-            async with session.post(url, data=data) as response:
-                result = await response.json()
+    for attempt in range(max_retries):
+        try:
+            timeout = aiohttp.ClientTimeout(total=60)  # 30s → 60s
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.post(url, data=data) as response:
+                    result = await response.json()
 
-                if "error" in result:
-                    error_msg = result["error"].get("message", "Unknown error")
-                    print(f"[INSTAGRAM] Container Error: {error_msg}")
-                    return None
+                    if "error" in result:
+                        error_msg = result["error"].get("message", "Unknown error")
+                        print(f"[INSTAGRAM] Container Error: {error_msg}")
 
-                container_id = result.get("id")
-                print(f"[INSTAGRAM] Media Container oluşturuldu: {container_id}")
-                return container_id
+                        # Retry edilebilir hata mı?
+                        if "timeout" in error_msg.lower() or "rate" in error_msg.lower():
+                            if attempt < max_retries - 1:
+                                wait_time = 5 * (attempt + 1)
+                                print(f"[INSTAGRAM] Retry {attempt + 1}/{max_retries}, {wait_time}s bekleniyor...")
+                                await asyncio.sleep(wait_time)
+                                continue
+                        return None
 
-    except asyncio.TimeoutError:
-        print("[INSTAGRAM] Container creation timeout (30s)")
-        return None
-    except Exception as e:
-        print(f"[INSTAGRAM] Container creation error: {e}")
-        return None
+                    container_id = result.get("id")
+                    print(f"[INSTAGRAM] Media Container oluşturuldu: {container_id}")
+                    return container_id
+
+        except asyncio.TimeoutError:
+            print(f"[INSTAGRAM] Container timeout (60s), retry {attempt + 1}/{max_retries}")
+            if attempt < max_retries - 1:
+                wait_time = 5 * (attempt + 1)  # 5s, 10s, 15s
+                await asyncio.sleep(wait_time)
+            else:
+                print("[INSTAGRAM] Max retries exceeded for container creation")
+                return None
+
+        except Exception as e:
+            print(f"[INSTAGRAM] Container creation error: {e}")
+            if attempt < max_retries - 1:
+                await asyncio.sleep(3)
+            else:
+                return None
+
+    return None
 
 
 async def create_carousel_container(
     children_ids: List[str],
-    caption: str = ""
+    caption: str = "",
+    max_retries: int = 3
 ) -> Optional[str]:
     """
-    Carousel ana container oluştur
+    Carousel ana container oluştur - retry ile
 
     Args:
         children_ids: Child container ID listesi
         caption: Post caption'ı
+        max_retries: Maksimum deneme sayısı
 
     Returns:
         Carousel container ID veya None
@@ -530,26 +555,44 @@ async def create_carousel_container(
         "access_token": creds["access_token"]
     }
 
-    try:
-        timeout = aiohttp.ClientTimeout(total=30)
-        async with aiohttp.ClientSession(timeout=timeout) as session:
-            async with session.post(url, data=data) as response:
-                result = await response.json()
+    for attempt in range(max_retries):
+        try:
+            timeout = aiohttp.ClientTimeout(total=60)  # 30s → 60s
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.post(url, data=data) as response:
+                    result = await response.json()
 
-                if "error" in result:
-                    print(f"[INSTAGRAM] Carousel Container Error: {result['error'].get('message')}")
-                    return None
+                    if "error" in result:
+                        error_msg = result["error"].get("message", "Unknown")
+                        print(f"[INSTAGRAM] Carousel Container Error: {error_msg}")
 
-                container_id = result.get("id")
-                print(f"[INSTAGRAM] Carousel Container: {container_id}")
-                return container_id
+                        if "timeout" in error_msg.lower() or "rate" in error_msg.lower():
+                            if attempt < max_retries - 1:
+                                wait_time = 5 * (attempt + 1)
+                                print(f"[INSTAGRAM] Carousel retry {attempt + 1}/{max_retries}...")
+                                await asyncio.sleep(wait_time)
+                                continue
+                        return None
 
-    except asyncio.TimeoutError:
-        print("[INSTAGRAM] Carousel container timeout (30s)")
-        return None
-    except Exception as e:
-        print(f"[INSTAGRAM] Carousel container error: {e}")
-        return None
+                    container_id = result.get("id")
+                    print(f"[INSTAGRAM] Carousel Container: {container_id}")
+                    return container_id
+
+        except asyncio.TimeoutError:
+            print(f"[INSTAGRAM] Carousel container timeout, retry {attempt + 1}/{max_retries}")
+            if attempt < max_retries - 1:
+                await asyncio.sleep(5 * (attempt + 1))
+            else:
+                return None
+
+        except Exception as e:
+            print(f"[INSTAGRAM] Carousel container error: {e}")
+            if attempt < max_retries - 1:
+                await asyncio.sleep(3)
+            else:
+                return None
+
+    return None
 
 
 async def check_container_status(container_id: str) -> Dict[str, Any]:
