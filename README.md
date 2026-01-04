@@ -231,17 +231,22 @@ Detaylar: [CONFIGURATION.md](CONFIGURATION.md)
 
 ## Skills (Claude Code)
 
-Proje `.claude/skills/` altinda 11 skill icerir:
+Proje `.claude/skills/` altinda 12 optimize edilmis skill icerir:
 
-- `video-generation` - Sora/Veo/Kling model secimi
-- `instagram-api` - Graph API v21.0 referansi
-- `database-patterns` - SQLite CRUD ornekleri
-- `multi-agent-architecture` - Pipeline akislari
-- `olivenet-brand` - Marka sesi ve kurallar
-- `telegram-bot` - Komut ve handler referansi
-- `template-system` - 11 HTML template
-- `helper-reference` - Tum helper fonksiyonlari
-- Ve digerleri...
+| Skill | Aciklama |
+|-------|----------|
+| `video-generation` | Sora/Veo/Kling model secimi |
+| `instagram-api` | Graph API v21.0 referansi |
+| `database-patterns` | SQLite CRUD ornekleri |
+| `multi-agent-architecture` | Pipeline akislari |
+| `olivenet-brand` | Marka sesi ve kurallar |
+| `telegram-bot` | Komut ve handler referansi |
+| `template-system` | 11 HTML template |
+| `helper-reference` | Tum helper fonksiyonlari |
+| `flux-image` | FLUX.2 Pro gorsel uretimi |
+| `cloudinary-cdn` | Video CDN yonetimi |
+| `error-handling` | Hata ayiklama rehberi |
+| `recent-changes` | Son degisiklikler logu |
 
 ---
 

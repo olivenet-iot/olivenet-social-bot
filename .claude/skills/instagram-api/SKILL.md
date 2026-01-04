@@ -3,172 +3,108 @@ name: instagram-api
 description: Instagram Graph API entegrasyonu. Use when publishing content, fetching insights, or working with Instagram media.
 ---
 
-# Instagram Graph API Integration
+# Instagram Graph API
+
+**Version:** v21.0 | **Base:** `https://graph.instagram.com/v21.0`
 
 ## Quick Reference
 
-| Feature | Endpoint | Method |
-|---------|----------|--------|
-| Account Info | `/{user_id}` | GET |
+| Action | Endpoint | Method |
+|--------|----------|--------|
 | Create Container | `/{user_id}/media` | POST |
 | Publish | `/{user_id}/media_publish` | POST |
-| Container Status | `/{container_id}` | GET |
-| Media Insights | `/{media_id}/insights` | GET |
-| Recent Media | `/{user_id}/media` | GET |
+| Check Status | `/{container_id}` | GET |
+| Get Insights | `/{media_id}/insights` | GET |
 
-**API Version:** v21.0
-**Base URL:** `https://graph.instagram.com/v21.0`
-
-## Two-Phase Publish Flow
-
-Instagram requires a 2-step process to publish content:
+## Two-Phase Publishing
 
 ```
-1. Create Container → Get container_id
-2. Wait (if video) → Check status
-3. Publish Container → Get post_id
+1. Create Container → container_id
+2. (Video only) Poll until FINISHED
+3. Publish Container → post_id
 ```
 
-### Image Publishing
+## Publishing Functions
 
 ```python
-# Step 1: Create container
-POST /{user_id}/media
-{
-    "image_url": "https://...",  # PUBLIC URL required
-    "caption": "...",
-    "access_token": "..."
-}
-# Returns: {"id": "container_id"}
+from app.instagram_helper import (
+    post_photo_to_instagram,
+    post_video_to_instagram,
+    post_carousel_to_instagram
+)
 
-# Step 2: Publish
-POST /{user_id}/media_publish
-{
-    "creation_id": "container_id",
-    "access_token": "..."
-}
-# Returns: {"id": "post_id"}
-```
+# Image
+result = await post_photo_to_instagram(image_url, caption)
 
-### Video/Reels Publishing
+# Reels
+result = await post_video_to_instagram(video_url, caption)
 
-```python
-# Step 1: Create REELS container
-POST /{user_id}/media
-{
-    "video_url": "https://...",  # PUBLIC URL required
-    "media_type": "REELS",
-    "caption": "...",
-    "access_token": "..."
-}
-
-# Step 2: Wait for processing (poll every 10s)
-GET /{container_id}?fields=status_code,status
-# Wait until status_code == "FINISHED"
-
-# Step 3: Publish
-POST /{user_id}/media_publish
-```
-
-### Carousel Publishing
-
-```python
-# Step 1: Create child containers (no caption)
-POST /{user_id}/media
-{
-    "image_url": "https://...",
-    "is_carousel_item": "true",
-    "access_token": "..."
-}
-# Repeat for each image (2-10 images)
-
-# Step 2: Create carousel container
-POST /{user_id}/media
-{
-    "media_type": "CAROUSEL",
-    "children": "id1,id2,id3,...",
-    "caption": "...",
-    "access_token": "..."
-}
-
-# Step 3: Publish
-POST /{user_id}/media_publish
+# Carousel (2-10 images)
+result = await post_carousel_to_instagram(image_urls, caption)
 ```
 
 ## Video Requirements
 
-Instagram Reels have strict format requirements:
-
-| Spec | Requirement |
-|------|-------------|
-| Codec | H.264 (video), AAC (audio) |
+| Spec | Value |
+|------|-------|
 | Resolution | 720x1280 (9:16) |
+| Codec | H.264 video, AAC audio |
 | FPS | 30 |
-| Max Duration | 90 seconds |
-| Format | MP4 |
-
-### FFmpeg Conversion Command
-
-```bash
-ffmpeg -y -i input.mp4 \
-  -c:v libx264 -preset medium -crf 23 \
-  -c:a aac -b:a 128k -ar 44100 \
-  -vf "scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2,setsar=1" \
-  -r 30 -movflags +faststart -t 90 \
-  output.mp4
-```
-
-## Insights API
-
-### Available Metrics by Media Type
-
-**Reels/Video:**
-- `plays` - Video plays
-- `reach` - Unique accounts reached
-- `saved` - Saves
-- `shares` - Shares
-- `comments` - Comments
-- `likes` - Likes
-- `total_interactions` - All interactions
-
-**Image/Carousel:**
-- `impressions` - Total views
-- `reach` - Unique accounts reached
-- `saved` - Saves
-
-### Fetching Insights
+| Max | 90 seconds |
 
 ```python
-GET /{media_id}/insights?metric=plays,reach,saved,shares,comments,likes
+# Auto-convert
+from app.instagram_helper import convert_video_for_instagram
+result = await convert_video_for_instagram(input_path)
+# Returns: {success, output_path, converted, file_size_mb}
 ```
 
-### Engagement Rate Formula
+## Insights
 
 ```python
-engagement_rate = (likes + comments + saves + shares) / reach * 100
+from app.insights_helper import get_instagram_media_insights
+
+insights = await get_instagram_media_insights(media_id)
+# Returns: {plays, reach, saves, shares, likes, comments, engagement_rate}
 ```
 
-## Error Handling
-
-Common error codes:
-- `OAuthAccessTokenException` - Token expired/invalid
-- `MediaTypeNotSupported` - Wrong media format
-- `MediaUploadError` - Upload failed
-- `RateLimitError` - Too many requests
+**Reels metrics:** plays, reach, saved, shares, comments, likes
+**Image metrics:** impressions, reach, saved
 
 ## Rate Limiting
 
-- Wait 2 seconds between container creation
-- Wait 10 seconds between video status checks
-- Max 30 attempts for video processing (5 minutes)
-- 0.3 second delay between insight fetches
+- Container creation: 2s delay
+- Video polling: 10s interval, max 30 attempts
+- Insights fetch: 0.3s delay between calls
 
 ## Environment Variables
 
 ```bash
-INSTAGRAM_ACCESS_TOKEN=your_token
-INSTAGRAM_USER_ID=your_user_id
-INSTAGRAM_BUSINESS_ID=your_business_id  # Optional
+INSTAGRAM_ACCESS_TOKEN=...
+INSTAGRAM_USER_ID=...
+INSTAGRAM_BUSINESS_ID=...  # Optional
 ```
 
-For more details, see [endpoints.md](endpoints.md) and [examples.md](examples.md).
+## Return Format
+
+```python
+# Success
+{"success": True, "id": "17901234567890123", "platform": "instagram"}
+
+# Error
+{"success": False, "error": "Error message"}
+```
+
+## Common Errors
+
+| Error | Solution |
+|-------|----------|
+| OAuthException | Token expired - refresh |
+| MediaTypeNotSupported | Wrong format - convert |
+| RateLimitError | Too many calls - add delay |
+
+## Deep Links
+
+- `app/instagram_helper.py` - Publishing
+- `app/insights_helper.py` - Metrics
+- `app/cloudinary_helper.py` - Video CDN

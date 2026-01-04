@@ -1,103 +1,71 @@
 ---
 name: olivenet-brand
-description: Olivenet marka sesi ve icin strateji referansi. Use when creating content, captions, hooks, or understanding brand voice.
+description: Olivenet marka sesi ve icerik stratejisi. Use when creating content, captions, hooks, or understanding brand voice.
 ---
 
 # Olivenet Brand Guidelines
 
 ## Company Profile
 
-**Olivenet Ltd.** - KKTC (Kuzey Kibris) merkezli Endustriyel IoT sirketi.
-
-### Expertise Areas
-- Akilli Tarim (Smart Agriculture)
-- Enerji Izleme (Energy Monitoring)
-- Kestirimci Bakim (Predictive Maintenance)
-- Bina Otomasyonu (Building Automation)
-
-### Technologies
-- LoRaWAN (The Things Stack, ChirpStack)
-- ThingsBoard IoT Platform
-- MQTT Protocol
-- Edge AI (Jetson Nano/Xavier)
-
-### Target Audience
-- Sera sahipleri ve tarim isletmeleri
-- Fabrika ve uretim tesisleri
-- Enerji yoneticileri
-- Belediyeler ve kamu kurumlari
+**Olivenet Ltd.** - KKTC merkezli Endustriyel IoT sirketi
+- Akilli Tarim, Enerji Izleme, Kestirimci Bakim
+- LoRaWAN, ThingsBoard, Edge AI
 
 ## Brand Voice
 
 | Attribute | Description |
 |-----------|-------------|
-| Professional | Uzman, guvenilir, teknik |
-| Approachable | Samimi, anlasilir, yerel |
-| Innovative | Yenilikci, cozum odakli |
-| Humble | Mutevazi, abartisiz |
+| Professional | Uzman, guvenilir |
+| Approachable | Samimi, anlasilir |
+| Innovative | Cozum odakli |
+| **Humble** | Mutevazi - ABARTI YOK! |
 
-**CRITICAL:** Olivenet yeni bir girisim. "Binlerce cihaz", "3000+ baglanti" gibi abartili rakamlar KULLANMA. Gercekci ve mutevazi ton tercih et.
+**KRITIK:** Olivenet yeni girisim. "Binlerce cihaz" gibi abartili rakamlar KULLANMA!
 
-## Instagram Content Rules
+## Instagram Rules
 
-### Length
-- **MAX 120 WORDS** (kesinlikle asilmamali!)
-- Kisa, vurucu, okunabilir icerik
-- Mobil uyumlu paragraflar (2-3 cumle max)
+- **MAX 120 KELIME** (kesinlikle!)
+- Ardisik 2 postta ayni hook tipi KULLANMA
+- 3 posttan 1'inde soft CTA
+- MAX 5-7 emoji per post
 
-### Hook Rotation
-- Ardisik iki postta ayni hook tipi KULLANMA
-- Haftalik en az 5 farkli hook tipi don
-- 10 hook tipi available (see [hooks.md](hooks.md))
+## 10 Hook Types
 
-### CTA Rules
-- Her postta CTA KOYMA!
-- 3 posttan 1'inde soft CTA: "DM at", "Bio'daki linke tikla"
-- Direkt satis yapma, deger sun
-- Engagement odakli: "Sen ne dusunuyorsun?"
+1. **Istatistik** - "%35 su tasarrufu mumkun!"
+2. **Soru** - "Seranizda ne kadar su israf?"
+3. **Cesur Iddia** - "Sensorsuz sera imkansiz."
+4. **Problem** - "Enerji faturalari artiyor..."
+5. **Deger** - "3 dakikada sera kontrolu."
+6. **Korku/FOMO** - "Suyunuz bitiyor mu?"
+7. **Before/After** - "Manuel → Akilli: %35 tasarruf"
+8. **Liste** - "3 adimda sera otomasyonu"
+9. **Karsilastirma** - "WiFi vs LoRaWAN"
+10. **Lokal** - "KKTC'de su kitligina cozum"
 
-### Hashtag Strategy
-**Sabit (her post):**
-```
-#Olivenet #KKTC #IoT
-```
+## Hashtags
 
-**Donen (rotasyonlu):**
-```
-#AkilliTarim #SeraOtomasyonu #EnerjiVerimliligi
-#DijitalDonusum #Teknoloji #Surdurulebilirlik
-```
-
-### Emoji Usage
-- Her postta MAX 5-7 emoji
-- Baslik/hook'ta 1-2 emoji
-- Anlamli kullanim, rastgele degil
+**Sabit:** #Olivenet #KKTC #IoT
+**Donen:** #AkilliTarim #SeraOtomasyonu #EnerjiVerimliligi
 
 ## Color Palette
 
 | Color | Hex | Usage |
 |-------|-----|-------|
-| Olive Green | #2E7D32 | Primary, nature |
-| Sky Blue | #38bdf8 | Technology, data |
-| White | #FFFFFF | Clean, modern |
+| Olive Green | #2E7D32 | Primary |
+| Sky Blue | #38bdf8 | Technology |
+| White | #FFFFFF | Clean |
 | Dark Gray | #1a1a1a | Background |
 
-## Content Categories
+## Viral Score
 
-| Category | IG Ratio | Description |
-|----------|----------|-------------|
-| Egitici/Bilgi | 40% | Tips, istatistikler |
-| Behind the scenes | 20% | Kurulum, ekip |
-| Deger/Fayda | 25% | Cozum odakli |
-| Soft Satis | 15% | CTA'li postlar |
-
-## Viral Score Formula
-
-Content is optimized for viral potential:
 ```python
-viral_score = (saves * 2) + (shares * 3) + engagement + (non_follower_reach * 0.015)
+viral_score = (saves * 2) + (shares * 3) + engagement + (non_follower * 0.015)
 ```
 
-**Key insight:** Save ve share > like algoritmada.
+Save ve share > like algoritmada!
 
-For more details, see [topics.md](topics.md) and [hooks.md](hooks.md).
+## Deep Links
+
+- `context/content-strategy.md` - Full strategy
+- `context/topics.md` - Topic categories
+- `context/visual-guidelines.md` - Design rules

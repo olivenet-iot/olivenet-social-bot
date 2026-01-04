@@ -5,165 +5,52 @@ description: Son degisiklikler logu. Check when debugging or understanding recen
 
 # Recent Changes
 
-Son commit'ler ve onemli degisiklikler. Debugging ve context icin referans.
+Son onemli degisiklikler ve fix'ler.
 
-## 2024-12 Son Commit'ler
+## Son Commit'ler
 
-### Kapsamli Dokumantasyon Refaktoru (TBD)
-**Degisiklikler:**
-- 7 yeni dokumantasyon dosyasi eklendi
-- Renk paleti tutarsizligi duzeltildi
-- Facebook referanslari tamamen temizlendi
-- Duplicate topic listeleri birlestirildi
-- README.md tamamen yeniden yazildi
-- .env.example kapsamli sekilde guncellendi
+### Logo Overlay Devre Disi (23df9bb)
+- Nano banana gorusellerinde logo overlay kaldirildi
 
-**Yeni Dosyalar:**
-- `ARCHITECTURE.md` - Sistem mimarisi, agent workflow
-- `DATABASE.md` - 11 tablo semasi ve ER diagram
-- `API_INTEGRATIONS.md` - 10+ API entegrasyonu detaylari
-- `CONFIGURATION.md` - Tum environment variables
-- `QUICKSTART.md` - Kurulum ve ilk calistirma
-- `USAGE_EXAMPLES.md` - Python API ornekleri
-- `TROUBLESHOOTING.md` - Sik hatalar ve cozumler
+### Instagram Container Timeout (b51a6c1)
+- Container status kontrolunde retry mekanizmasi eklendi
+- Max 30 deneme, 10s aralik
 
-**Guncellenen Dosyalar:**
-- `.claude/skills/template-system/SKILL.md` - renk paleti fix
-- `.claude/skills/database-patterns/schema.sql` - Facebook sutunlari kaldirildi
-- `.claude/skills/olivenet-brand/topics.md` - context/topics.md'ye referans
-- `context/schedule-strategy.md` - Facebook referanslari temizlendi
-- `context/social-media-expert.md` - rakam catismasi duzeltildi
+### Nano Banana Prompt Optimizasyonu (ea18ef4)
+- Gunluk icerik promptlari iyilestirildi
 
----
+### Telegram Markdown + DB Fix (1d0d08c)
+- escape_markdown() fonksiyonu duzeltildi
+- NULL constraint hatalari giderildi
 
-### KAYDET Sorunu Fix (f0d7d2f)
-**Problem:** Carousel cover slide'da "KAYDET" button metni gorunuyordu.
-**Cozum:** 4 katmanli savunma eklendi:
-1. Claude prompt'a KAYDET yasagi
-2. Creator'da regex temizleme
-3. Reviewer'da validation
-4. Telegram'da son kontrol
+## Bilinen Sorunlar
 
-**Dosyalar:**
-- `app/agents/creator.py` - regex cleanup
-- `app/telegram_pipeline.py` - final validation
-
----
-
-### Carousel Iyilestirmeleri (4c0894f)
-**Eklenenler:**
-- 5 yeni infographic template
-- Slide validation + auto-fix
-- Text length kontrol (her slide max 100 karakter)
-- Cover slide ozel tasarim
-
-**Dosyalar:**
-- `templates/*.html` - yeni template'ler
-- `app/agents/creator.py` - validation logic
-
----
-
-### Revision Button Fix (3ece58a)
-**Problem:** Telegram'da revizyon butonu calismiyor.
-**Cozum:** Callback handler duzeltildi, feedback akisi iyilestirildi.
-
-**Dosya:** `app/telegram_pipeline.py`
-
----
-
-### Icerik Stratejisi Guncellemesi (ea63918)
-**Degisiklikler:**
-- Kalite kontrol kriterleri guncellendi
-- Tasarim standartlari belirlendi
-- Hook performance takibi iyilestirildi
-
-**Dosyalar:**
-- `context/content-strategy.md`
-- `app/agents/reviewer.py`
-
----
-
-### Prompt Tracking Sistemi (3ad6580)
-**Yeni Ozellik:** Video/image prompt performans takibi.
-
-**Yeni Tablo:** `prompt_history`
-- prompt_type: video | image
-- prompt_style: cinematic, documentary, pov, etc.
-- prompt_hash: duplicate detection
-- Performance metrics: reach, engagement, saves
-
-**Dosyalar:**
-- `app/database/models.py` - tablo ekleme
-- `app/database/crud.py` - CRUD fonksiyonlari
-
----
-
-### Facebook Temizlik (503642e)
-**Degisiklik:** Tum Facebook referanslari kaldirildi.
-- `facebook_helper.py` -> `facebook_helper.py.disabled`
-- Platform secenekleri sadece Instagram
-
----
-
-### None Hatalari Fix (bf522e2)
-**Problem:** `.upper()` ve `.lower()` None degerlerinde hata.
-**Cozum:** Null check eklendi.
-
-```python
-# Onceki
-text.lower()
-
-# Sonraki
-(text or "").lower()
-```
-
-**Ek:** Timezone duzeltmeleri (KKTC UTC+2)
-
----
-
-## Bilinen Sorunlar (Troubleshooting)
-
-### Video Generation Timeout
-**Belirti:** Sora/Veo 5 dakikadan uzun suruyor.
-**Cozum:** `generate_video_smart()` kullan, otomatik fallback var.
-
-### Carousel Upload Hatasi
-**Belirti:** "All items must have same aspect ratio"
-**Cozum:** Tum slide'lar 1080x1080 olmali.
-
-### Telegram Parse Error
-**Belirti:** "Can't parse entities"
-**Cozum:** Markdown ozel karakterleri escape et veya parse_mode kaldir.
-
-### Instagram Rate Limit
-**Belirti:** "Application request limit reached"
-**Cozum:** 0.3s delay ekle, batch islemlerde bekle.
-
----
+| Sorun | Cozum |
+|-------|-------|
+| Video timeout | `generate_video_smart()` kullan |
+| Carousel aspect ratio | Tum slide'lar 1080x1080 |
+| Telegram parse error | Markdown karakterlerini escape et |
+| Instagram rate limit | 0.3s delay ekle |
+| None.upper() | `(text or "").upper()` |
 
 ## Onemli Dosyalar
 
-| Dosya | Son Degisiklik |
-|-------|----------------|
-| app/agents/creator.py | KAYDET fix, carousel |
-| app/telegram_pipeline.py | Revision button |
-| app/database/models.py | prompt_history |
-| context/content-strategy.md | Strateji |
-
----
+| Dosya | Aciklama |
+|-------|----------|
+| app/agents/creator.py | Icerik uretimi |
+| app/telegram_pipeline.py | Bot handlers |
+| app/database/models.py | Schema |
+| app/scheduler/pipeline.py | Pipeline logic |
 
 ## Git Komutlari
 
 ```bash
-# Son 10 commit
-git log --oneline -10
-
-# Belirli dosyanin gecmisi
-git log --oneline -5 -- app/agents/creator.py
-
-# Commit detayi
-git show f0d7d2f
-
-# Degisiklikleri geri al
-git checkout HEAD -- app/agents/creator.py
+git log --oneline -10           # Son 10 commit
+git show <hash>                 # Commit detayi
+git diff HEAD~1                 # Son degisiklik
 ```
+
+## Deep Links
+
+- `TROUBLESHOOTING.md` - Detayli sorun giderme
+- `ARCHITECTURE.md` - Sistem mimarisi
