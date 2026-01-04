@@ -34,8 +34,8 @@ def create_post(
     conn = get_connection()
     cursor = conn.cursor()
 
-    # post_text yoksa post_text_fb kullan
-    final_post_text = post_text or post_text_fb
+    # post_text yoksa post_text_fb, o da yoksa topic kullan (NULL olamaz)
+    final_post_text = post_text if post_text else (post_text_fb if post_text_fb else topic)
 
     cursor.execute('''
         INSERT INTO posts (topic, post_text, visual_type, scheduled_at, platform, status, post_text_ig, post_text_fb, topic_category, hook_type)

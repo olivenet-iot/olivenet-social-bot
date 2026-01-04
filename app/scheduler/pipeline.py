@@ -12,6 +12,15 @@ from enum import Enum
 from app.database import save_prompt
 from app.validators.text_validator import validate_html_content, fix_common_issues
 from app.video_models import get_model_config, get_prompt_key, validate_duration, should_disable_audio
+from telegram.helpers import escape_markdown
+
+
+def _escape_md(value) -> str:
+    """Telegram Markdown için güvenli escape - None ve boş değerleri de handle eder"""
+    if value is None:
+        return "N/A"
+    return escape_markdown(str(value))
+
 
 def extract_shot_structure(speech_script: str, target_duration: int) -> list:
     """
@@ -174,16 +183,16 @@ class ContentPipeline:
                 message=f"""
 📋 *Bugünün Konu Önerisi*
 
-🎯 *Konu:* {topic_result.get('topic', 'N/A')}
-📂 *Kategori:* {topic_result.get('category', 'N/A')}
-🎨 *Görsel:* {topic_result.get('suggested_visual', 'N/A')}
-⏰ *Önerilen Saat:* {topic_result.get('best_time', 'N/A')}
+🎯 *Konu:* {_escape_md(topic_result.get('topic', 'N/A'))}
+📂 *Kategori:* {_escape_md(topic_result.get('category', 'N/A'))}
+🎨 *Görsel:* {_escape_md(topic_result.get('suggested_visual', 'N/A'))}
+⏰ *Önerilen Saat:* {_escape_md(topic_result.get('best_time', 'N/A'))}
 
 💡 *Neden bu konu?*
-{topic_result.get('reasoning', 'N/A')}
+{_escape_md(topic_result.get('reasoning', 'N/A'))}
 
 🪝 *Hook Önerileri:*
-{chr(10).join(['• ' + h for h in topic_result.get('suggested_hooks', [])])}
+{chr(10).join(['• ' + _escape_md(h) for h in topic_result.get('suggested_hooks', [])])}
 """,
                 data=topic_result,
                 buttons=[
@@ -233,14 +242,14 @@ class ContentPipeline:
                 message=f"""
 📝 *Post Metni Hazır*
 
-{content_result.get('post_text', 'N/A')}
+{_escape_md(content_result.get('post_text', 'N/A'))}
 
 ---
 📊 *Detaylar:*
-- Kelime sayısı: {content_result.get('word_count', 'N/A')}
-- Emoji sayısı: {content_result.get('emoji_count', 'N/A')}
-- Ton: {content_result.get('tone', 'N/A')}
-- Hook: {content_result.get('hook_used', 'N/A')}
+- Kelime sayısı: {_escape_md(content_result.get('word_count', 'N/A'))}
+- Emoji sayısı: {_escape_md(content_result.get('emoji_count', 'N/A'))}
+- Ton: {_escape_md(content_result.get('tone', 'N/A'))}
+- Hook: {_escape_md(content_result.get('hook_used', 'N/A'))}
 """,
                 data=content_result,
                 buttons=[
@@ -276,16 +285,24 @@ class ContentPipeline:
 
             visual_type = topic_result.get("suggested_visual", "flux")
 
-            visual_prompt_result = await self.creator.execute({
-                "action": "create_visual_prompt",
-                "post_text": content_result.get("post_text"),
-                "topic": topic_result.get("topic"),
-                "visual_type": visual_type,
-                "post_id": content_result.get("post_id")
-            })
+            # nano_banana ve infographic kendi promptlarını oluşturur - visual_prompt agent atla
+            if visual_type in ["nano_banana", "infographic"]:
+                self.log(f"{visual_type} için visual_prompt agent atlanıyor (kendi promptunu oluşturur)...")
+                visual_prompt_result = {
+                    "visual_prompt": topic_result.get("topic", ""),
+                    "style": visual_type
+                }
+            else:
+                visual_prompt_result = await self.creator.execute({
+                    "action": "create_visual_prompt",
+                    "post_text": content_result.get("post_text"),
+                    "topic": topic_result.get("topic"),
+                    "visual_type": visual_type,
+                    "post_id": content_result.get("post_id")
+                })
 
-            if "error" in visual_prompt_result:
-                raise Exception(f"Visual prompt error: {visual_prompt_result['error']}")
+                if "error" in visual_prompt_result:
+                    raise Exception(f"Visual prompt error: {visual_prompt_result['error']}")
 
             self.current_data["visual_prompt"] = visual_prompt_result
             result["stages_completed"].append("visual_prompt")
@@ -396,7 +413,7 @@ class ContentPipeline:
                         error_msg = visual_result.get("error", "Görsel üretilemedi") if visual_result else "Görsel üretilemedi"
                         self.log(f"Görsel üretim hatası: {error_msg}")
                         await self.notify_telegram(
-                            message=f"❌ Görsel üretim hatası: {error_msg}",
+                            message=f"❌ Görsel üretim hatası: {_escape_md(error_msg)}",
                             buttons=[
                                 {"text": "🔄 Tekrar Dene", "callback": "retry_visual"},
                                 {"text": "🎨 Tip Değiştir", "callback": "change_visual_type"},
@@ -600,7 +617,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             result["final_state"] = self.state.value
 
             await self.notify_telegram(
-                message=f"❌ *Pipeline Hatası*\n\n{str(e)}",
+                message=f"❌ *Pipeline Hatası*\n\n{_escape_md(str(e))}",
                 data={"error": str(e)},
                 buttons=[]
             )
@@ -645,7 +662,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
 
             # Telegram'a bilgi gönder (sadece bilgi, onay beklenmez)
             await self.notify_telegram(
-                message=f"🤖 *OTONOM MOD* - Konu Secildi\n\nKonu: {topic_result.get('topic', 'N/A')}\nKategori: {topic_result.get('category', 'N/A')}",
+                message=f"🤖 *OTONOM MOD* - Konu Secildi\n\nKonu: {escape_markdown(topic_result.get('topic', 'N/A'))}\nKategori: {escape_markdown(topic_result.get('category', 'N/A'))}",
                 data=topic_result,
                 buttons=[]
             )
@@ -812,7 +829,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             if score < min_score:
                 self.log(f"[OTONOM] {MAX_REVIEW_RETRIES} denemede de puan yetersiz ({score} < {min_score})")
                 await self.notify_telegram(
-                    message=f"⚠️ *OTONOM MOD* - Icerik Reddedildi\n\nPuan: {score}/10 (min: {min_score})\nKonu: {topic_result.get('topic')}\nDeneme: {MAX_REVIEW_RETRIES}\n\nIcerik kalite standardini karsilamiyor.",
+                    message=f"⚠️ *OTONOM MOD* - Icerik Reddedildi\n\nPuan: {score}/10 (min: {min_score})\nKonu: {escape_markdown(topic_result.get('topic') or '')}\nDeneme: {MAX_REVIEW_RETRIES}\n\nIcerik kalite standardini karsilamiyor.",
                     data=review_result,
                     buttons=[]
                 )
@@ -842,7 +859,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 self.log(f"[OTONOM] Başarıyla yayınlandı! IG: {publish_result.get('instagram_post_id')}")
 
                 await self.notify_telegram(
-                    message=f"🎉 *OTONOM MOD* - Yayinlandi!\n\nKonu: {topic_result.get('topic')}\nPuan: {score}/10\nIG Post: {publish_result.get('instagram_post_id', 'N/A')}",
+                    message=f"🎉 *OTONOM MOD* - Yayinlandi!\n\nKonu: {escape_markdown(topic_result.get('topic') or '')}\nPuan: {score}/10\nIG Post: {publish_result.get('instagram_post_id', 'N/A')}",
                     data=publish_result,
                     buttons=[]
                 )
@@ -862,7 +879,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             result["final_state"] = self.state.value
 
             await self.notify_telegram(
-                message=f"❌ *OTONOM MOD* - Hata\n\n{str(e)}",
+                message=f"❌ *OTONOM MOD* - Hata\n\n{_escape_md(str(e))}",
                 data={"error": str(e)},
                 buttons=[]
             )
@@ -1003,8 +1020,8 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
 
                 await self.notify_telegram(
                     message=f"✅ Planlı İçerik Yayınlandı!\n\n"
-                    f"📝 Konu: {topic[:50]}...\n"
-                    f"🎨 Görsel: {visual_type}\n"
+                    f"📝 Konu: {_escape_md(topic[:50])}...\n"
+                    f"🎨 Görsel: {_escape_md(visual_type)}\n"
                     f"📱 Platform: Instagram\n"
                     f"⭐ Puan: {score}/10",
                     data={},
@@ -1071,7 +1088,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             result["topic"] = topic
 
             await self.notify_telegram(
-                message=f"🎬 *REELS MOD* - Başlatıldı\n\nKonu: {topic[:80]}...",
+                message=f"🎬 *REELS MOD* - Başlatıldı\n\nKonu: {escape_markdown(topic[:80])}...",
                 data=topic_data,
                 buttons=[]
             )
@@ -1234,8 +1251,8 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
 
                 await self.notify_telegram(
                     message=f"🎉 *REELS* - Yayınlandı!\n\n"
-                    f"📝 Konu: {topic[:50]}...\n"
-                    f"🎥 Model: {model_used}\n"
+                    f"📝 Konu: {_escape_md(topic[:50])}...\n"
+                    f"🎥 Model: {_escape_md(model_used)}\n"
                     f"📱 Platform: Instagram Reels\n"
                     f"⭐ Puan: {score}/10",
                     data=publish_result,
@@ -1257,7 +1274,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             result["final_state"] = self.state.value
 
             await self.notify_telegram(
-                message=f"❌ *REELS* - Hata\n\n{str(e)}",
+                message=f"❌ *REELS* - Hata\n\n{_escape_md(str(e))}",
                 data={"error": str(e)},
                 buttons=[]
             )
@@ -1369,7 +1386,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
 
             await self.notify_telegram(
                 message=f"🎙️ *SESLİ REELS* - Başlatıldı\n\n"
-                f"📝 Konu: {topic[:80]}...\n"
+                f"📝 Konu: {_escape_md(topic[:80])}...\n"
                 f"⏱️ Hedef: {target_duration}s",
                 data=topic_data,
                 buttons=[]
@@ -1670,8 +1687,8 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
 
                 await self.notify_telegram(
                     message=f"🎉 *SESLİ REELS* - Yayınlandı!\n\n"
-                    f"📝 Konu: {topic[:50]}...\n"
-                    f"🎥 Model: {model_used}\n"
+                    f"📝 Konu: {_escape_md(topic[:50])}...\n"
+                    f"🎥 Model: {_escape_md(model_used)}\n"
                     f"🎙️ Ses: {voice_status}\n"
                     f"⏱️ Süre: ~{target_duration}s\n"
                     f"📱 Platform: Instagram Reels\n"
@@ -1695,7 +1712,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             result["final_state"] = self.state.value
 
             await self.notify_telegram(
-                message=f"❌ *SESLİ REELS* - Hata\n\n{str(e)}",
+                message=f"❌ *SESLİ REELS* - Hata\n\n{_escape_md(str(e))}",
                 data={"error": str(e)},
                 buttons=[]
             )
@@ -2062,7 +2079,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
 
                 await self.notify_telegram(
                     message=f"🎠 *CAROUSEL* - Yayınlandı!\n\n"
-                    f"📝 Konu: {topic[:50]}...\n"
+                    f"📝 Konu: {_escape_md(topic[:50])}...\n"
                     f"📸 Slide sayısı: {len(image_urls)}\n"
                     f"⭐ Puan: {score}/10\n"
                     f"📱 Platform: Instagram",
@@ -2085,7 +2102,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             result["final_state"] = self.state.value
 
             await self.notify_telegram(
-                message=f"❌ *CAROUSEL* - Hata\n\n{str(e)}",
+                message=f"❌ *CAROUSEL* - Hata\n\n{_escape_md(str(e))}",
                 data={"error": str(e)},
                 buttons=[]
             )
@@ -2176,9 +2193,9 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
 
                 await self.notify_telegram(
                     message=f"🔬 *A/B TEST* - Variantlar Hazır\n\n"
-                    f"📝 Konu: {topic[:50]}...\n"
-                    f"🅰️ Variant A: {variant_a.get('hook_type')} hook\n"
-                    f"🅱️ Variant B: {variant_b.get('hook_type')} hook",
+                    f"📝 Konu: {_escape_md(topic[:50])}...\n"
+                    f"🅰️ Variant A: {_escape_md(variant_a.get('hook_type'))} hook\n"
+                    f"🅱️ Variant B: {_escape_md(variant_b.get('hook_type'))} hook",
                     data=ab_result,
                     buttons=[]
                 )
@@ -2401,9 +2418,9 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
 
                 await self.notify_telegram(
                     message=f"🎉 *A/B TEST* - Yayınlandı!\n\n"
-                    f"📝 Konu: {topic[:50]}...\n"
-                    f"🏆 Kazanan: Variant {winner if enable_ab else 'N/A'}\n"
-                    f"🪝 Hook: {hook_type or 'N/A'}\n"
+                    f"📝 Konu: {_escape_md(topic[:50])}...\n"
+                    f"🏆 Kazanan: Variant {_escape_md(winner) if enable_ab else 'N/A'}\n"
+                    f"🪝 Hook: {_escape_md(hook_type or 'N/A')}\n"
                     f"⭐ Puan: {score}/10",
                     data=publish_result,
                     buttons=[]
@@ -2424,7 +2441,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             result["final_state"] = self.state.value
 
             await self.notify_telegram(
-                message=f"❌ *A/B TEST* - Hata\n\n{str(e)}",
+                message=f"❌ *A/B TEST* - Hata\n\n{_escape_md(str(e))}",
                 data={"error": str(e)},
                 buttons=[]
             )
