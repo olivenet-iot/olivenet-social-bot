@@ -51,6 +51,81 @@ OUTPUT: High quality infographic suitable for Instagram post
 # Google GenAI client
 _client = None
 
+
+def add_logo_overlay(
+    image_path: str,
+    position: str = "bottom_left",
+    logo_scale: float = 0.12,
+    padding: int = 25,
+    opacity: float = 0.85
+) -> str:
+    """
+    Görsele Olivenet logosu ekle
+
+    Args:
+        image_path: Görsel dosya yolu
+        position: Logo pozisyonu (bottom_left, bottom_right, top_left, top_right)
+        logo_scale: Logo boyutu (görsel genişliğinin oranı)
+        padding: Kenar boşluğu (piksel)
+        opacity: Logo opaklığı (0.0 - 1.0)
+
+    Returns:
+        Güncellenmiş görsel yolu
+    """
+    from PIL import Image
+
+    logo_path = os.path.join(os.path.dirname(__file__), "..", "assets", "logo-icon.png")
+
+    if not os.path.exists(logo_path):
+        logger.warning(f"Logo bulunamadı: {logo_path}")
+        return image_path
+
+    try:
+        image = Image.open(image_path).convert("RGBA")
+        logo = Image.open(logo_path).convert("RGBA")
+
+        # Logo boyutlandırma
+        logo_width = int(image.width * logo_scale)
+        logo_height = int(logo.height * (logo_width / logo.width))
+        logo = logo.resize((logo_width, logo_height), Image.LANCZOS)
+
+        # Opacity ayarı
+        if opacity < 1.0:
+            alpha = logo.split()[3]
+            alpha = alpha.point(lambda p: int(p * opacity))
+            logo.putalpha(alpha)
+
+        # Pozisyon hesapla
+        if position == "bottom_left":
+            x = padding
+            y = image.height - logo_height - padding
+        elif position == "bottom_right":
+            x = image.width - logo_width - padding
+            y = image.height - logo_height - padding
+        elif position == "top_left":
+            x = padding
+            y = padding
+        elif position == "top_right":
+            x = image.width - logo_width - padding
+            y = padding
+        else:
+            x = padding
+            y = image.height - logo_height - padding
+
+        # Logo yapıştır
+        image.paste(logo, (x, y), logo)
+
+        # Üzerine kaydet
+        image.convert("RGB").save(image_path, "PNG")
+        logger.info(f"Logo eklendi: {image_path}")
+
+        return image_path
+
+    except Exception as e:
+        logger.error(f"Logo ekleme hatası: {e}")
+        return image_path
+
+
 def get_client():
     """Get Google GenAI client (singleton)"""
     global _client
@@ -138,6 +213,9 @@ async def generate_infographic(
 
                 image = part.as_image()
                 image.save(image_path)
+
+                # Logo overlay ekle
+                add_logo_overlay(image_path)
 
                 file_size = os.path.getsize(image_path)
                 logger.info(f"  Image saved: {image_path} ({file_size/1024:.1f} KB)")
@@ -287,6 +365,9 @@ async def _generate_single_slide(prompt: str, slide_number: int) -> Dict[str, An
 
                 image = part.as_image()
                 image.save(image_path)
+
+                # Logo overlay ekle
+                add_logo_overlay(image_path)
 
                 return {
                     "success": True,
