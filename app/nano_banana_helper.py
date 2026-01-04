@@ -215,8 +215,8 @@ async def generate_infographic(
                 image = part.as_image()
                 image.save(image_path)
 
-                # Logo overlay ekle
-                add_logo_overlay(image_path)
+                # Logo overlay devre dışı - içerikle çakışıyor
+                # add_logo_overlay(image_path)
 
                 file_size = os.path.getsize(image_path)
                 logger.info(f"  Image saved: {image_path} ({file_size/1024:.1f} KB)")
@@ -367,8 +367,8 @@ async def _generate_single_slide(prompt: str, slide_number: int) -> Dict[str, An
                 image = part.as_image()
                 image.save(image_path)
 
-                # Logo overlay ekle
-                add_logo_overlay(image_path)
+                # Logo overlay devre dışı - içerikle çakışıyor
+                # add_logo_overlay(image_path)
 
                 return {
                     "success": True,
