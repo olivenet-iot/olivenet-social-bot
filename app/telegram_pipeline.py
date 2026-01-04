@@ -15,6 +15,7 @@ from telegram.ext import (
 )
 from telegram.request import HTTPXRequest
 from telegram.error import NetworkError, TimedOut, RetryAfter
+from telegram.helpers import escape_markdown
 from app.scheduler import ContentPipeline, ContentScheduler, create_default_scheduler
 from app.database import (
     get_current_strategy, get_analytics_summary, log_approval_decision,
@@ -564,7 +565,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await query.edit_message_text(
             f"🚀 *Günlük içerik başlatılıyor...*\n\n"
-            f"📝 *Konu:* {topic[:60]}{'...' if len(topic) > 60 else ''}\n"
+            f"📝 *Konu:* {escape_markdown(topic[:60])}{'...' if len(topic) > 60 else ''}\n"
             f"🖼️ *Görsel:* {visual_names.get(visual_type, visual_type)}",
             parse_mode="Markdown"
         )
@@ -948,7 +949,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await query.edit_message_text(
             f"🎙️ *SESLİ REELS* başlatılıyor...\n\n"
-            f"📝 *Konu:* {topic[:60]}{'...' if len(topic) > 60 else ''}\n"
+            f"📝 *Konu:* {escape_markdown(topic[:60])}{'...' if len(topic) > 60 else ''}\n"
             f"⏱️ *Süre:* {duration} saniye\n"
             f"🔊 *Ses:* Türkçe AI voiceover\n"
             f"🎥 *Video:* Sora 2 (sinematik)\n\n"
@@ -1447,7 +1448,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(
             f"🎠 *CAROUSEL* başlatılıyor...\n\n"
             f"📊 *Görsel:* {type_names.get(carousel_type, carousel_type)}\n"
-            f"📝 *Konu:* {'Manuel - ' + manual_topic[:40] + '...' if manual_topic else 'Otomatik'}\n\n"
+            f"📝 *Konu:* {'Manuel - ' + escape_markdown(manual_topic[:40]) + '...' if manual_topic else 'Otomatik'}\n\n"
             "Kaydırmalı içerik oluşturulacak:\n"
             "• Konu seçimi/onayı\n"
             "• Slide metinleri (5 slide)\n"
@@ -1679,7 +1680,7 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
 
         await update.message.reply_text(
-            f"📝 *Konu:* {topic[:60]}{'...' if len(topic) > 60 else ''}\n\n"
+            f"📝 *Konu:* {escape_markdown(topic[:60])}{'...' if len(topic) > 60 else ''}\n\n"
             "Görsel tipi seçin:\n"
             "• *Infographic*: HTML şablon (~$0)\n"
             "• *AI Infographic*: Nano Banana (~$0.15)\n"
@@ -1721,7 +1722,7 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pending_input.clear()
         await update.message.reply_text(
             f"🎬 *REELS* başlatılıyor...\n\n"
-            f"📝 *Konu:* {topic[:80]}{'...' if len(topic) > 80 else ''}\n"
+            f"📝 *Konu:* {escape_markdown(topic[:80])}{'...' if len(topic) > 80 else ''}\n"
             f"🎯 *Model:* {model_name}\n\n"
             "⏳ Bu işlem 5-10 dakika sürebilir...",
             parse_mode="Markdown"
@@ -1755,7 +1756,7 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
 
         await update.message.reply_text(
-            f"📝 *Konu:* {topic[:60]}{'...' if len(topic) > 60 else ''}\n\n"
+            f"📝 *Konu:* {escape_markdown(topic[:60])}{'...' if len(topic) > 60 else ''}\n\n"
             "🎠 *Carousel Görsel Tipi Seçin:*\n\n"
             "• *HTML Template*: Hızlı, tutarlı tasarım\n"
             "• *Nano Banana*: AI infographic, oklu kutucuklar",
@@ -1788,7 +1789,7 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             await update.message.reply_text(
                 f"🎙️ *SESLİ REELS* başlatılıyor...\n\n"
-                f"📝 *Konu:* {topic[:60]}{'...' if len(topic) > 60 else ''}\n"
+                f"📝 *Konu:* {escape_markdown(topic[:60])}{'...' if len(topic) > 60 else ''}\n"
                 f"🎬 *Model:* {config['emoji']} {config['name']}\n"
                 f"⏱️ *Süre:* {duration} saniye\n"
                 f"🔊 *Ses:* Türkçe AI voiceover\n\n"
