@@ -354,6 +354,30 @@ class ContentPipeline:
                         image_path = await render_html_to_png(html)
                         visual_result = {"success": True, "image_path": image_path}
 
+                    elif visual_type == "nano_banana":
+                        # Nano Banana Pro AI Infographic
+                        self.log("Nano Banana Pro ile AI infographic üretiliyor...")
+                        from app.nano_banana_helper import generate_infographic
+                        visual_result = await generate_infographic(
+                            topic=topic_result.get("topic"),
+                            content_text=content_result.get("post_text"),
+                            style="modern",
+                            use_search=True
+                        )
+                        if visual_result.get("success"):
+                            image_path = visual_result.get("image_path")
+                        else:
+                            # Fallback to HTML infographic
+                            self.log(f"Nano Banana hatası: {visual_result.get('error')}, HTML'e fallback...")
+                            from app.claude_helper import generate_visual_html
+                            from app.renderer import render_html_to_png
+                            html = await generate_visual_html(
+                                content_result.get("post_text"),
+                                topic_result.get("topic")
+                            )
+                            image_path = await render_html_to_png(html)
+                            visual_result = {"success": True, "image_path": image_path}
+
                     elif visual_type == "carousel":
                         # Carousel tipi seçildi - carousel pipeline'a yönlendir
                         self.log("Carousel tipi seçildi, carousel pipeline'a geçiliyor...")
@@ -1678,25 +1702,38 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
 
             return result
 
-    async def run_carousel_pipeline(self, topic: str = None, dry_run: bool = False) -> Dict[str, Any]:
+    async def run_carousel_pipeline(
+        self,
+        topic: str = None,
+        dry_run: bool = False,
+        carousel_type: str = "html",
+        manual_topic: str = None
+    ) -> Dict[str, Any]:
         """
         Instagram Carousel içerik üretim pipeline'ı.
 
         Akış:
         1. Konu seçimi (opsiyonel)
         2. Carousel içerik oluşturma (Creator)
-        3. Her slide için görsel üretimi (FLUX)
+        3. Her slide için görsel üretimi (HTML veya Nano Banana)
         4. Kalite kontrolü (Reviewer)
         5. Instagram'a paylaşım (Publisher)
 
         Args:
             topic: Carousel konusu (None ise Planner'dan al)
             dry_run: True ise paylaşım yapmadan dur
+            carousel_type: Görsel tipi ("html" veya "nano_banana")
+            manual_topic: Manuel konu (topic yerine kullanılır)
 
         Returns:
             Pipeline sonucu
         """
-        self.log("🎠 Carousel Pipeline başlatılıyor...")
+        # Manual topic varsa onu kullan
+        if manual_topic:
+            topic = manual_topic
+
+        type_name = "Nano Banana AI" if carousel_type == "nano_banana" else "HTML Template"
+        self.log(f"🎠 Carousel Pipeline başlatılıyor... (Tip: {type_name})")
         self.state = PipelineState.CREATING_CONTENT
 
         result = {
@@ -1794,12 +1831,8 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 result["final_state"] = "dry_run_completed"
                 return result
 
-            # ========== AŞAMA 3: Görsel Üretimi (HTML Render) ==========
-            self.log("[CAROUSEL] Aşama 3: Görseller HTML ile üretiliyor...")
+            # ========== AŞAMA 3: Görsel Üretimi ==========
             self.state = PipelineState.CREATING_VISUAL
-
-            from app.claude_helper import generate_carousel_slide_html
-            from app.renderer import render_html_to_png
             from app.instagram_helper import upload_image_to_cdn
             from datetime import datetime
 
@@ -1807,79 +1840,115 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             slides = carousel_content.get("slides", [])
             total_slides = len(slides)
 
-            for i, slide in enumerate(slides):
-                slide_num = i + 1
-                self.log(f"[CAROUSEL] Slide {slide_num}/{total_slides} HTML üretiliyor...")
+            # Nano Banana AI Carousel
+            if carousel_type == "nano_banana":
+                self.log("[CAROUSEL] Aşama 3: Görseller Nano Banana ile üretiliyor...")
+                from app.nano_banana_helper import generate_carousel_infographics
 
-                # Retry mekanizması
-                for attempt in range(2):
-                    try:
-                        # HTML oluştur
-                        html_content = await generate_carousel_slide_html(
-                            slide_data=slide,
-                            slide_number=slide_num,
-                            total_slides=total_slides,
-                            topic=topic
-                        )
+                nano_result = await generate_carousel_infographics(
+                    topic=topic,
+                    slides=slides,
+                    style="modern",
+                    language="tr"
+                )
 
-                        # Text validation - typo kontrolü
-                        validation = validate_html_content(html_content)
-                        if not validation["can_render"]:
-                            self.log(f"[CAROUSEL] Slide {slide_num} yazım hatası tespit edildi")
-                            for issue in validation["issues"]:
-                                if issue["severity"] == "high":
-                                    self.log(f"  - '{issue['found']}' -> '{issue['expected']}'")
+                if nano_result.get("success"):
+                    # Nano Banana başarılı - görselleri CDN'e yükle
+                    image_paths = nano_result.get("image_paths", [])
+                    for i, image_path in enumerate(image_paths):
+                        slide_num = i + 1
+                        self.log(f"[CAROUSEL] Slide {slide_num}/{total_slides} CDN'e yükleniyor...")
+                        cdn_url = await upload_image_to_cdn(image_path)
+                        if cdn_url:
+                            image_urls.append(cdn_url)
+                        else:
+                            self.log(f"[CAROUSEL] ⚠️ Slide {slide_num} CDN yükleme hatası")
+                else:
+                    # Nano Banana başarısız - HTML'e fallback
+                    self.log(f"[CAROUSEL] Nano Banana hatası: {nano_result.get('error')}, HTML'e fallback...")
+                    carousel_type = "html"  # Fallback
 
-                            # Otomatik düzelt
-                            html_content, fixes = fix_common_issues(html_content)
-                            if fixes:
-                                self.log(f"[CAROUSEL] Otomatik düzeltmeler: {fixes}")
+            # HTML Template Carousel (veya fallback)
+            if carousel_type == "html":
+                self.log("[CAROUSEL] Aşama 3: Görseller HTML ile üretiliyor...")
+                from app.claude_helper import generate_carousel_slide_html
+                from app.renderer import render_html_to_png
 
-                            # Tekrar doğrula
+            # HTML rendering loop (sadece html tipi için çalışır)
+            if carousel_type == "html":
+                for i, slide in enumerate(slides):
+                    slide_num = i + 1
+                    self.log(f"[CAROUSEL] Slide {slide_num}/{total_slides} HTML üretiliyor...")
+
+                    # Retry mekanizması
+                    for attempt in range(2):
+                        try:
+                            # HTML oluştur
+                            html_content = await generate_carousel_slide_html(
+                                slide_data=slide,
+                                slide_number=slide_num,
+                                total_slides=total_slides,
+                                topic=topic
+                            )
+
+                            # Text validation - typo kontrolü
                             validation = validate_html_content(html_content)
                             if not validation["can_render"]:
-                                self.log(f"[CAROUSEL] Slide {slide_num} hala hatalı, yeniden üretiliyor...")
-                                html_content = await generate_carousel_slide_html(
-                                    slide_data=slide,
-                                    slide_number=slide_num,
-                                    total_slides=total_slides,
-                                    topic=topic
-                                )
+                                self.log(f"[CAROUSEL] Slide {slide_num} yazım hatası tespit edildi")
+                                for issue in validation["issues"]:
+                                    if issue["severity"] == "high":
+                                        self.log(f"  - '{issue['found']}' -> '{issue['expected']}'")
 
-                        # PNG'ye render et
-                        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                        output_path = f"outputs/carousel_{timestamp}_{slide_num}.png"
-                        image_path = await render_html_to_png(
-                            html_content=html_content,
-                            output_path=output_path,
-                            width=1080,
-                            height=1080
-                        )
+                                # Otomatik düzelt
+                                html_content, fixes = fix_common_issues(html_content)
+                                if fixes:
+                                    self.log(f"[CAROUSEL] Otomatik düzeltmeler: {fixes}")
 
-                        if image_path:
-                            # CDN'e yükle - retry logic ile
-                            cdn_url = None
-                            for upload_attempt in range(3):
-                                cdn_url = await upload_image_to_cdn(image_path)
+                                # Tekrar doğrula
+                                validation = validate_html_content(html_content)
+                                if not validation["can_render"]:
+                                    self.log(f"[CAROUSEL] Slide {slide_num} hala hatalı, yeniden üretiliyor...")
+                                    html_content = await generate_carousel_slide_html(
+                                        slide_data=slide,
+                                        slide_number=slide_num,
+                                        total_slides=total_slides,
+                                        topic=topic
+                                    )
+
+                            # PNG'ye render et
+                            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                            output_path = f"outputs/carousel_{timestamp}_{slide_num}.png"
+                            image_path = await render_html_to_png(
+                                html_content=html_content,
+                                output_path=output_path,
+                                width=1080,
+                                height=1080
+                            )
+
+                            if image_path:
+                                # CDN'e yükle - retry logic ile
+                                cdn_url = None
+                                for upload_attempt in range(3):
+                                    cdn_url = await upload_image_to_cdn(image_path)
+                                    if cdn_url:
+                                        break
+                                    elif upload_attempt < 2:
+                                        self.log(f"[CAROUSEL] Slide {slide_num} CDN upload retry {upload_attempt + 1}...")
+                                        await asyncio.sleep(2)
+
                                 if cdn_url:
+                                    image_urls.append(cdn_url)
+                                    self.log(f"[CAROUSEL] Slide {slide_num} OK")
                                     break
-                                elif upload_attempt < 2:
-                                    self.log(f"[CAROUSEL] Slide {slide_num} CDN upload retry {upload_attempt + 1}...")
-                                    await asyncio.sleep(2)
-
-                            if cdn_url:
-                                image_urls.append(cdn_url)
-                                self.log(f"[CAROUSEL] Slide {slide_num} OK")
-                                break
+                                else:
+                                    self.log(f"[CAROUSEL] Slide {slide_num} CDN upload başarısız (3 deneme)")
                             else:
-                                self.log(f"[CAROUSEL] Slide {slide_num} CDN upload başarısız (3 deneme)")
-                        else:
-                            self.log(f"[CAROUSEL] Slide {slide_num} render hatası, retry...")
+                                self.log(f"[CAROUSEL] Slide {slide_num} render hatası, retry...")
 
-                    except Exception as e:
-                        self.log(f"[CAROUSEL] Slide {slide_num} hata: {e}")
-                        if attempt == 1:
-                            self.log(f"[CAROUSEL] Slide {slide_num} atlanıyor")
+                        except Exception as e:
+                            self.log(f"[CAROUSEL] Slide {slide_num} hata: {e}")
+                            if attempt == 1:
+                                self.log(f"[CAROUSEL] Slide {slide_num} atlanıyor")
 
             result["image_urls"] = image_urls
             result["images_generated"] = len(image_urls)

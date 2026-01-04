@@ -557,6 +557,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         visual_names = {
             "infographic": "Infographic (HTML)",
+            "nano_banana": "AI Infographic (Nano Banana)",
             "carousel": "Carousel (Flux AI)",
             "single": "Tek Görsel (Flux AI)"
         }
@@ -1387,21 +1388,80 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = [[InlineKeyboardButton("🏠 Ana Menü", callback_data="main_menu")]]
         await query.edit_message_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
-    # ===== CAROUSEL OLUŞTUR =====
+    # ===== CAROUSEL OLUŞTUR - KONU SEÇİMİ =====
     elif action == "create_carousel":
+        keyboard = [
+            [InlineKeyboardButton("🤖 Otomatik Konu", callback_data="carousel_auto")],
+            [InlineKeyboardButton("✏️ Manuel Konu", callback_data="carousel_manual")],
+            [InlineKeyboardButton("« Ana Menü", callback_data="main_menu")]
+        ]
         await query.edit_message_text(
-            "🎠 *CAROUSEL MOD* başlatılıyor...\n\n"
+            "🎠 *CAROUSEL - Konu Seçimi*\n\n"
+            "• *Otomatik*: AI optimal konu seçer\n"
+            "• *Manuel*: Kendi konunuzu yazın",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+
+    # ===== CAROUSEL - OTOMATİK KONU =====
+    elif action == "carousel_auto":
+        keyboard = [
+            [InlineKeyboardButton("📝 HTML Template (~$0.01)", callback_data="carousel_type:html:auto")],
+            [InlineKeyboardButton("📊 Nano Banana AI (~$0.75)", callback_data="carousel_type:nano_banana:auto")],
+            [InlineKeyboardButton("« Geri", callback_data="create_carousel")]
+        ]
+        await query.edit_message_text(
+            "🎠 *CAROUSEL - Görsel Tipi*\n\n"
+            "• *HTML Template*: Hızlı, tutarlı tasarım\n"
+            "• *Nano Banana*: AI infographic, oklu kutucuklar\n\n"
+            "💡 Her iki yöntemde de 5 slide oluşturulur.",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+
+    # ===== CAROUSEL - MANUEL KONU =====
+    elif action == "carousel_manual":
+        pending_input["type"] = "carousel_manual_topic"
+        pending_input["user_id"] = user_id
+        await query.edit_message_text(
+            "✏️ *Manuel Carousel Konusu*\n\n"
+            "Carousel için konu yazın:\n\n"
+            "Örnek:\n"
+            "• `LoRaWAN Gateway türleri karşılaştırma`\n"
+            "• `Sera otomasyonunda 5 kritik sensör`",
+            parse_mode="Markdown"
+        )
+
+    # ===== CAROUSEL - TİP SEÇİMİ =====
+    elif action.startswith("carousel_type:"):
+        parts = action.split(":")
+        carousel_type = parts[1]  # html veya nano_banana
+        topic_mode = parts[2]  # auto veya manual
+        manual_topic = pending_input.pop("carousel_topic", None) if topic_mode == "manual" else None
+
+        type_names = {
+            "html": "HTML Template",
+            "nano_banana": "Nano Banana AI"
+        }
+
+        await query.edit_message_text(
+            f"🎠 *CAROUSEL* başlatılıyor...\n\n"
+            f"📊 *Görsel:* {type_names.get(carousel_type, carousel_type)}\n"
+            f"📝 *Konu:* {'Manuel - ' + manual_topic[:40] + '...' if manual_topic else 'Otomatik'}\n\n"
             "Kaydırmalı içerik oluşturulacak:\n"
-            "• Konu seçimi (carousel optimize)\n"
+            "• Konu seçimi/onayı\n"
             "• Slide metinleri (5 slide)\n"
-            "• Her slide için FLUX görsel\n"
+            "• Her slide için görsel\n"
             "• Instagram Carousel post\n\n"
             "⏳ Bu işlem 3-5 dakika sürebilir...",
             parse_mode="Markdown"
         )
 
         # Carousel pipeline'ı arka planda çalıştır
-        asyncio.create_task(pipeline.run_carousel_pipeline())
+        asyncio.create_task(pipeline.run_carousel_pipeline(
+            carousel_type=carousel_type,
+            manual_topic=manual_topic
+        ))
 
     # ===== PIPELINE ONAYLARI =====
     elif action == "approve_topic":
@@ -1431,6 +1491,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Görsel tipi seçim menüsü göster
         keyboard = [
             [InlineKeyboardButton("📊 İnfografik", callback_data="set_type_infographic")],
+            [InlineKeyboardButton("🧠 AI Infographic", callback_data="set_type_nano_banana")],
             [InlineKeyboardButton("🖼️ FLUX Görsel", callback_data="set_type_flux")],
             [InlineKeyboardButton("🎬 Video (Veo)", callback_data="set_type_video")],
             [InlineKeyboardButton("📱 Carousel", callback_data="set_type_carousel")],
@@ -1438,8 +1499,9 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
         menu_text = (
             "🎨 *Görsel Tipi Seçin:*\n\n"
-            "📊 İnfografik - HTML tabanlı infografik\n"
-            "🖼️ FLUX - AI görsel üretimi\n"
+            "📊 İnfografik - HTML tabanlı (~$0)\n"
+            "🧠 AI Infographic - Nano Banana (~$0.15)\n"
+            "🖼️ FLUX - AI görsel üretimi (~$0.03)\n"
             "🎬 Video - Veo ile video üretimi\n"
             "📱 Carousel - Çoklu slayt formatı"
         )
@@ -1462,6 +1524,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         new_type = action.replace("set_type_", "")
         type_names = {
             "infographic": "İnfografik",
+            "nano_banana": "AI Infographic (Nano Banana)",
             "flux": "FLUX Görsel",
             "video": "Video (Veo)",
             "carousel": "Carousel"
@@ -1609,15 +1672,17 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         keyboard = [
             [InlineKeyboardButton("🖼️ Infographic", callback_data="daily_visual:infographic"),
-             InlineKeyboardButton("🎨 Carousel", callback_data="daily_visual:carousel")],
-            [InlineKeyboardButton("📸 Tek Görsel", callback_data="daily_visual:single")],
+             InlineKeyboardButton("📊 AI Infographic", callback_data="daily_visual:nano_banana")],
+            [InlineKeyboardButton("🎨 Carousel", callback_data="daily_visual:carousel"),
+             InlineKeyboardButton("📸 Tek Görsel", callback_data="daily_visual:single")],
             [InlineKeyboardButton("❌ İptal", callback_data="cancel")]
         ]
 
         await update.message.reply_text(
             f"📝 *Konu:* {topic[:60]}{'...' if len(topic) > 60 else ''}\n\n"
             "Görsel tipi seçin:\n"
-            "• *Infographic*: HTML şablon\n"
+            "• *Infographic*: HTML şablon (~$0)\n"
+            "• *AI Infographic*: Nano Banana (~$0.15)\n"
             "• *Carousel*: Flux AI çoklu görsel\n"
             "• *Tek Görsel*: Flux AI single post",
             parse_mode="Markdown",
@@ -1662,6 +1727,41 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="Markdown"
         )
         asyncio.create_task(pipeline.run_reels_content(force_model=model, topic=topic, manual_topic_mode=True))
+
+    elif pending_input.get("type") == "carousel_manual_topic":
+        # ATOMIC: Race condition önlemek için hemen pop et
+        input_type = pending_input.pop("type", None)
+        if input_type != "carousel_manual_topic":
+            return  # Başka thread zaten işledi
+
+        topic = text.strip()
+
+        if len(topic) < 5:
+            pending_input["type"] = "carousel_manual_topic"
+            await update.message.reply_text(
+                "⚠️ *Konu çok kısa!*\n\n"
+                "En az 5 karakter olmalı.",
+                parse_mode="Markdown"
+            )
+            return
+
+        # Konu kaydedilip tip seçim menüsü göster
+        pending_input["carousel_topic"] = topic
+
+        keyboard = [
+            [InlineKeyboardButton("📝 HTML Template (~$0.01)", callback_data="carousel_type:html:manual")],
+            [InlineKeyboardButton("📊 Nano Banana AI (~$0.75)", callback_data="carousel_type:nano_banana:manual")],
+            [InlineKeyboardButton("« Geri", callback_data="create_carousel")]
+        ]
+
+        await update.message.reply_text(
+            f"📝 *Konu:* {topic[:60]}{'...' if len(topic) > 60 else ''}\n\n"
+            "🎠 *Carousel Görsel Tipi Seçin:*\n\n"
+            "• *HTML Template*: Hızlı, tutarlı tasarım\n"
+            "• *Nano Banana*: AI infographic, oklu kutucuklar",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
 
     elif pending_input.get("type") == "voice_topic_manual":
         # Sesli Reels için manuel konu girişi
