@@ -375,7 +375,12 @@ def init_database():
         "ALTER TABLE posts ADD COLUMN audio_duration REAL DEFAULT 0",
         "ALTER TABLE posts ADD COLUMN voice_mode BOOLEAN DEFAULT 0",
         # Topic category tracking
-        "ALTER TABLE posts ADD COLUMN topic_category TEXT"
+        "ALTER TABLE posts ADD COLUMN topic_category TEXT",
+        # Multi-segment video support
+        "ALTER TABLE posts ADD COLUMN video_segment_count INTEGER DEFAULT 1",
+        "ALTER TABLE posts ADD COLUMN total_video_duration REAL DEFAULT 0",
+        "ALTER TABLE posts ADD COLUMN segment_prompts TEXT",
+        "ALTER TABLE posts ADD COLUMN video_model TEXT"
     ]
 
     for stmt in alter_statements:

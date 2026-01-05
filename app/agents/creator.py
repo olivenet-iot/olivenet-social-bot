@@ -843,6 +843,185 @@ Sadece JSON döndür, başka açıklama ekleme.
             **result
         }
 
+    async def create_multi_scene_prompts(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Multi-segment video için tutarlı sahne promptları üret.
+
+        Her segment için ayrı video prompt oluşturur, tüm segmentler arasında
+        görsel tutarlılık sağlamak için ortak stil prefix'i kullanır.
+
+        Args:
+            input_data: {
+                "topic": str - Video konusu
+                "segment_count": int - Segment sayısı (2-6)
+                "segment_duration": int - Her segment'in süresi (saniye)
+                "speech_structure": List[Dict] - Shot structure (opsiyonel)
+                "model_id": str - Video modeli (opsiyonel)
+            }
+
+        Returns:
+            {
+                "success": bool,
+                "style_prefix": str - Tüm segmentlere eklenecek stil
+                "scenes": List[Dict] - Her segment için sahne bilgisi
+                "narrative_arc": str - Hikaye yapısı
+            }
+        """
+        self.log("Multi-scene promptlar oluşturuluyor...")
+
+        topic = input_data.get("topic", "")
+        segment_count = input_data.get("segment_count", 3)
+        segment_duration = input_data.get("segment_duration", 10)
+        speech_structure = input_data.get("speech_structure", [])
+        model_id = input_data.get("model_id", "kling-2.6-pro")
+
+        # Segment sayısı sınırla
+        segment_count = max(2, min(6, segment_count))
+
+        # Toplam süre
+        total_duration = segment_count * segment_duration
+
+        # Speech structure'dan zaman aralıklarını oluştur
+        time_ranges = []
+        for i in range(segment_count):
+            start = i * segment_duration
+            end = (i + 1) * segment_duration
+            time_ranges.append(f"{start}-{end}s")
+
+        # Speech structure'dan içerik ipuçlarını al
+        speech_hints = ""
+        if speech_structure:
+            for i, shot in enumerate(speech_structure[:segment_count]):
+                shot_concept = shot.get("concept", "")
+                shot_keywords = shot.get("keywords", [])
+                speech_hints += f"\n[{time_ranges[i]}] İçerik: {shot_concept}"
+                if shot_keywords:
+                    speech_hints += f" | Anahtar kelimeler: {', '.join(shot_keywords)}"
+
+        prompt = f"""
+## GÖREV: Multi-Segment Video Sahne Planlaması
+
+Aşağıdaki konu için {segment_count} adet tutarlı video sahnesi oluştur.
+Her sahne {segment_duration} saniye sürecek, toplam {total_duration} saniye.
+
+### KONU:
+{topic}
+
+### SES YAPISI (varsa):
+{speech_hints if speech_hints else "Ses yapısı belirtilmedi."}
+
+### TUTARLILIK GEREKSİNİMLERİ:
+- Tüm sahnelerde AYNI ışık kalitesi (profesyonel stüdyo ışığı)
+- Tüm sahnelerde AYNI renk paleti (Olivenet: yeşil #2E7D32, mavi #38bdf8, beyaz)
+- Tüm sahnelerde AYNI kamera stili (4K sinematik)
+- Sahneler arası görsel geçiş uyumu
+- NO TEXT - hiçbir sahnede yazı olmamalı
+
+### NARRATİF ARC:
+- Sahne 1: HOOK - Dikkat çekici açılış, merak uyandırıcı
+- Orta sahneler: DEVELOPMENT - Ana içerik, detaylar
+- Son sahne: RESOLUTION - Sonuç, çözüm gösterimi
+
+### ÇIKTI FORMATI (JSON):
+```json
+{{
+    "style_prefix": "4K cinematic, professional studio lighting, color palette: olive green (#2E7D32), sky blue (#38bdf8), clean white background, no text or labels, ",
+    "narrative_arc": "hook -> development -> resolution",
+    "scenes": [
+        {{
+            "segment_index": 0,
+            "time_range": "{time_ranges[0]}",
+            "narrative_role": "hook",
+            "visual_concept": "Kısa açıklama",
+            "camera_movement": "Kamera hareketi (dolly, pan, zoom, etc.)",
+            "prompt": "Detaylı video prompt (İngilizce, 50-80 kelime)"
+        }},
+        ...
+    ]
+}}
+```
+
+### VIDEO MODEL BİLGİSİ:
+Model: {model_id}
+- Promptlar İngilizce olmalı
+- Her prompt 50-80 kelime arası olmalı
+- Kamera hareketini açıkça belirt
+- Sahne detaylarını (nesne, eylem, ortam) açıkla
+
+Sadece JSON döndür.
+"""
+
+        MAX_RETRIES = 3
+        last_error = None
+
+        for attempt in range(MAX_RETRIES):
+            try:
+                response = await self.call_claude(prompt, timeout=90)
+                result = json.loads(self._clean_json_response(response))
+
+                # Validasyon
+                if "scenes" not in result:
+                    last_error = "scenes key eksik"
+                    continue
+
+                scenes = result.get("scenes", [])
+                if len(scenes) < segment_count:
+                    last_error = f"Yetersiz sahne: {len(scenes)}/{segment_count}"
+                    continue
+
+                # Scenes'i segment_count'a kırp
+                result["scenes"] = scenes[:segment_count]
+
+                # Style prefix yoksa varsayılan ekle
+                if not result.get("style_prefix"):
+                    result["style_prefix"] = (
+                        "4K cinematic, professional studio lighting, "
+                        "color palette: olive green, sky blue, clean white background, "
+                        "no text or labels, smooth camera movement, "
+                    )
+
+                self.log(f"Multi-scene promptlar oluşturuldu")
+                self.log(f"   Segment sayısı: {len(result['scenes'])}")
+                self.log(f"   Narrative arc: {result.get('narrative_arc', 'N/A')}")
+
+                log_agent_action(
+                    agent_name=self.name,
+                    action="create_multi_scene_prompts",
+                    input_data={"topic": topic, "segment_count": segment_count},
+                    output_data={"scene_count": len(result["scenes"])},
+                    success=True
+                )
+
+                return {
+                    "success": True,
+                    **result
+                }
+
+            except json.JSONDecodeError as e:
+                last_error = f"JSON parse error: {e}"
+                self.log(f"[MULTI-SCENE] Attempt {attempt + 1}: {last_error}")
+                if attempt < MAX_RETRIES - 1:
+                    await asyncio.sleep(2)
+
+            except Exception as e:
+                last_error = str(e)
+                self.log(f"[MULTI-SCENE] Attempt {attempt + 1}: {last_error}")
+                if attempt < MAX_RETRIES - 1:
+                    await asyncio.sleep(2)
+
+        # Tüm denemeler başarısız
+        log_agent_action(
+            agent_name=self.name,
+            action="create_multi_scene_prompts",
+            success=False,
+            error_message=last_error
+        )
+
+        return {
+            "success": False,
+            "error": f"Multi-scene prompt generation failed: {last_error}"
+        }
+
     async def create_speech_script(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Instagram Reels için Türkçe voiceover scripti üret.

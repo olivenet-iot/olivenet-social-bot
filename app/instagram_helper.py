@@ -397,6 +397,259 @@ async def merge_audio_video(
         return {"success": False, "error": str(e)}
 
 
+def build_crossfade_filter(
+    video_count: int,
+    segment_duration: float,
+    crossfade_duration: float = 0.5
+) -> str:
+    """
+    N video için FFmpeg crossfade filter_complex string'i oluştur.
+
+    Args:
+        video_count: Video sayısı (2-6 arası)
+        segment_duration: Her segment'in süresi (saniye)
+        crossfade_duration: Crossfade geçiş süresi (saniye)
+
+    Returns:
+        FFmpeg filter_complex string
+    """
+    if video_count < 2:
+        raise ValueError("En az 2 video gerekli")
+
+    filter_parts = []
+
+    # Her input için scale ve format
+    for i in range(video_count):
+        filter_parts.append(
+            f"[{i}:v]setpts=PTS-STARTPTS,scale=720:1280:force_original_aspect_ratio=decrease,"
+            f"pad=720:1280:(ow-iw)/2:(oh-ih)/2,fps=30,format=yuv420p[v{i}]"
+        )
+
+    # Crossfade zincirleme
+    if video_count == 2:
+        offset = segment_duration - crossfade_duration
+        filter_parts.append(
+            f"[v0][v1]xfade=transition=fade:duration={crossfade_duration}:offset={offset:.2f}[vout]"
+        )
+    else:
+        # N video için zincirleme xfade
+        current_output = "v0"
+        cumulative_duration = segment_duration
+
+        for i in range(1, video_count):
+            offset = cumulative_duration - crossfade_duration
+            next_output = "vout" if i == video_count - 1 else f"vt{i}"
+
+            filter_parts.append(
+                f"[{current_output}][v{i}]xfade=transition=fade:"
+                f"duration={crossfade_duration}:offset={offset:.2f}[{next_output}]"
+            )
+
+            current_output = next_output
+            cumulative_duration += segment_duration - crossfade_duration
+
+    return ";".join(filter_parts)
+
+
+async def concatenate_videos_with_crossfade(
+    video_paths: List[str],
+    output_path: str = None,
+    crossfade_duration: float = 0.5,
+    segment_duration: float = 10.0
+) -> Dict[str, Any]:
+    """
+    Birden fazla videoyu crossfade geçişlerle birleştir.
+
+    Args:
+        video_paths: Sıralı video dosya yolları listesi
+        output_path: Çıktı dosya yolu (None ise otomatik oluşturulur)
+        crossfade_duration: Crossfade süresi (saniye)
+        segment_duration: Her segment'in yaklaşık süresi (saniye)
+
+    Returns:
+        {
+            "success": bool,
+            "output_path": str,
+            "total_duration": float,
+            "segment_count": int,
+            "file_size_mb": float
+        }
+    """
+    if len(video_paths) < 2:
+        return {"success": False, "error": "En az 2 video gerekli"}
+
+    if len(video_paths) > 6:
+        return {"success": False, "error": "Maksimum 6 video destekleniyor"}
+
+    # Tüm dosyaların var olduğunu kontrol et
+    for path in video_paths:
+        if not os.path.exists(path):
+            return {"success": False, "error": f"Video bulunamadı: {path}"}
+
+    # Output path
+    if not output_path:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_path = os.path.join(OUTPUT_DIR, f"concat_{timestamp}.mp4")
+
+    # Output dizinini oluştur
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+    print(f"[VIDEO CONCAT] {len(video_paths)} video birleştiriliyor...")
+    print(f"[VIDEO CONCAT] Crossfade: {crossfade_duration}s")
+
+    try:
+        # Filter complex oluştur
+        filter_complex = build_crossfade_filter(
+            video_count=len(video_paths),
+            segment_duration=segment_duration,
+            crossfade_duration=crossfade_duration
+        )
+
+        # FFmpeg komutu oluştur
+        ffmpeg_cmd = ["ffmpeg", "-y"]
+
+        # Input'lar
+        for path in video_paths:
+            ffmpeg_cmd.extend(["-i", path])
+
+        # Filter complex
+        ffmpeg_cmd.extend(["-filter_complex", filter_complex])
+
+        # Output mapping ve codec
+        ffmpeg_cmd.extend([
+            "-map", "[vout]",
+            "-c:v", "libx264",
+            "-preset", "medium",
+            "-crf", "23",
+            "-movflags", "+faststart",
+            "-pix_fmt", "yuv420p",
+            output_path
+        ])
+
+        print(f"[VIDEO CONCAT] FFmpeg çalıştırılıyor...")
+
+        # FFmpeg çalıştır (5 dakika timeout)
+        process = subprocess.run(
+            ffmpeg_cmd,
+            capture_output=True,
+            text=True,
+            timeout=300
+        )
+
+        if process.returncode != 0:
+            print(f"[VIDEO CONCAT] FFmpeg hata: {process.stderr[:500]}")
+
+            # Fallback: Simple concat (crossfade olmadan)
+            print("[VIDEO CONCAT] Fallback: Simple concat deneniyor...")
+            return await simple_concat_fallback(video_paths, output_path)
+
+        # Çıktı kontrolü
+        if not os.path.exists(output_path):
+            return {"success": False, "error": "Çıktı dosyası oluşturulamadı"}
+
+        # Dosya boyutu
+        file_size = os.path.getsize(output_path) / (1024 * 1024)
+
+        # Süre hesaplama (ffprobe ile)
+        duration_result = await get_video_duration(output_path)
+        total_duration = duration_result if duration_result else (
+            len(video_paths) * segment_duration -
+            (len(video_paths) - 1) * crossfade_duration
+        )
+
+        print(f"[VIDEO CONCAT] Başarılı!")
+        print(f"[VIDEO CONCAT] Çıktı: {output_path}")
+        print(f"[VIDEO CONCAT] Süre: {total_duration:.1f}s, Boyut: {file_size:.2f}MB")
+
+        return {
+            "success": True,
+            "output_path": output_path,
+            "total_duration": total_duration,
+            "segment_count": len(video_paths),
+            "file_size_mb": round(file_size, 2)
+        }
+
+    except subprocess.TimeoutExpired:
+        return {"success": False, "error": "FFmpeg concat timeout (5 min)"}
+    except Exception as e:
+        print(f"[VIDEO CONCAT] Exception: {e}")
+        return {"success": False, "error": str(e)}
+
+
+async def simple_concat_fallback(
+    video_paths: List[str],
+    output_path: str
+) -> Dict[str, Any]:
+    """
+    Crossfade başarısız olursa basit concat ile birleştir.
+    """
+    try:
+        # Concat demuxer için liste dosyası oluştur
+        list_path = output_path.replace(".mp4", "_list.txt")
+
+        with open(list_path, "w") as f:
+            for path in video_paths:
+                f.write(f"file '{path}'\n")
+
+        # Simple concat komutu
+        ffmpeg_cmd = [
+            "ffmpeg", "-y",
+            "-f", "concat",
+            "-safe", "0",
+            "-i", list_path,
+            "-c:v", "libx264",
+            "-preset", "medium",
+            "-crf", "23",
+            "-movflags", "+faststart",
+            output_path
+        ]
+
+        process = subprocess.run(
+            ffmpeg_cmd,
+            capture_output=True,
+            text=True,
+            timeout=300
+        )
+
+        # Liste dosyasını temizle
+        if os.path.exists(list_path):
+            os.remove(list_path)
+
+        if process.returncode != 0:
+            return {"success": False, "error": f"Simple concat de başarısız: {process.stderr[:200]}"}
+
+        file_size = os.path.getsize(output_path) / (1024 * 1024)
+
+        return {
+            "success": True,
+            "output_path": output_path,
+            "total_duration": 0,  # Hesaplanmadı
+            "segment_count": len(video_paths),
+            "file_size_mb": round(file_size, 2),
+            "fallback": True
+        }
+
+    except Exception as e:
+        return {"success": False, "error": f"Fallback hata: {str(e)}"}
+
+
+async def get_video_duration(video_path: str) -> Optional[float]:
+    """FFprobe ile video süresini al"""
+    try:
+        cmd = [
+            "ffprobe", "-v", "error",
+            "-show_entries", "format=duration",
+            "-of", "default=noprint_wrappers=1:nokey=1",
+            video_path
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        if result.returncode == 0 and result.stdout.strip():
+            return float(result.stdout.strip())
+    except Exception:
+        pass
+    return None
+
+
 async def get_account_info() -> Dict[str, Any]:
     """
     Instagram hesap bilgilerini al

@@ -2447,3 +2447,345 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             )
 
             return result
+
+    async def run_long_video_pipeline(
+        self,
+        topic: str = None,
+        total_duration: int = 30,
+        segment_duration: int = 10,
+        model_id: str = "kling-2.6-pro",
+        transition_type: str = "crossfade",
+        transition_duration: float = 0.5,
+        manual_topic_mode: bool = False
+    ) -> Dict[str, Any]:
+        """
+        Multi-segment uzun video pipeline.
+
+        Birden fazla video segmenti üretip birleştirerek 20-60 saniyelik
+        uzun videolar oluşturur.
+
+        Pipeline Akışı:
+        1. Konu seçimi (Planner/Creator)
+        2. Caption üretimi (Creator)
+        3. Speech script üretimi (30s için)
+        4. TTS ses üretimi (ElevenLabs)
+        5. Multi-scene prompt üretimi (Creator)
+        6. Paralel video üretimi (N segment)
+        7. Video birleştirme (FFmpeg crossfade)
+        8. Audio-video merge (FFmpeg)
+        9. Kalite kontrol (Reviewer)
+        10. Instagram Reels yayını (Publisher)
+
+        Args:
+            topic: Konu (None ise Planner'dan alınır)
+            total_duration: Toplam video süresi (20-60 saniye)
+            segment_duration: Her segment süresi (10 saniye default)
+            model_id: Video model ID (kling-2.6-pro, sora-2, veo-2, wan-2.1)
+            transition_type: Geçiş tipi (crossfade, cut)
+            transition_duration: Crossfade süresi (0.5s default)
+            manual_topic_mode: True ise topic Creator ile işlenir
+
+        Returns:
+            Pipeline sonucu
+        """
+        from app.sora_helper import generate_videos_parallel
+        from app.instagram_helper import (
+            concatenate_videos_with_crossfade,
+            merge_audio_video
+        )
+        from app.elevenlabs_helper import ElevenLabsHelper
+        from app.database.crud import create_post, update_post
+
+        # Segment sayısını hesapla
+        segment_count = max(2, min(6, total_duration // segment_duration))
+        actual_total_duration = segment_count * segment_duration
+
+        self.log(f"🎬 UZUN VIDEO: Pipeline başlatılıyor...")
+        self.log(f"   Toplam süre: {actual_total_duration}s ({segment_count} segment x {segment_duration}s)")
+        self.log(f"   Model: {model_id}")
+        self.log(f"   Geçiş: {transition_type} ({transition_duration}s)")
+        self.state = PipelineState.PLANNING
+
+        result = {
+            "success": False,
+            "stages_completed": [],
+            "final_state": None,
+            "long_video": True,
+            "voice_enabled": True,
+            "segment_count": segment_count,
+            "total_duration": actual_total_duration,
+            "model_id": model_id
+        }
+
+        try:
+            # ========== AŞAMA 1: Konu Seçimi ==========
+            if topic and manual_topic_mode:
+                self.log(f"[LONG VIDEO] Manuel konu işleniyor: {topic[:50]}...")
+
+                topic_result = await self.creator.execute({
+                    "action": "process_manual_topic",
+                    "user_input": topic
+                })
+
+                processed_topic = topic_result.get("processed_topic", topic)
+                topic_data = {
+                    "topic": processed_topic,
+                    "category": topic_result.get("category", "tanitim"),
+                    "suggested_visual": "video",
+                    "original_input": topic
+                }
+                topic = processed_topic
+
+            elif topic:
+                topic_data = {
+                    "topic": topic,
+                    "category": "tanitim",
+                    "suggested_visual": "video"
+                }
+            else:
+                self.log("[LONG VIDEO] Aşama 1: Konu seçiliyor...")
+                topic_result = await self.planner.execute({"action": "suggest_topic"})
+
+                if "error" in topic_result:
+                    raise Exception(f"Planner error: {topic_result['error']}")
+
+                topic_data = topic_result
+                topic = topic_data.get("topic", "IoT ve akıllı tarım")
+
+            self.log(f"[LONG VIDEO] Konu: {topic[:50]}...")
+            result["stages_completed"].append("topic_selection")
+
+            # ========== AŞAMA 2: Caption Üretimi ==========
+            self.log("[LONG VIDEO] Aşama 2: Caption üretiliyor...")
+            self.state = PipelineState.CONTENT_CREATING
+
+            content_result = await self.creator.execute({
+                "action": "create_content",
+                "topic": topic,
+                "platform": "instagram",
+                "visual_type": "reels",
+                "category": topic_data.get("category", "tanitim")
+            })
+
+            caption = content_result.get("post_text_ig") or content_result.get("post_text", "")
+            post_id = content_result.get("post_id")
+
+            self.log(f"[LONG VIDEO] Caption oluşturuldu (Post ID: {post_id})")
+            result["stages_completed"].append("caption_creation")
+            result["post_id"] = post_id
+
+            # ========== AŞAMA 3: Speech Script Üretimi ==========
+            self.log(f"[LONG VIDEO] Aşama 3: Voiceover scripti üretiliyor ({actual_total_duration}s)...")
+
+            # Kelime hedefi: ~2.5 kelime/saniye
+            target_words = int(actual_total_duration * 2.5)
+
+            speech_result = await self.creator.execute({
+                "action": "create_speech_script",
+                "topic": topic,
+                "target_duration": actual_total_duration,
+                "target_words": target_words,
+                "tone": "professional",
+                "post_id": post_id
+            })
+
+            if not speech_result.get("success"):
+                raise Exception(f"Speech script hatası: {speech_result.get('error')}")
+
+            speech_script = speech_result.get("speech_script", "")
+            self.log(f"[LONG VIDEO] Script: {len(speech_script.split())} kelime")
+            result["stages_completed"].append("speech_script")
+
+            # ========== AŞAMA 4: TTS Ses Üretimi ==========
+            self.log("[LONG VIDEO] Aşama 4: TTS ses üretiliyor...")
+
+            elevenlabs = ElevenLabsHelper()
+            tts_result = await elevenlabs.generate_speech(
+                text=speech_script,
+                voice_id="onwK4e9ZLuTAKqWW03F9"  # Daniel - Turkish
+            )
+
+            if not tts_result.get("success"):
+                raise Exception(f"TTS hatası: {tts_result.get('error')}")
+
+            audio_path = tts_result.get("audio_path")
+            audio_duration = tts_result.get("duration", actual_total_duration)
+
+            self.log(f"[LONG VIDEO] Ses üretildi: {audio_duration:.1f}s")
+            result["stages_completed"].append("tts_generation")
+            result["audio_duration"] = audio_duration
+
+            # ========== AŞAMA 5: Multi-Scene Prompt Üretimi ==========
+            self.log(f"[LONG VIDEO] Aşama 5: {segment_count} sahne promptu üretiliyor...")
+
+            # Shot structure'ı çıkar
+            shot_structure = extract_shot_structure(speech_script, actual_total_duration)
+
+            scene_result = await self.creator.execute({
+                "action": "create_multi_scene_prompts",
+                "topic": topic,
+                "segment_count": segment_count,
+                "segment_duration": segment_duration,
+                "speech_structure": shot_structure,
+                "model_id": model_id
+            })
+
+            if not scene_result.get("success"):
+                raise Exception(f"Scene planning hatası: {scene_result.get('error')}")
+
+            scenes = scene_result.get("scenes", [])
+            style_prefix = scene_result.get("style_prefix", "")
+
+            self.log(f"[LONG VIDEO] {len(scenes)} sahne planlandı")
+            result["stages_completed"].append("scene_planning")
+
+            # Segment promptlarını JSON olarak kaydet
+            segment_prompts = json.dumps([s.get("prompt", "") for s in scenes], ensure_ascii=False)
+            if post_id:
+                update_post(
+                    post_id,
+                    segment_prompts=segment_prompts,
+                    video_segment_count=segment_count,
+                    video_model=model_id
+                )
+
+            # ========== AŞAMA 6: Paralel Video Üretimi ==========
+            self.log(f"[LONG VIDEO] Aşama 6: {segment_count} video segmenti üretiliyor (paralel)...")
+            self.state = PipelineState.VISUAL_CREATING
+
+            # Her sahnenin prompt'unu al
+            prompts = [scene.get("prompt", "") for scene in scenes]
+
+            video_result = await generate_videos_parallel(
+                prompts=prompts,
+                model=model_id,
+                duration=segment_duration,
+                style_prefix=style_prefix,
+                max_concurrent=3,
+                max_retries=3
+            )
+
+            if not video_result.get("success"):
+                raise Exception(f"Video üretim hatası: {video_result.get('error', 'Yetersiz segment')}")
+
+            video_paths = video_result.get("video_paths", [])
+            self.log(f"[LONG VIDEO] {len(video_paths)} segment üretildi")
+            result["stages_completed"].append("parallel_video_generation")
+            result["segments_generated"] = len(video_paths)
+
+            # ========== AŞAMA 7: Video Birleştirme ==========
+            self.log(f"[LONG VIDEO] Aşama 7: {len(video_paths)} video birleştiriliyor ({transition_type})...")
+
+            concat_result = await concatenate_videos_with_crossfade(
+                video_paths=video_paths,
+                crossfade_duration=transition_duration if transition_type == "crossfade" else 0,
+                segment_duration=float(segment_duration)
+            )
+
+            if not concat_result.get("success"):
+                raise Exception(f"Video concat hatası: {concat_result.get('error')}")
+
+            concat_video_path = concat_result.get("output_path")
+            concat_duration = concat_result.get("total_duration", 0)
+
+            self.log(f"[LONG VIDEO] Birleşik video: {concat_duration:.1f}s")
+            result["stages_completed"].append("video_concatenation")
+
+            # ========== AŞAMA 8: Audio-Video Merge ==========
+            self.log("[LONG VIDEO] Aşama 8: Ses ve video birleştiriliyor...")
+
+            merge_result = await merge_audio_video(
+                video_path=concat_video_path,
+                audio_path=audio_path,
+                target_duration=audio_duration
+            )
+
+            if not merge_result.get("success"):
+                raise Exception(f"Merge hatası: {merge_result.get('error')}")
+
+            final_video_path = merge_result.get("output_path")
+            final_duration = merge_result.get("duration", 0)
+
+            self.log(f"[LONG VIDEO] Final video: {final_duration:.1f}s")
+            result["stages_completed"].append("audio_video_merge")
+
+            # Post'u güncelle
+            if post_id:
+                update_post(
+                    post_id,
+                    visual_path=final_video_path,
+                    total_video_duration=final_duration,
+                    audio_path=audio_path,
+                    audio_duration=audio_duration,
+                    voice_mode=True
+                )
+
+            # ========== AŞAMA 9: Review ==========
+            self.log("[LONG VIDEO] Aşama 9: Kalite kontrol...")
+            self.state = PipelineState.REVIEWING
+
+            review_result = await self.reviewer.execute({
+                "action": "review_content",
+                "post_id": post_id,
+                "content_type": "reels",
+                "caption": caption,
+                "video_path": final_video_path
+            })
+
+            score = review_result.get("score", 7)
+            self.log(f"[LONG VIDEO] Review skoru: {score}/10")
+            result["stages_completed"].append("review")
+            result["review_score"] = score
+
+            # ========== AŞAMA 10: Yayın ==========
+            self.log("[LONG VIDEO] Aşama 10: Instagram'a yayınlanıyor...")
+            self.state = PipelineState.PUBLISHING
+
+            publish_result = await self.publisher.execute({
+                "action": "publish_reels",
+                "post_id": post_id,
+                "video_path": final_video_path,
+                "caption": caption,
+                "audio_path": None  # Ses video'ya gömülü
+            })
+
+            if publish_result.get("success"):
+                instagram_id = publish_result.get("instagram_post_id")
+                self.log(f"[LONG VIDEO] ✓ Yayınlandı! ID: {instagram_id}")
+
+                result["success"] = True
+                result["instagram_post_id"] = instagram_id
+                result["stages_completed"].append("publish")
+
+                # Telegram bildirimi
+                await self.notify_telegram(
+                    message=f"🎬 *UZUN VIDEO* - Yayınlandı!\n\n"
+                    f"📝 Konu: {_escape_md(topic[:50])}...\n"
+                    f"⏱️ Süre: {final_duration:.0f}s ({segment_count} segment)\n"
+                    f"🎥 Model: {_escape_md(model_id)}\n"
+                    f"⭐ Puan: {score}/10",
+                    data=publish_result,
+                    buttons=[]
+                )
+            else:
+                raise Exception(f"Publish error: {publish_result.get('error')}")
+
+            self.state = PipelineState.COMPLETED
+            result["final_state"] = self.state.value
+
+            self.log("[LONG VIDEO] Pipeline tamamlandı!")
+            return result
+
+        except Exception as e:
+            self.log(f"[LONG VIDEO] Pipeline hatası: {str(e)}")
+            self.state = PipelineState.ERROR
+            result["error"] = str(e)
+            result["final_state"] = self.state.value
+
+            await self.notify_telegram(
+                message=f"❌ *UZUN VIDEO* - Hata\n\n{_escape_md(str(e))}",
+                data={"error": str(e)},
+                buttons=[]
+            )
+
+            return result

@@ -7,7 +7,7 @@ import os
 import httpx
 import asyncio
 from datetime import datetime
-from typing import Dict, Any
+from typing import Dict, Any, List, Tuple
 
 from app.config import settings
 from app.utils.logger import get_logger
@@ -373,3 +373,149 @@ async def generate_video_smart(
         return result
 
     return sora_result
+
+
+async def generate_videos_parallel(
+    prompts: List[str],
+    model: str = "kling-2.6-pro",
+    duration: int = 10,
+    style_prefix: str = "",
+    max_concurrent: int = 3,
+    max_retries: int = 3
+) -> Dict[str, Any]:
+    """
+    Birden fazla videoyu paralel olarak üret.
+
+    Args:
+        prompts: Her segment için video promptları listesi
+        model: Kullanılacak video modeli
+        duration: Her segment'in süresi (saniye)
+        style_prefix: Tüm promptlara eklenecek stil prefix'i
+        max_concurrent: Aynı anda çalışacak maksimum API çağrısı
+        max_retries: Başarısız segment için yeniden deneme sayısı
+
+    Returns:
+        {
+            "success": bool,
+            "video_paths": [str],  # Sıralı video yolları
+            "failed_indices": [int],  # Başarısız segment indeksleri
+            "model_used": str,
+            "total_duration": float
+        }
+    """
+    if not prompts:
+        return {"success": False, "error": "Prompt listesi boş"}
+
+    print(f"[PARALLEL VIDEO] {len(prompts)} segment üretiliyor...")
+    print(f"[PARALLEL VIDEO] Model: {model}, Segment süresi: {duration}s")
+    print(f"[PARALLEL VIDEO] Max concurrent: {max_concurrent}")
+
+    # Style prefix ekle
+    full_prompts = [
+        f"{style_prefix}\n\n{prompt}" if style_prefix else prompt
+        for prompt in prompts
+    ]
+
+    # Semaphore ile concurrent limit
+    semaphore = asyncio.Semaphore(max_concurrent)
+
+    async def generate_single_with_limit(
+        index: int,
+        prompt: str
+    ) -> Tuple[int, Dict[str, Any]]:
+        """Tek bir video üret (semaphore ile sınırlı)"""
+        async with semaphore:
+            print(f"[PARALLEL VIDEO] Segment {index + 1}/{len(prompts)} başlıyor...")
+
+            result = await generate_video_smart(
+                prompt=prompt,
+                force_model=model,
+                duration=duration,
+                voice_mode=True
+            )
+
+            if result.get("success"):
+                print(f"[PARALLEL VIDEO] ✓ Segment {index + 1} tamamlandı")
+            else:
+                print(f"[PARALLEL VIDEO] ✗ Segment {index + 1} başarısız: {result.get('error', 'Unknown')}")
+
+            return (index, result)
+
+    # İlk deneme - tüm segmentleri paralel başlat
+    tasks = [
+        generate_single_with_limit(i, prompt)
+        for i, prompt in enumerate(full_prompts)
+    ]
+
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    # Sonuçları işle
+    video_paths: List[Tuple[int, str]] = []
+    failed_indices: List[int] = []
+
+    for item in results:
+        if isinstance(item, Exception):
+            # Task kendisi exception fırlattı
+            failed_indices.append(item)  # Index bilinmiyor
+            continue
+
+        index, result = item
+
+        if result.get("success") and result.get("video_path"):
+            video_paths.append((index, result["video_path"]))
+        else:
+            failed_indices.append(index)
+
+    # Başarısız segmentleri yeniden dene
+    for retry in range(max_retries):
+        if not failed_indices:
+            break
+
+        print(f"[PARALLEL VIDEO] Retry {retry + 1}/{max_retries} - {len(failed_indices)} segment")
+
+        retry_tasks = [
+            generate_single_with_limit(idx, full_prompts[idx])
+            for idx in failed_indices
+            if isinstance(idx, int)  # Exception olanları atla
+        ]
+
+        retry_results = await asyncio.gather(*retry_tasks, return_exceptions=True)
+
+        new_failed = []
+        for item in retry_results:
+            if isinstance(item, Exception):
+                continue
+
+            index, result = item
+
+            if result.get("success") and result.get("video_path"):
+                video_paths.append((index, result["video_path"]))
+                # Başarılı olanları failed listesinden çıkar
+                if index in failed_indices:
+                    failed_indices.remove(index)
+            else:
+                new_failed.append(index)
+
+        failed_indices = [idx for idx in failed_indices if idx in new_failed]
+
+    # Sıraya göre düzenle
+    video_paths.sort(key=lambda x: x[0])
+    ordered_paths = [path for _, path in video_paths]
+
+    # Başarı durumu - en az 2 segment gerekli
+    success = len(ordered_paths) >= 2
+
+    if success:
+        print(f"[PARALLEL VIDEO] ✓ {len(ordered_paths)}/{len(prompts)} segment tamamlandı")
+    else:
+        print(f"[PARALLEL VIDEO] ✗ Yeterli segment üretilemedi: {len(ordered_paths)}/{len(prompts)}")
+
+    return {
+        "success": success,
+        "video_paths": ordered_paths,
+        "failed_indices": list(set([idx for idx in failed_indices if isinstance(idx, int)])),
+        "model_used": model,
+        "total_duration": len(ordered_paths) * duration,
+        "segment_count": len(ordered_paths),
+        "requested_count": len(prompts)
+    }

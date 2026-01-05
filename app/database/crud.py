@@ -62,7 +62,9 @@ def update_post(post_id: int, **kwargs) -> bool:
         # Voice Reels (ElevenLabs TTS)
         'speech_script', 'audio_path', 'voice_id', 'audio_duration', 'voice_mode',
         # Topic category
-        'topic_category'
+        'topic_category',
+        # Multi-segment video
+        'video_segment_count', 'total_video_duration', 'segment_prompts', 'video_model'
     ]
 
     updates = []
