@@ -2557,7 +2557,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
 
             # ========== AŞAMA 2: Caption Üretimi ==========
             self.log("[LONG VIDEO] Aşama 2: Caption üretiliyor...")
-            self.state = PipelineState.CONTENT_CREATING
+            self.state = PipelineState.CREATING_CONTENT
 
             content_result = await self.creator.execute({
                 "action": "create_content",
