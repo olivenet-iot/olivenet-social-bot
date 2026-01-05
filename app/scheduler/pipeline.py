@@ -2651,7 +2651,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
 
             # ========== AŞAMA 6: Paralel Video Üretimi ==========
             self.log(f"[LONG VIDEO] Aşama 6: {segment_count} video segmenti üretiliyor (paralel)...")
-            self.state = PipelineState.VISUAL_CREATING
+            self.state = PipelineState.CREATING_VISUAL
 
             # Her sahnenin prompt'unu al
             prompts = [scene.get("prompt", "") for scene in scenes]
