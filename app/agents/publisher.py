@@ -44,6 +44,8 @@ class PublisherAgent(BaseAgent):
 
         if action == "publish":
             return await self.publish(input_data)
+        elif action == "publish_reels":
+            return await self.publish(input_data)  # Reels = video publish
         elif action == "schedule":
             return await self.schedule(input_data)
         else:
