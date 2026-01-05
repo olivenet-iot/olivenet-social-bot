@@ -898,6 +898,28 @@ Sadece JSON döndür, başka açıklama ekleme.
                 if shot_keywords:
                     speech_hints += f" | Anahtar kelimeler: {', '.join(shot_keywords)}"
 
+        # Dinamik narrative arc (segment sayısına göre)
+        if segment_count == 2:
+            narrative_arc_text = """### NARRATİF ARC (2 Segment - 20s):
+- Sahne 1 (0-10s): HOOK + PROBLEM - Dikkat çekici açılış, problem tanıtımı
+- Sahne 2 (10-20s): SOLUTION + CTA - Çözüm, faydalar, call-to-action"""
+            narrative_arc_json = "hook+problem -> solution+cta"
+            example_roles = ["hook+problem", "solution+cta"]
+        elif segment_count == 3:
+            narrative_arc_text = """### NARRATİF ARC (3 Segment - 30s):
+- Sahne 1 (0-10s): HOOK - Dikkat çekici açılış, problem tanıtımı
+- Sahne 2 (10-20s): DEVELOPMENT - Çözümün açıklanması, detaylar
+- Sahne 3 (20-30s): RESOLUTION - Faydalar, sonuç, call-to-action"""
+            narrative_arc_json = "hook -> development -> resolution"
+            example_roles = ["hook", "development", "resolution"]
+        else:  # 4+ segment
+            narrative_arc_text = f"""### NARRATİF ARC ({segment_count} Segment):
+- Sahne 1: HOOK - Dikkat çekici açılış
+- Sahneler 2-{segment_count-1}: DEVELOPMENT - Ana içerik, detaylar
+- Son sahne: RESOLUTION - Sonuç, çözüm gösterimi"""
+            narrative_arc_json = "hook -> development -> resolution"
+            example_roles = ["hook"] + ["development"] * (segment_count - 2) + ["resolution"]
+
         prompt = f"""
 ## GÖREV: Multi-Segment Video Sahne Planlaması
 
@@ -917,21 +939,18 @@ Her sahne {segment_duration} saniye sürecek, toplam {total_duration} saniye.
 - Sahneler arası görsel geçiş uyumu
 - NO TEXT - hiçbir sahnede yazı olmamalı
 
-### NARRATİF ARC:
-- Sahne 1: HOOK - Dikkat çekici açılış, merak uyandırıcı
-- Orta sahneler: DEVELOPMENT - Ana içerik, detaylar
-- Son sahne: RESOLUTION - Sonuç, çözüm gösterimi
+{narrative_arc_text}
 
 ### ÇIKTI FORMATI (JSON):
 ```json
 {{
     "style_prefix": "4K cinematic, professional studio lighting, color palette: olive green (#2E7D32), sky blue (#38bdf8), clean white background, no text or labels, ",
-    "narrative_arc": "hook -> development -> resolution",
+    "narrative_arc": "{narrative_arc_json}",
     "scenes": [
         {{
             "segment_index": 0,
             "time_range": "{time_ranges[0]}",
-            "narrative_role": "hook",
+            "narrative_role": "{example_roles[0]}",
             "visual_concept": "Kısa açıklama",
             "camera_movement": "Kamera hareketi (dolly, pan, zoom, etc.)",
             "prompt": "Detaylı video prompt (İngilizce, 50-80 kelime)"
