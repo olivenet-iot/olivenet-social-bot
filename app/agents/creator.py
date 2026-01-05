@@ -44,6 +44,8 @@ class CreatorAgent(BaseAgent):
             return await self.create_speech_script(input_data)
         elif action == "process_manual_topic":
             return await self.process_manual_topic(input_data)
+        elif action == "create_multi_scene_prompts":
+            return await self.create_multi_scene_prompts(input_data)
         else:
             return {"error": f"Unknown action: {action}"}
 
