@@ -187,6 +187,9 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ],
         [
             InlineKeyboardButton("🎠 Carousel", callback_data="create_carousel"),
+            InlineKeyboardButton("🎥 Uzun Video", callback_data="create_long_video")
+        ],
+        [
             InlineKeyboardButton("🤖 Otonom", callback_data="start_autonomous")
         ],
         # Planlama
@@ -973,6 +976,124 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             model_id="sora-2",  # Backward compatibility
             manual_topic_mode=True
         ))
+
+    # ===== UZUN VIDEO (MULTI-SEGMENT) =====
+    elif action == "create_long_video":
+        keyboard = [
+            [
+                InlineKeyboardButton("⏱️ 20 saniye", callback_data="long_duration:20"),
+                InlineKeyboardButton("⏱️ 30 saniye", callback_data="long_duration:30")
+            ],
+            [InlineKeyboardButton("◀️ Ana Menü", callback_data="main_menu")]
+        ]
+        await query.edit_message_text(
+            "🎥 *UZUN VIDEO*\n\n"
+            "Multi-segment video pipeline.\n"
+            "2-3 segment paralel üretilip birleştirilir.\n\n"
+            "💰 *Maliyet:* ~$0.60-$1.50\n"
+            "⏳ *Süre:* ~4-5 dakika\n\n"
+            "⏱️ *Süre seçin:*",
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="Markdown"
+        )
+
+    elif action.startswith("long_duration:"):
+        duration = int(action.split(":")[1])
+        segment_count = duration // 10
+        keyboard = [
+            [
+                InlineKeyboardButton("🎬 Kling 2.6", callback_data=f"long_model:{duration}:kling-2.6-pro"),
+                InlineKeyboardButton("🌟 Sora 2", callback_data=f"long_model:{duration}:sora-2")
+            ],
+            [
+                InlineKeyboardButton("🎯 Veo 2", callback_data=f"long_model:{duration}:veo-2"),
+                InlineKeyboardButton("🌊 Wan 2.1", callback_data=f"long_model:{duration}:wan-2.1")
+            ],
+            [InlineKeyboardButton("◀️ Geri", callback_data="create_long_video")]
+        ]
+        await query.edit_message_text(
+            f"🎥 *UZUN VIDEO* - {duration}s ({segment_count} segment)\n\n"
+            "🎬 *Model seçin:*\n\n"
+            "• *Kling 2.6:* Dengeli kalite/fiyat (~$0.30/segment)\n"
+            "• *Sora 2:* En yüksek kalite (~$0.50/segment)\n"
+            "• *Veo 2:* Hızlı üretim (~$0.20/segment)\n"
+            "• *Wan 2.1:* Uzun segment desteği (~$0.15/segment)",
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="Markdown"
+        )
+
+    elif action.startswith("long_model:"):
+        parts = action.split(":")
+        duration = int(parts[1])
+        model_id = parts[2]
+        model_config = get_model_config(model_id)
+        model_name = model_config.get("name", model_id)
+
+        keyboard = [
+            [InlineKeyboardButton("🎲 Otomatik Konu", callback_data=f"long_topic:{duration}:{model_id}:auto")],
+            [InlineKeyboardButton("✏️ Manuel Konu", callback_data=f"long_topic:{duration}:{model_id}:manual")],
+            [InlineKeyboardButton("◀️ Geri", callback_data=f"long_duration:{duration}")]
+        ]
+        await query.edit_message_text(
+            f"🎥 *UZUN VIDEO*\n\n"
+            f"⏱️ *Süre:* {duration}s\n"
+            f"🎬 *Model:* {model_name}\n\n"
+            "📝 *Konu seçin:*",
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="Markdown"
+        )
+
+    elif action.startswith("long_topic:"):
+        parts = action.split(":")
+        duration = int(parts[1])
+        model_id = parts[2]
+        topic_mode = parts[3]
+        segment_count = duration // 10
+
+        if topic_mode == "auto":
+            await query.edit_message_text(
+                f"🎥 *UZUN VIDEO* başlatılıyor...\n\n"
+                f"⏱️ *Süre:* {duration}s ({segment_count} segment)\n"
+                f"🎬 *Model:* {model_id}\n"
+                f"📝 *Konu:* Otomatik\n\n"
+                "Pipeline aşamaları:\n"
+                "1️⃣ Konu seçimi\n"
+                "2️⃣ Caption üretimi\n"
+                "3️⃣ Voiceover scripti\n"
+                "4️⃣ TTS ses üretimi\n"
+                "5️⃣ Multi-scene prompt üretimi\n"
+                f"6️⃣ Paralel video üretimi ({segment_count}x)\n"
+                "7️⃣ Video birleştirme (crossfade)\n"
+                "8️⃣ Audio-video merge\n"
+                "9️⃣ Instagram Reels yayını\n\n"
+                "⏳ Bu işlem 4-5 dakika sürebilir...",
+                parse_mode="Markdown"
+            )
+            asyncio.create_task(pipeline.run_long_video_pipeline(
+                total_duration=duration,
+                model_id=model_id
+            ))
+        else:
+            pending_input["type"] = "long_video_manual"
+            pending_input["duration"] = duration
+            pending_input["model_id"] = model_id
+            pending_input["user_id"] = query.from_user.id
+
+            cancel_keyboard = InlineKeyboardMarkup([
+                [InlineKeyboardButton("❌ İptal", callback_data="create_long_video")]
+            ])
+
+            await query.edit_message_text(
+                "✏️ *MANUEL KONU GİRİŞİ*\n\n"
+                "Uzun video için konu yazın:\n\n"
+                "💡 *Örnekler:*\n"
+                "• Kestirimci bakım ile makine arızalarını önleyin\n"
+                "• IoT sensörlerle sera otomasyonu\n"
+                "• Akıllı fabrika enerji yönetimi\n\n"
+                "📝 Konunuzu yazın (en az 5 karakter):",
+                parse_mode="Markdown",
+                reply_markup=cancel_keyboard
+            )
 
     # ===== HAFTALIK PLAN =====
     elif action == "weekly_plan":
@@ -1828,6 +1949,59 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 parse_mode="Markdown",
                 reply_markup=duration_keyboard
             )
+
+    elif pending_input.get("type") == "long_video_manual":
+        # Uzun video için manuel konu girişi
+        input_type = pending_input.pop("type", None)
+        if input_type != "long_video_manual":
+            return
+
+        topic = text.strip()
+
+        # Validasyon: minimum 5 karakter
+        if len(topic) < 5:
+            pending_input["type"] = "long_video_manual"
+            await update.message.reply_text(
+                "⚠️ *Konu çok kısa!*\n\n"
+                "En az 5 karakter olmalı.\n"
+                "Daha detaylı bir konu yazın.",
+                parse_mode="Markdown"
+            )
+            return
+
+        duration = pending_input.get("duration", 30)
+        model_id = pending_input.get("model_id", "kling-2.6-pro")
+        segment_count = duration // 10
+        pending_input.clear()
+
+        model_config = get_model_config(model_id)
+        model_name = model_config.get("name", model_id)
+
+        await update.message.reply_text(
+            f"🎥 *UZUN VIDEO* başlatılıyor...\n\n"
+            f"📝 *Konu:* {escape_markdown(topic[:60])}{'...' if len(topic) > 60 else ''}\n"
+            f"⏱️ *Süre:* {duration}s ({segment_count} segment)\n"
+            f"🎬 *Model:* {model_name}\n\n"
+            "Pipeline aşamaları:\n"
+            "1️⃣ Konu işleme\n"
+            "2️⃣ Caption üretimi\n"
+            "3️⃣ Voiceover scripti\n"
+            "4️⃣ TTS ses üretimi\n"
+            "5️⃣ Multi-scene prompt\n"
+            f"6️⃣ Paralel video üretimi ({segment_count}x)\n"
+            "7️⃣ Video birleştirme\n"
+            "8️⃣ Audio-video merge\n"
+            "9️⃣ Instagram yayını\n\n"
+            "⏳ Bu işlem 4-5 dakika sürebilir...",
+            parse_mode="Markdown"
+        )
+
+        asyncio.create_task(pipeline.run_long_video_pipeline(
+            topic=topic,
+            total_duration=duration,
+            model_id=model_id,
+            manual_topic_mode=True
+        ))
 
     elif pending_input.get("type") == "manual_topic":
         # Manuel konu ile pipeline başlat (genel içerik için)
