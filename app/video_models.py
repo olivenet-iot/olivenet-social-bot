@@ -136,6 +136,20 @@ def get_model_durations(model_id: str) -> List[int]:
     return config.get("durations", [8, 12])
 
 
+def get_max_duration(model_id: str) -> int:
+    """
+    Get maximum supported duration for a model.
+
+    Args:
+        model_id: Model identifier (e.g., "veo-2", "kling-2.6-pro")
+
+    Returns:
+        Maximum duration in seconds (e.g., Veo=8, Kling=10, Sora=12, Wan=15)
+    """
+    config = get_model_config(model_id)
+    return config.get("max_duration", 10)
+
+
 def get_prompt_key(model_id: str) -> str:
     """
     Get the prompt key for selecting model-specific prompt from create_reels_prompt output.

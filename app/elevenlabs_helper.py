@@ -23,11 +23,13 @@ ELEVENLABS_API_URL = "https://api.elevenlabs.io/v1"
 DEFAULT_MODEL = "eleven_multilingual_v2"  # Türkçe destekli
 DEFAULT_OUTPUT_FORMAT = "mp3_44100_128"
 
-# Varsayılan ses ayarları
+# Varsayılan ses ayarları (doğal Türkçe için optimize edildi)
+# stability: 0.5 = doğal varyasyon, similarity_boost: 0.75 = orijinal sese benzerlik
+# style: 0.15 = hafif stil ekler (0.0 robotik, 0.3+ aşırı dramatik)
 DEFAULT_VOICE_SETTINGS = {
     "stability": 0.5,
     "similarity_boost": 0.75,
-    "style": 0.0,
+    "style": 0.15,
     "use_speaker_boost": True
 }
 

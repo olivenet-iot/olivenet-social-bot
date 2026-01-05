@@ -11,7 +11,7 @@ from enum import Enum
 
 from app.database import save_prompt
 from app.validators.text_validator import validate_html_content, fix_common_issues
-from app.video_models import get_model_config, get_prompt_key, validate_duration, should_disable_audio
+from app.video_models import get_model_config, get_prompt_key, validate_duration, should_disable_audio, get_max_duration
 from telegram.helpers import escape_markdown
 
 
@@ -2496,12 +2496,17 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
         from app.elevenlabs_helper import ElevenLabsHelper
         from app.database.crud import create_post, update_post
 
-        # Segment sayısını hesapla
-        segment_count = max(2, min(6, total_duration // segment_duration))
-        actual_total_duration = segment_count * segment_duration
+        # Model'in max süresine göre segment duration'ı dinamik ayarla
+        model_max_duration = get_max_duration(model_id)
+        actual_segment_duration = min(segment_duration, model_max_duration)
+
+        # Segment sayısını hesapla (yeni segment süresine göre)
+        segment_count = max(2, min(6, total_duration // actual_segment_duration))
+        actual_total_duration = segment_count * actual_segment_duration
 
         self.log(f"🎬 UZUN VIDEO: Pipeline başlatılıyor...")
-        self.log(f"   Toplam süre: {actual_total_duration}s ({segment_count} segment x {segment_duration}s)")
+        self.log(f"   Model max süre: {model_max_duration}s → Segment: {actual_segment_duration}s")
+        self.log(f"   Toplam süre: {actual_total_duration}s ({segment_count} segment x {actual_segment_duration}s)")
         self.log(f"   Model: {model_id}")
         self.log(f"   Geçiş: {transition_type} ({transition_duration}s)")
         self.state = PipelineState.PLANNING
@@ -2625,7 +2630,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 "action": "create_multi_scene_prompts",
                 "topic": topic,
                 "segment_count": segment_count,
-                "segment_duration": segment_duration,
+                "segment_duration": actual_segment_duration,
                 "speech_structure": shot_structure,
                 "model_id": model_id
             })
@@ -2659,7 +2664,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             video_result = await generate_videos_parallel(
                 prompts=prompts,
                 model=model_id,
-                duration=segment_duration,
+                duration=actual_segment_duration,
                 style_prefix=style_prefix,
                 max_concurrent=3,
                 max_retries=3
@@ -2679,7 +2684,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             concat_result = await concatenate_videos_with_crossfade(
                 video_paths=video_paths,
                 crossfade_duration=transition_duration if transition_type == "crossfade" else 0,
-                segment_duration=float(segment_duration)
+                segment_duration=float(actual_segment_duration)
             )
 
             if not concat_result.get("success"):
