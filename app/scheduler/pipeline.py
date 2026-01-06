@@ -2590,7 +2590,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 "topic": topic,
                 "target_duration": actual_total_duration,
                 "target_words": target_words,
-                "tone": "professional",
+                "tone": "friendly",  # Samimi ton (voice reels ile aynı)
                 "post_id": post_id
             })
 
@@ -2604,10 +2604,11 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             # ========== AŞAMA 4: TTS Ses Üretimi ==========
             self.log("[LONG VIDEO] Aşama 4: TTS ses üretiliyor...")
 
-            elevenlabs = ElevenLabsHelper()
-            tts_result = await elevenlabs.generate_speech(
+            # Voice reels ile aynı fonksiyon - ENV'deki voice ID'yi kullanır
+            from app.elevenlabs_helper import generate_speech_with_retry
+            tts_result = await generate_speech_with_retry(
                 text=speech_script,
-                voice_id="onwK4e9ZLuTAKqWW03F9"  # Daniel - Turkish
+                max_retries=3
             )
 
             if not tts_result.get("success"):
