@@ -2565,7 +2565,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             self.state = PipelineState.CREATING_CONTENT
 
             content_result = await self.creator.execute({
-                "action": "create_content",
+                "action": "create_post",
                 "topic": topic,
                 "platform": "instagram",
                 "visual_type": "reels",
