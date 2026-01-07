@@ -453,10 +453,11 @@ async def generate_videos_parallel(
     video_paths: List[Tuple[int, str]] = []
     failed_indices: List[int] = []
 
-    for item in results:
+    for i, item in enumerate(results):
         if isinstance(item, Exception):
-            # Task kendisi exception fırlattı
-            failed_indices.append(item)  # Index bilinmiyor
+            # Task exception fırlattı - index'i koru
+            failed_indices.append(i)
+            print(f"[PARALLEL VIDEO] ✗ Segment {i + 1} exception: {item}")
             continue
 
         index, result = item

@@ -2703,7 +2703,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             merge_result = await merge_audio_video(
                 video_path=concat_video_path,
                 audio_path=audio_path,
-                target_duration=audio_duration
+                target_duration=concat_duration  # Video süresini koru (audio kırpılsın, video değil)
             )
 
             if not merge_result.get("success"):
@@ -2751,7 +2751,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 "action": "publish_reels",
                 "post_id": post_id,
                 "video_path": final_video_path,
-                "caption": caption,
+                "post_text": caption,
                 "audio_path": None  # Ses video'ya gömülü
             })
 
