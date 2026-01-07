@@ -1076,9 +1076,11 @@ Sadece JSON döndür.
         tone = input_data.get("tone", "friendly")  # Samimi ton varsayılan
         post_id = input_data.get("post_id")
 
-        # Süre bazlı kelime hedefi (Türkçe: ~1.8 kelime/saniye - TTS gerçek süreye uyumlu)
-        # NOT: ElevenLabs Türkçe TTS tahminlerden %30-40 daha yavaş okuyor
-        target_words = int(target_duration * 1.8)  # 12s için ~21 kelime
+        # Pipeline'dan gelen target_words'u kullan (varsa)
+        target_words = input_data.get("target_words")
+        if not target_words:
+            # Fallback: süre bazlı hesapla (~3.0 kelime/saniye - ElevenLabs gerçek hızı)
+            target_words = int(target_duration * 3.0)
 
         company_profile = self.load_context("company-profile.md")
 
