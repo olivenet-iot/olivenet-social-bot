@@ -410,11 +410,23 @@ async def generate_videos_parallel(
     print(f"[PARALLEL VIDEO] Model: {model}, Segment süresi: {duration}s")
     print(f"[PARALLEL VIDEO] Max concurrent: {max_concurrent}")
 
-    # Style prefix ekle
-    full_prompts = [
-        f"{style_prefix}\n\n{prompt}" if style_prefix else prompt
-        for prompt in prompts
+    # Segment-specific shot type ve kamera prefix'leri (görsel çeşitlilik için)
+    SEGMENT_PREFIXES = [
+        "WIDE ESTABLISHING SHOT, slow dolly forward, cinematic depth of field, ",
+        "MEDIUM SHOT, tracking alongside subject, dynamic camera movement, ",
+        "CLOSE-UP DETAIL SHOT, smooth push in, macro focus, emotional impact, "
     ]
+
+    # Her segment için farklı prefix + style prefix ekle
+    full_prompts = []
+    for i, prompt in enumerate(prompts):
+        seg_prefix = SEGMENT_PREFIXES[i % len(SEGMENT_PREFIXES)]
+        if style_prefix:
+            full_prompt = f"{seg_prefix}{style_prefix}\n\n{prompt}"
+        else:
+            full_prompt = f"{seg_prefix}{prompt}"
+        full_prompts.append(full_prompt)
+        print(f"   Prompt {i+1}: {full_prompt[:80]}...")
 
     # Semaphore ile concurrent limit
     semaphore = asyncio.Semaphore(max_concurrent)
