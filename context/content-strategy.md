@@ -327,30 +327,22 @@ Slide 6: CTA ve iletişim
 
 ## Hashtag Stratejisi
 
-### Her Postta Kullanılacak (3-4)
-- #Olivenet
-- #KKTC
-- #IoT
-- [Sektörel hashtag]
-
-### Sektörel Rotasyonda (2-3)
-- Tarım: #AkıllıTarım #SmartFarming #SeraOtomasyonu
-- Enerji: #Enerjiİzleme #EnerjiVerimliliği
-- Bakım: #KestirimciBakım #PredictiveMaintenance
-- Bina: #BinaOtomasyonu #SmartBuilding
-
-### Trend/Genel (1-2)
-- #DijitalDönüşüm
-- #Endüstri40
-- #Teknoloji
-- #Verimlilik
-- #Sürdürülebilirlik
-
-### Maksimum Hashtag Sayısı
-- Instagram: 15-20
+### Hedef Hashtag Sayısı
+- **Instagram: 8-12 hashtag** (önemli!)
 - LinkedIn: 5-7
 - Twitter: 3-5
 - Facebook: 5-7
+
+### ZORUNLU Hashtagler (her postta)
+- #Olivenet
+- #KKTC
+- #IoT
+
+### Sektörel Havuz (5-9 adet seç)
+- **Tarım:** #AkıllıTarım #SmartFarming #SeraOtomasyonu #AkıllıSera #TarımTeknolojisi
+- **Enerji:** #EnerjiYönetimi #EnerjiVerimliliği #EnerjiTasarrufu
+- **IoT/Endüstri:** #EndüstriyelIoT #LoRaWAN #Sensör #Otomasyon #Endüstri40
+- **Genel:** #DijitalDönüşüm #Teknoloji #Verimlilik #Sürdürülebilirlik #AkıllıSulama
 
 ---
 
@@ -488,7 +480,7 @@ Broad: #Technology #Innovation #DigitalTransformation #Sustainability
 [Değer/Bilgi - 1 satır]
 [CTA - emoji ile]
 
-5-8 hashtag
+8-12 hashtag
 ```
 
 **Örnek:**
@@ -497,7 +489,7 @@ Seranızda %40 su tasarrufu mümkün! 💧
 IoT sensörleri ile akıllı sulama sistemi.
 Kaydet ve uygula! 🔖
 
-#akıllıtarım #sera #iot #KKTC
+#Olivenet #KKTC #IoT #AkıllıTarım #SeraOtomasyonu #AkıllıSulama #Teknoloji #Verimlilik
 ```
 
 #### Carousel Caption Yapısı
@@ -505,7 +497,7 @@ Kaydet ve uygula! 🔖
 [Tek satır hook veya soru]
 [Kaydet çağrısı]
 
-5-8 hashtag
+8-12 hashtag
 ```
 
 **Örnek:**
@@ -513,7 +505,7 @@ Kaydet ve uygula! 🔖
 Edge Computing'i 5 slide'da öğren! ⬇️
 Kaydet, sonra oku 🔖
 
-#edgecomputing #iot #teknoloji
+#Olivenet #KKTC #IoT #EdgeComputing #Teknoloji #EndüstriyelIoT #DijitalDönüşüm #Verimlilik
 ```
 
 #### YAPMA:
@@ -624,9 +616,9 @@ Kaydet, sonra oku 🔖
 - Direkt satış yapma, değer sun
 - Engagement odaklı: "Sen ne düşünüyorsun?", "Hangisi sizin için önemli?"
 
-### Hashtag Stratejisi
-Sabit (her post): #Olivenet #KKTC #IoT
-Dönen: #AkıllıTarım #SeraOtomasyonu #EnerjiVerimliliği #DijitalDönüşüm #Teknoloji #Sürdürülebilirlik #AkıllıSera #EndüstriyelIoT
+### Hashtag Stratejisi (8-12 adet)
+ZORUNLU (her post): #Olivenet #KKTC #IoT
+Dönen (5-9 adet): #AkıllıTarım #SeraOtomasyonu #EnerjiVerimliliği #DijitalDönüşüm #Teknoloji #Sürdürülebilirlik #AkıllıSera #EndüstriyelIoT #LoRaWAN #Sensör
 
 ## İçerik Kategorileri (Platform Bazlı)
 

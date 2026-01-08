@@ -375,7 +375,7 @@ Sadece JSON döndür.
 - Hook ile başla (yukarıdaki öncelikli tiplerden birini kullan)
 - 2-3 cümle ana mesaj (kısa ve öz)
 - {cta_instruction}
-- 5-8 hashtag (sabit: #Olivenet #KKTC #IoT + rotasyonlu)
+- 8-12 hashtag (ZORUNLU: #Olivenet #KKTC #IoT + 5-9 sektörel/genel)
 - MARKDOWN KULLANMA: **bold**, *italic*, `code` YASAK (Instagram desteklemiyor)
 - Vurgu için BÜYÜK HARF veya emoji kullan
 
@@ -428,7 +428,7 @@ Sadece post metnini yaz, başka açıklama ekleme.
 - Profesyonel ama samimi ton
 - Detaylı açıklama ve değer önerisi
 - CTA ile bitir (iletişim bilgisi: info@olivenet.io)
-- 6-8 hashtag
+- 8-12 hashtag (ZORUNLU: #Olivenet #KKTC #IoT + sektörel)
 
 Sadece post metnini yaz, başka açıklama ekleme.
 """
@@ -715,7 +715,7 @@ Bu video TTS voiceover ile birleştirilecek. Her shot, aşağıdaki speech içer
     "recommended_duration": 5,
     "hook_description": "İlk 2 saniyede ne görünecek (Türkçe)",
     "caption_ig": "Instagram Reels caption (Türkçe, max 50 kelime, hook+değer+CTA formatı, emoji'li)",
-    "hashtags": ["Olivenet", "KKTC", "IoT", "..."],
+    "hashtags": ["#Olivenet", "#KKTC", "#IoT", "#AkıllıTarım", "...8-12 adet toplam"],
     "camera_movement": "static|dolly|pan|arc|reveal",
     "mood": "professional|calm|energetic|inspirational"
 }}
@@ -729,6 +729,7 @@ Bu video TTS voiceover ile birleştirilecek. Her shot, aşağıdaki speech içer
 5. Olivenet renkleri: Yeşil (#2E7D32), Mavi (#38bdf8)
 6. Tek sahne, akıcı hareket
 7. Gerçekçi ve üretilebilir prompt yaz
+8. HASHTAG: 8-12 adet (ZORUNLU: #Olivenet #KKTC #IoT + 5-9 sektörel)
 
 ### KLING FORMAT KURALLARI (video_prompt_kling):
 - Basit, virgülle ayrılmış İngilizce
@@ -1340,9 +1341,9 @@ Eğitici ve görsel açıdan tutarlı bir carousel oluştur.
 - Slide içeriğini caption'da TEKRARLAMA
 
 ### Hashtag'ler:
-- 6-8 adet
-- Sabit: #Olivenet #KKTC #IoT
-- Konu bazlı eklemeler
+- 8-12 adet (önemli!)
+- ZORUNLU: #Olivenet #KKTC #IoT
+- Sektörel: 5-9 adet konu bazlı (#AkıllıTarım, #SeraOtomasyonu, #EndüstriyelIoT, #Teknoloji vb.)
 
 ---
 

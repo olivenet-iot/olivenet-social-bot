@@ -10,6 +10,7 @@ from datetime import datetime
 from typing import Dict, Any
 from .base_agent import BaseAgent
 from app.database import update_post, log_agent_action
+from app.hashtag_helper import validate_and_complete_hashtags
 
 
 def clean_caption_for_instagram(caption: str) -> str:
@@ -198,7 +199,7 @@ class PublisherAgent(BaseAgent):
         # Markdown temizle (Instagram desteklemiyor)
         caption = clean_caption_for_instagram(caption)
         image_urls = input_data.get("image_urls", [])
-        hashtags = input_data.get("hashtags", [])
+        hashtags = validate_and_complete_hashtags(input_data.get("hashtags", []))
 
         result = {
             "success": False,
