@@ -2615,7 +2615,15 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 raise Exception(f"TTS hatası: {tts_result.get('error')}")
 
             audio_path = tts_result.get("audio_path")
-            audio_duration = tts_result.get("duration", actual_total_duration)
+            estimated_duration = tts_result.get("duration", actual_total_duration)
+
+            # GERÇEK audio süresini ffprobe ile ölç (Voice Reels ile aynı)
+            from app.instagram_helper import get_audio_duration
+            actual_audio_duration = await get_audio_duration(audio_path)
+            self.log(f"[LONG VIDEO] TTS süre - Tahmini: {estimated_duration:.1f}s, Gerçek: {actual_audio_duration:.1f}s")
+
+            # Gerçek süreyi kullan (tahmini değil)
+            audio_duration = actual_audio_duration if actual_audio_duration > 0 else estimated_duration
 
             self.log(f"[LONG VIDEO] Ses üretildi: {audio_duration:.1f}s")
             result["stages_completed"].append("tts_generation")
