@@ -2590,6 +2590,8 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 "topic": topic,
                 "target_duration": actual_total_duration,
                 "target_words": target_words,
+                "segment_count": segment_count,
+                "segment_duration": actual_segment_duration,
                 "tone": "friendly",  # Samimi ton (voice reels ile aynı)
                 "post_id": post_id
             })

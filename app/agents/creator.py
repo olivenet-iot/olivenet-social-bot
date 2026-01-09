@@ -1044,6 +1044,57 @@ Sadece JSON döndür.
             "error": f"Multi-scene prompt generation failed: {last_error}"
         }
 
+    def _build_segment_structure(self, segment_count: int, segment_duration: int, words_per_segment: int) -> str:
+        """Segment sayısına göre dinamik yapı oluştur."""
+
+        if segment_count == 2:
+            # 2 segment: HOOK + RESOLUTION
+            return f"""
+[BÖLÜM 1 - HOOK (0-{segment_duration}s, ~{words_per_segment} kelime)]:
+Problem/dikkat çekici açılış. İzleyiciyi durduracak soru veya iddia.
+
+[BÖLÜM 2 - RESOLUTION ({segment_duration}-{segment_duration*2}s, ~{words_per_segment} kelime)]:
+Çözüm tanıtımı ve CTA. Takip et, kaydet veya düşündürücü soru.
+"""
+
+        elif segment_count == 3:
+            # 3 segment: HOOK + DEVELOPMENT + RESOLUTION
+            return f"""
+[BÖLÜM 1 - HOOK (0-{segment_duration}s, ~{words_per_segment} kelime)]:
+Problem/dikkat çekici açılış. İzleyiciyi durduracak soru veya iddia.
+
+[BÖLÜM 2 - DEVELOPMENT ({segment_duration}-{segment_duration*2}s, ~{words_per_segment} kelime)]:
+Çözüm tanıtımı. Ürün/hizmetin faydası.
+
+[BÖLÜM 3 - RESOLUTION ({segment_duration*2}-{segment_duration*3}s, ~{words_per_segment} kelime)]:
+Sonuç ve CTA. Takip et, kaydet veya düşündürücü soru.
+"""
+
+        else:  # 4+ segment
+            # HOOK + N-2 DEVELOPMENT + RESOLUTION
+            lines = [f"""
+[BÖLÜM 1 - HOOK (0-{segment_duration}s, ~{words_per_segment} kelime)]:
+Problem/dikkat çekici açılış. İzleyiciyi durduracak soru veya iddia.
+"""]
+
+            for i in range(2, segment_count):  # DEVELOPMENT bölümleri
+                start = segment_duration * (i - 1)
+                end = segment_duration * i
+                lines.append(f"""
+[BÖLÜM {i} - DEVELOPMENT ({start}-{end}s, ~{words_per_segment} kelime)]:
+Detay {i-1}: Çözümün bir yönü veya faydası.
+""")
+
+            # Son bölüm: RESOLUTION
+            start = segment_duration * (segment_count - 1)
+            end = segment_duration * segment_count
+            lines.append(f"""
+[BÖLÜM {segment_count} - RESOLUTION ({start}-{end}s, ~{words_per_segment} kelime)]:
+Sonuç ve CTA. Takip et, kaydet veya düşündürücü soru.
+""")
+
+            return "".join(lines)
+
     async def create_speech_script(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Instagram Reels için Türkçe voiceover scripti üret.
@@ -1057,6 +1108,8 @@ Sadece JSON döndür.
                 "target_duration": int - Hedef süre (12, 15, veya 20 saniye)
                 "tone": str - Ses tonu (professional, friendly, energetic)
                 "post_id": int (opsiyonel) - Güncellenecek post ID
+                "segment_count": int (opsiyonel) - Video segment sayısı (long video için)
+                "segment_duration": int (opsiyonel) - Her segment süresi (long video için)
             }
 
         Returns:
@@ -1083,6 +1136,10 @@ Sadece JSON döndür.
             # Fallback: süre bazlı hesapla (~3.0 kelime/saniye - ElevenLabs gerçek hızı)
             target_words = int(target_duration * 3.0)
 
+        # Long video için segment bilgisi (opsiyonel)
+        segment_count = input_data.get("segment_count")
+        segment_duration = input_data.get("segment_duration")
+
         company_profile = self.load_context("company-profile.md")
 
         # Ton açıklamaları
@@ -1092,6 +1149,33 @@ Sadece JSON döndür.
             "energetic": "Enerjik, heyecanlı, motive edici. Dikkat çekici ve dinamik."
         }
         tone_desc = tone_descriptions.get(tone, tone_descriptions["friendly"])
+
+        # Segment-aware yapı (long video) veya standart yapı (short reels)
+        if segment_count and segment_duration:
+            words_per_segment = target_words // segment_count
+            segment_structure = self._build_segment_structure(segment_count, segment_duration, words_per_segment)
+            structure_section = f"""### SEGMENT YAPISI ({segment_count} bölüm, her biri {segment_duration}s):
+{segment_structure}
+
+**ÖNEMLİ**: Her bölüm TAM OLARAK belirtilen kelime sayısına yakın olmalı!
+Bölümler arasında doğal geçiş olmalı ama her bölüm video segmentiyle senkronize olacak."""
+        else:
+            # Kısa reels için standart yapı
+            structure_section = f"""### YAPI (3 BÖLÜM):
+1. **HOOK (0-3 saniye)**: Dikkat çekici açılış
+   - Merak uyandıran soru VEYA
+   - Şaşırtıcı istatistik VEYA
+   - Cesur bir iddia
+
+2. **ANA İÇERİK ({target_duration-6} saniye)**: Değer sun
+   - 2-3 kısa nokta
+   - Somut fayda veya bilgi
+   - Pratik uygulama
+
+3. **CTA (son 3 saniye)**: Aksiyon çağrısı
+   - "Takip et" VEYA
+   - "Kaydet" VEYA
+   - Düşündürücü soru"""
 
         prompt = f"""
 ## GÖREV: Instagram Reels Voiceover Scripti Yaz
@@ -1111,21 +1195,7 @@ Sadece JSON döndür.
 
 ## VOICEOVER SCRIPT KURALLARI:
 
-### YAPI (3 BÖLÜM):
-1. **HOOK (0-3 saniye)**: Dikkat çekici açılış
-   - Merak uyandıran soru VEYA
-   - Şaşırtıcı istatistik VEYA
-   - Cesur bir iddia
-
-2. **ANA İÇERİK ({target_duration-6} saniye)**: Değer sun
-   - 2-3 kısa nokta
-   - Somut fayda veya bilgi
-   - Pratik uygulama
-
-3. **CTA (son 3 saniye)**: Aksiyon çağrısı
-   - "Takip et" VEYA
-   - "Kaydet" VEYA
-   - Düşündürücü soru
+{structure_section}
 
 ### FORMAT KURALLARI:
 - DOĞAL konuşma dili kullan (yazı dili değil!)
