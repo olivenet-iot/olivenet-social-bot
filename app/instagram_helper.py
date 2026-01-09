@@ -413,6 +413,97 @@ async def merge_audio_video(
         return {"success": False, "error": str(e)}
 
 
+async def add_subtitles_to_video(
+    video_path: str,
+    ass_path: str,
+    output_path: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Burn ASS subtitles into video using FFmpeg.
+
+    Uses the 'ass' filter which provides better styling control than 'subtitles'.
+    The ASS file must already exist with proper styling.
+
+    Args:
+        video_path: Input video file path
+        ass_path: ASS subtitle file path
+        output_path: Output file path (auto-generated if None)
+
+    Returns:
+        {
+            "success": bool,
+            "output_path": str,
+            "file_size_mb": float,
+            "error": str (if failed)
+        }
+    """
+    if not os.path.exists(video_path):
+        return {"success": False, "error": f"Video not found: {video_path}"}
+
+    if not os.path.exists(ass_path):
+        return {"success": False, "error": f"Subtitle file not found: {ass_path}"}
+
+    # Generate output path if not provided
+    if not output_path:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_path = f"{OUTPUT_DIR}/subtitled_{timestamp}.mp4"
+
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+    print(f"[SUBTITLE BURN] Input video: {video_path}")
+    print(f"[SUBTITLE BURN] ASS file: {ass_path}")
+    print(f"[SUBTITLE BURN] Output: {output_path}")
+
+    # FFmpeg command with ASS filter
+    # Note: For the ass filter, path needs proper escaping
+    # Using colon and backslash escaping for FFmpeg filter syntax
+    escaped_ass_path = ass_path.replace("\\", "/").replace(":", "\\:").replace("'", "'\\''")
+
+    ffmpeg_cmd = [
+        "ffmpeg", "-y",
+        "-i", video_path,
+        "-vf", f"ass='{escaped_ass_path}'",
+        "-c:v", "libx264",
+        "-preset", "medium",
+        "-crf", "23",
+        "-c:a", "copy",  # Copy audio stream unchanged
+        "-movflags", "+faststart",
+        output_path
+    ]
+
+    try:
+        print(f"[SUBTITLE BURN] Running FFmpeg...")
+        process = subprocess.run(
+            ffmpeg_cmd,
+            capture_output=True,
+            text=True,
+            timeout=300  # 5 minute timeout
+        )
+
+        if process.returncode != 0:
+            error_msg = process.stderr[-500:] if len(process.stderr) > 500 else process.stderr
+            print(f"[SUBTITLE BURN] FFmpeg error: {error_msg}")
+            return {"success": False, "error": f"FFmpeg error: {error_msg[:200]}"}
+
+        if not os.path.exists(output_path):
+            return {"success": False, "error": "Output file not created"}
+
+        file_size = os.path.getsize(output_path) / 1024 / 1024
+        print(f"[SUBTITLE BURN] Success! Size: {file_size:.2f}MB")
+
+        return {
+            "success": True,
+            "output_path": output_path,
+            "file_size_mb": round(file_size, 2)
+        }
+
+    except subprocess.TimeoutExpired:
+        return {"success": False, "error": "FFmpeg timeout (5 min)"}
+    except Exception as e:
+        print(f"[SUBTITLE BURN] Exception: {e}")
+        return {"success": False, "error": str(e)}
+
+
 def build_crossfade_filter(
     video_count: int,
     segment_duration: float,

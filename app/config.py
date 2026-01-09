@@ -156,6 +156,14 @@ class Settings(BaseSettings):
     carousel_weekly_target: int = Field(default=2, description="Target Carousels per week")
     post_weekly_target: int = Field(default=3, description="Target Posts per week")
 
+    # Subtitle Settings (Automatic subtitles for voice reels/long videos)
+    subtitle_enabled: bool = Field(default=False, description="Enable automatic subtitle generation")
+    whisper_model_size: str = Field(default="base", description="Whisper model size: tiny, base, small, medium, large")
+    subtitle_font: str = Field(default="DejaVu Sans", description="Subtitle font name")
+    subtitle_font_size: int = Field(default=48, description="Subtitle font size in pixels")
+    subtitle_max_chars: int = Field(default=35, description="Max characters per subtitle line")
+    subtitle_max_lines: int = Field(default=2, description="Max lines per subtitle")
+
     # Paths - All derived from BASE_DIR
     base_dir: Path = Field(default=BASE_DIR)
 

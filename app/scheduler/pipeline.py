@@ -1619,6 +1619,40 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                     result["stages_completed"].append("audio_merge")
                     result["final_duration"] = merge_result.get("duration")
                     self.log(f"[VOICE REELS] Merge tamamlandı: {merge_result.get('duration'):.1f}s")
+
+                    # ========== SUBTITLE GENERATION (Optional) ==========
+                    if os.getenv("SUBTITLE_ENABLED", "false").lower() == "true":
+                        self.log("[VOICE REELS] Altyazı ekleniyor...")
+                        try:
+                            from app.subtitle_helper import create_subtitle_file
+                            from app.instagram_helper import add_subtitles_to_video
+
+                            # Generate ASS subtitle from audio
+                            sub_result = await create_subtitle_file(
+                                audio_path=audio_path,
+                                model_size=os.getenv("WHISPER_MODEL_SIZE", "base"),
+                                language="tr"
+                            )
+
+                            if sub_result.get("success"):
+                                # Burn subtitles into video
+                                burn_result = await add_subtitles_to_video(
+                                    video_path=final_video_path,
+                                    ass_path=sub_result["ass_path"]
+                                )
+
+                                if burn_result.get("success"):
+                                    final_video_path = burn_result["output_path"]
+                                    result["stages_completed"].append("subtitles")
+                                    result["subtitle_count"] = sub_result["subtitle_count"]
+                                    self.log(f"[VOICE REELS] Altyazı eklendi: {sub_result['subtitle_count']} satır")
+                                else:
+                                    self.log(f"[VOICE REELS] Altyazı burn hatası: {burn_result.get('error')}")
+                            else:
+                                self.log(f"[VOICE REELS] Altyazı üretim hatası: {sub_result.get('error')}")
+                        except Exception as e:
+                            self.log(f"[VOICE REELS] Altyazı exception: {e}")
+                            # Continue without subtitles - graceful degradation
                 else:
                     self.log(f"[VOICE REELS] Merge hatası: {merge_result.get('error')}")
                     self.log("[VOICE REELS] Sessiz video ile devam ediliyor...")
@@ -2724,6 +2758,40 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
 
             self.log(f"[LONG VIDEO] Final video: {final_duration:.1f}s")
             result["stages_completed"].append("audio_video_merge")
+
+            # ========== SUBTITLE GENERATION (Optional) ==========
+            if os.getenv("SUBTITLE_ENABLED", "false").lower() == "true":
+                self.log("[LONG VIDEO] Altyazı ekleniyor...")
+                try:
+                    from app.subtitle_helper import create_subtitle_file
+                    from app.instagram_helper import add_subtitles_to_video
+
+                    # Generate ASS subtitle from audio
+                    sub_result = await create_subtitle_file(
+                        audio_path=audio_path,
+                        model_size=os.getenv("WHISPER_MODEL_SIZE", "base"),
+                        language="tr"
+                    )
+
+                    if sub_result.get("success"):
+                        # Burn subtitles into video
+                        burn_result = await add_subtitles_to_video(
+                            video_path=final_video_path,
+                            ass_path=sub_result["ass_path"]
+                        )
+
+                        if burn_result.get("success"):
+                            final_video_path = burn_result["output_path"]
+                            result["stages_completed"].append("subtitles")
+                            result["subtitle_count"] = sub_result["subtitle_count"]
+                            self.log(f"[LONG VIDEO] Altyazı eklendi: {sub_result['subtitle_count']} satır")
+                        else:
+                            self.log(f"[LONG VIDEO] Altyazı burn hatası: {burn_result.get('error')}")
+                    else:
+                        self.log(f"[LONG VIDEO] Altyazı üretim hatası: {sub_result.get('error')}")
+                except Exception as e:
+                    self.log(f"[LONG VIDEO] Altyazı exception: {e}")
+                    # Continue without subtitles - graceful degradation
 
             # Post'u güncelle
             if post_id:
