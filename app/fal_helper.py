@@ -7,6 +7,7 @@ import os
 import logging
 import httpx
 import asyncio
+import uuid
 from typing import Dict, Any, Optional
 from datetime import datetime
 
@@ -254,8 +255,9 @@ class FalVideoGenerator:
         """
         Video'yu CDN'den indirip lokal dosyaya kaydet.
         """
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_path = settings.outputs_dir / f"kling_{timestamp}.mp4"
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        unique_suffix = uuid.uuid4().hex[:6]
+        output_path = settings.outputs_dir / f"kling_{timestamp}_{unique_suffix}.mp4"
 
         async with httpx.AsyncClient(timeout=120.0) as client:
             response = await client.get(video_url)
