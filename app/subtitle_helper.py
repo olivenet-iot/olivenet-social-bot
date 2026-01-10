@@ -23,7 +23,7 @@ DEFAULT_SUBTITLE_CONFIG = {
     "outline_color": "&H000000",     # Black
     "outline_width": 3,
     "shadow": 0,
-    "margin_v": 80,                  # Bottom margin for Instagram safe zone
+    "margin_v": 150,                 # Bottom margin (higher = more visible above caption)
     "alignment": 2,                  # Bottom center (1-3 bottom, 4-6 middle, 7-9 top)
     "bold": True,
     "max_chars_per_line": 35,
@@ -40,6 +40,24 @@ def check_whisper_installed() -> bool:
         return True
     except ImportError:
         return False
+
+
+def tokenize_script(script: str) -> List[str]:
+    """
+    Tokenize script into words while preserving punctuation attached to words.
+
+    Example: "Merhaba, dünya!" -> ["Merhaba,", "dünya!"]
+
+    Args:
+        script: Original script text
+
+    Returns:
+        List of words with punctuation preserved
+    """
+    # Split on whitespace but keep punctuation attached to words
+    words = script.split()
+    # Filter out empty strings
+    return [w.strip() for w in words if w.strip()]
 
 
 def extract_word_timestamps_sync(
@@ -400,6 +418,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
 async def create_subtitle_file(
     audio_path: str,
+    original_script: Optional[str] = None,
     output_path: Optional[str] = None,
     model_size: str = "base",
     language: str = "tr",
@@ -410,11 +429,13 @@ async def create_subtitle_file(
 
     This is the main entry point for subtitle generation. It:
     1. Runs Whisper transcription to get word-level timestamps
-    2. Groups words into readable sentences
-    3. Generates an ASS subtitle file
+    2. If original_script provided, aligns original words with Whisper timing (hybrid mode)
+    3. Groups words into readable sentences
+    4. Generates an ASS subtitle file
 
     Args:
         audio_path: Path to audio file (MP3, WAV, etc.)
+        original_script: Original TTS script text (if provided, uses this text with Whisper timing)
         output_path: Output ASS file path (auto-generated if None)
         model_size: Whisper model size (tiny, base, small, medium, large)
         language: Language code (tr for Turkish)
@@ -448,10 +469,43 @@ async def create_subtitle_file(
             "error": f"Whisper transcription failed: {whisper_result.get('error')}"
         }
 
-    # Step 2: Group words into sentences
+    # Step 2: Hybrid alignment - use original script text with Whisper timing
+    whisper_words = whisper_result["words"]
+    final_text = whisper_result.get("full_text", "")
+
+    if original_script and original_script.strip():
+        original_words = tokenize_script(original_script)
+        print(f"[SUBTITLE] Hybrid mode: {len(original_words)} original words, {len(whisper_words)} Whisper words")
+
+        # Align original words with Whisper timing
+        aligned_words = []
+        for i, orig_word in enumerate(original_words):
+            if i < len(whisper_words):
+                # Use original text with Whisper timing
+                aligned_words.append({
+                    "word": orig_word,
+                    "start": whisper_words[i]["start"],
+                    "end": whisper_words[i]["end"]
+                })
+            else:
+                # Extra original words - extend from last timing
+                if aligned_words:
+                    last_end = aligned_words[-1]["end"]
+                    # Estimate ~0.3s per extra word
+                    aligned_words.append({
+                        "word": orig_word,
+                        "start": last_end,
+                        "end": last_end + 0.3
+                    })
+
+        whisper_words = aligned_words
+        final_text = original_script
+        print(f"[SUBTITLE] Using original script text for subtitles")
+
+    # Step 3: Group words into sentences
     subtitle_config = {**DEFAULT_SUBTITLE_CONFIG, **(config or {})}
     subtitles = group_words_into_sentences(
-        words=whisper_result["words"],
+        words=whisper_words,
         max_chars=subtitle_config.get("max_chars_per_line", 35),
         max_lines=subtitle_config.get("max_lines", 2),
         min_duration=subtitle_config.get("min_duration", 1.0),
@@ -484,12 +538,13 @@ async def create_subtitle_file(
         "ass_path": output_path,
         "subtitle_count": len(subtitles),
         "duration": whisper_result["duration"],
-        "full_text": whisper_result.get("full_text", "")
+        "full_text": final_text
     }
 
 
 def create_subtitle_file_sync(
     audio_path: str,
+    original_script: Optional[str] = None,
     output_path: Optional[str] = None,
     model_size: str = "base",
     language: str = "tr",
@@ -500,6 +555,7 @@ def create_subtitle_file_sync(
     """
     return asyncio.run(create_subtitle_file(
         audio_path=audio_path,
+        original_script=original_script,
         output_path=output_path,
         model_size=model_size,
         language=language,

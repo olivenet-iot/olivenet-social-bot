@@ -1628,9 +1628,10 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                             from app.subtitle_helper import create_subtitle_file
                             from app.instagram_helper import add_subtitles_to_video
 
-                            # Generate ASS subtitle from audio
+                            # Generate ASS subtitle from audio (hybrid: original script + Whisper timing)
                             sub_result = await create_subtitle_file(
                                 audio_path=audio_path,
+                                original_script=speech_script,
                                 model_size=os.getenv("WHISPER_MODEL_SIZE", "base"),
                                 language="tr"
                             )
@@ -2767,9 +2768,10 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                     from app.subtitle_helper import create_subtitle_file
                     from app.instagram_helper import add_subtitles_to_video
 
-                    # Generate ASS subtitle from audio
+                    # Generate ASS subtitle from audio (hybrid: original script + Whisper timing)
                     sub_result = await create_subtitle_file(
                         audio_path=audio_path,
+                        original_script=speech_script,
                         model_size=os.getenv("WHISPER_MODEL_SIZE", "base"),
                         language="tr"
                     )
