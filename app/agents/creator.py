@@ -1100,7 +1100,7 @@ Sonuç ve CTA. Takip et, kaydet veya düşündürücü soru.
         Instagram Reels için Türkçe voiceover scripti üret.
 
         ElevenLabs TTS ile seslendirilecek metin oluşturur.
-        Süre bazlı kelime hedefi ile çalışır (~2.5 kelime/saniye).
+        Süre bazlı kelime hedefi ile çalışır (~1.9 kelime/saniye - ElevenLabs ölçümü).
 
         Args:
             input_data: {
@@ -1133,8 +1133,8 @@ Sonuç ve CTA. Takip et, kaydet veya düşündürücü soru.
         # Pipeline'dan gelen target_words'u kullan (varsa)
         target_words = input_data.get("target_words")
         if not target_words:
-            # Fallback: süre bazlı hesapla (~3.0 kelime/saniye - ElevenLabs gerçek hızı)
-            target_words = int(target_duration * 3.0)
+            # Fallback: süre bazlı hesapla (~1.9 kelime/saniye - ElevenLabs gerçek ölçümü)
+            target_words = int(target_duration * 1.9)
 
         # Long video için segment bilgisi (opsiyonel)
         segment_count = input_data.get("segment_count")

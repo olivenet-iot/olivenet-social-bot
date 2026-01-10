@@ -2632,8 +2632,8 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             # ========== AŞAMA 3: Speech Script Üretimi ==========
             self.log(f"[LONG VIDEO] Aşama 3: Voiceover scripti üretiliyor ({actual_total_duration}s)...")
 
-            # Kelime hedefi: ~3.0 kelime/saniye (ElevenLabs gerçek hızı)
-            target_words = int(actual_total_duration * 3.0)
+            # Kelime hedefi: ~1.9 kelime/saniye (ElevenLabs gerçek ölçümü)
+            target_words = int(actual_total_duration * 1.9)
 
             speech_result = await self.creator.execute({
                 "action": "create_speech_script",
