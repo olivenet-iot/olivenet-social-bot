@@ -5,6 +5,7 @@ Semi-autonomous mod: Her aşamada Telegram onayı bekler
 
 import asyncio
 import json
+import os
 from datetime import datetime
 from typing import Dict, Any, Optional, Callable
 from enum import Enum
