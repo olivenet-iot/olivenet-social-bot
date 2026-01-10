@@ -268,32 +268,35 @@ async def merge_audio_video(
     print(f"[AUDIO-VIDEO MERGE] Video süresi: {video_duration:.1f}s")
     print(f"[AUDIO-VIDEO MERGE] Audio süresi: {audio_duration:.1f}s")
 
-    # Strateji belirle - GERÇEK audio süresine göre karar ver (target değil!)
-    # Bu sayede audio > video ise video loop edilir, ses kesilmez
-    LOOP_TOLERANCE = 3.0
-    audio_video_diff = audio_duration - video_duration
-
-    if video_duration >= audio_duration:
-        # Video audio'dan uzun veya eşit, video'yu audio süresine kırp
-        strategy = "trim_video"
-        loop_video = False
-        final_duration = min(audio_duration, target_duration or 90.0, 90.0)
-        print(f"[AUDIO-VIDEO MERGE] Strateji: trim_video (video {video_duration:.1f}s >= audio {audio_duration:.1f}s)")
-    elif audio_video_diff <= LOOP_TOLERANCE:
-        # Audio biraz uzun (<=3s fark), -shortest kullan (küçük kesinti kabul)
-        strategy = "shortest"
-        loop_video = False
-        final_duration = min(audio_duration, target_duration or 90.0, 90.0)
-        print(f"[AUDIO-VIDEO MERGE] Strateji: shortest (fark {audio_video_diff:.1f}s <= tolerans {LOOP_TOLERANCE}s)")
+    # Hedef süreyi belirle
+    if target_duration:
+        final_duration = min(target_duration, 90.0)  # Instagram max 90s
     else:
-        # Audio video'dan çok uzun (>3s), video'yu loop et - SES KESİLMEZ!
-        strategy = "loop_video"
-        loop_video = True
-        final_duration = min(audio_duration, target_duration or 90.0, 90.0)
-        loop_count = int(final_duration / video_duration) + 1
-        print(f"[AUDIO-VIDEO MERGE] Strateji: loop_video ({loop_count}x, audio {audio_duration:.1f}s > video {video_duration:.1f}s)")
+        final_duration = min(audio_duration, 90.0)
 
     print(f"[AUDIO-VIDEO MERGE] Hedef süre: {final_duration:.1f}s")
+
+    # Strateji belirle
+    # Küçük fark toleransı (3 saniye) - gereksiz loop önlemek için
+    LOOP_TOLERANCE = 3.0
+    duration_diff = final_duration - video_duration
+
+    if video_duration >= final_duration:
+        # Video yeterince uzun, kırp
+        strategy = "trim_video"
+        loop_video = False
+        print(f"[AUDIO-VIDEO MERGE] Strateji: trim_video (video {video_duration:.1f}s >= hedef {final_duration:.1f}s)")
+    elif duration_diff <= LOOP_TOLERANCE:
+        # Fark küçük, loop yapma - -shortest kullan
+        strategy = "shortest"
+        loop_video = False
+        print(f"[AUDIO-VIDEO MERGE] Strateji: shortest (fark {duration_diff:.1f}s <= tolerans {LOOP_TOLERANCE}s)")
+    else:
+        # Fark büyük, loop gerekli
+        strategy = "loop_video"
+        loop_video = True
+        loop_count = int(final_duration / video_duration) + 1
+        print(f"[AUDIO-VIDEO MERGE] Strateji: loop_video ({loop_count}x loop, fark {duration_diff:.1f}s)")
 
     # Output dosyası
     os.makedirs(OUTPUT_DIR, exist_ok=True)
