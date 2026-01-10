@@ -53,6 +53,8 @@ PRONUNCIATION_FIXES = {
     "vs.": "karşı",
     "vb.": "ve benzeri",
     "vb": "ve benzeri",
+    # Türkçe-İngilizce çakışan kelimeler
+    "fire": "firé",  # Türkçe: atık/israf (İngilizce yangın ile karışmasın)
 }
 
 
