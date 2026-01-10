@@ -1601,18 +1601,32 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 self.log("[VOICE REELS] Aşama 7: Video ve ses birleştiriliyor...")
 
                 from app.instagram_helper import merge_audio_video, get_video_duration
+                from app.audio_sync_helper import sync_audio_to_video
 
                 # Video süresini kontrol et
                 video_duration = await get_video_duration(video_path)
+
+                # Audio/Video sync - video loop yapmadan audio'yu adapte et
                 if audio_duration > video_duration:
-                    self.log(f"[VOICE REELS] ⚠️ Audio ({audio_duration:.1f}s) > Video ({video_duration:.1f}s) - video loop edilecek")
+                    self.log(f"[VOICE REELS] Audio ({audio_duration:.1f}s) > Video ({video_duration:.1f}s) - sync yapılıyor...")
+
+                    sync_result = await sync_audio_to_video(
+                        audio_path=audio_path,
+                        video_duration=video_duration,
+                        original_script=speech_script
+                    )
+
+                    if sync_result.get("success"):
+                        audio_path = sync_result["audio_path"]
+                        audio_duration = sync_result["final_duration"]
+                        self.log(f"[VOICE REELS] Sync: {sync_result['action']} ({sync_result.get('trimmed_seconds', 0):.1f}s kırpıldı)")
 
                 merge_result = await merge_audio_video(
                     video_path=video_path,
                     audio_path=audio_path,
                     target_duration=audio_duration,
                     fade_out=True,
-                    fade_duration=0.5  # Daha kısa fade-out, kesinti yumuşak biter
+                    fade_duration=0.5
                 )
 
                 if merge_result.get("success"):
@@ -2746,10 +2760,27 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             # ========== AŞAMA 8: Audio-Video Merge ==========
             self.log("[LONG VIDEO] Aşama 8: Ses ve video birleştiriliyor...")
 
+            from app.audio_sync_helper import sync_audio_to_video
+
+            # Audio/Video sync - video loop yapmadan audio'yu adapte et
+            if audio_duration > concat_duration:
+                self.log(f"[LONG VIDEO] Audio ({audio_duration:.1f}s) > Video ({concat_duration:.1f}s) - sync yapılıyor...")
+
+                sync_result = await sync_audio_to_video(
+                    audio_path=audio_path,
+                    video_duration=concat_duration,
+                    original_script=speech_script
+                )
+
+                if sync_result.get("success"):
+                    audio_path = sync_result["audio_path"]
+                    audio_duration = sync_result["final_duration"]
+                    self.log(f"[LONG VIDEO] Sync: {sync_result['action']} ({sync_result.get('trimmed_seconds', 0):.1f}s kırpıldı)")
+
             merge_result = await merge_audio_video(
                 video_path=concat_video_path,
                 audio_path=audio_path,
-                target_duration=concat_duration  # Video süresini koru (audio kırpılsın, video değil)
+                target_duration=concat_duration
             )
 
             if not merge_result.get("success"):
