@@ -14,6 +14,8 @@ AI destekli Instagram icerik otomasyonu. Multi-agent mimari ile icerik planlama,
 - **Video Uretimi** - Sora 2, Veo 3.1, Kling AI entegrasyonu
 - **Gorsel Uretimi** - FLUX.2 Pro, Gemini ile yuksek kalite
 - **Sesli Reels** - ElevenLabs TTS ile Turkce seslendirme
+- **Otomatik Altyazi** - Whisper ile word-level timing
+- **Audio Sync** - Akilli ses/video senkronizasyonu
 - **11 Infographic Template** - HTML tabanlı carousel sablonlari
 - **Telegram Kontrol** - Onay akisi ve yonetim paneli
 - **Performance Learning** - Hook ve konu performans takibi
@@ -25,7 +27,7 @@ AI destekli Instagram icerik otomasyonu. Multi-agent mimari ile icerik planlama,
 
 ```bash
 # Klonla
-git clone https://github.com/your-org/olivenet-social-bot.git
+git clone https://github.com/olivenet-iot/olivenet-social-bot.git
 cd olivenet-social-bot
 
 # Virtual environment
@@ -108,6 +110,7 @@ Detayli kurulum: [QUICKSTART.md](QUICKSTART.md)
 | Sora 2 | 4-12s | En yuksek | Sinematik, voice reels |
 | Veo 3.1 | 4-8s | Yuksek | Hizli uretim |
 | Kling Pro | 5-10s | Iyi | Alternatif |
+| Minimax | 5-6s | Iyi | Hizli uretim |
 | Wan 2.6 | 5-15s | Iyi | Uzun icerik |
 
 ---
@@ -187,8 +190,8 @@ olivenet-social-bot/
 
 ## Gereksinimler
 
-- Python 3.10+
-- FFmpeg (video donusturme)
+- Python 3.11+
+- FFmpeg 6.0+ (video donusturme)
 - Playwright (HTML render)
 - SQLite
 
