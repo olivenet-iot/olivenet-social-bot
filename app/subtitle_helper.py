@@ -108,7 +108,7 @@ def tokenize_script(script: str) -> List[str]:
 
 def extract_word_timestamps_sync(
     audio_path: str,
-    model_size: str = "base",
+    model_size: str = "small",
     language: str = "tr"
 ) -> Dict[str, Any]:
     """
@@ -192,7 +192,7 @@ def extract_word_timestamps_sync(
 
 async def extract_word_timestamps(
     audio_path: str,
-    model_size: str = "base",
+    model_size: str = "small",
     language: str = "tr"
 ) -> Dict[str, Any]:
     """
@@ -466,7 +466,7 @@ async def create_subtitle_file(
     audio_path: str,
     original_script: Optional[str] = None,
     output_path: Optional[str] = None,
-    model_size: str = "base",
+    model_size: str = "small",
     language: str = "tr",
     config: Optional[Dict] = None
 ) -> Dict[str, Any]:
@@ -749,7 +749,7 @@ def create_subtitle_file_sync(
     audio_path: str,
     original_script: Optional[str] = None,
     output_path: Optional[str] = None,
-    model_size: str = "base",
+    model_size: str = "small",
     language: str = "tr",
     config: Optional[Dict] = None
 ) -> Dict[str, Any]:

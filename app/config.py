@@ -162,7 +162,7 @@ class Settings(BaseSettings):
 
     # Subtitle Settings (Automatic subtitles for voice reels/long videos)
     subtitle_enabled: bool = Field(default=False, description="Enable automatic subtitle generation")
-    whisper_model_size: str = Field(default="base", description="Whisper model size: tiny, base, small, medium, large")
+    whisper_model_size: str = Field(default="small", description="Whisper model size: tiny, base, small, medium, large")
     subtitle_font: str = Field(default="DejaVu Sans", description="Subtitle font name")
     subtitle_font_size: int = Field(default=48, description="Subtitle font size in pixels")
     subtitle_max_chars: int = Field(default=35, description="Max characters per subtitle line")
