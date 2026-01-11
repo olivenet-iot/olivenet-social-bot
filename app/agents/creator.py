@@ -1811,15 +1811,48 @@ Sadece JSON döndür.
 - ERKEK: Merakli, problem odakli, samimi, endiseli
 - KADIN: Cozum odakli, guvenlı, bilgili, sakin
 
-**VIDEO PROMPT (2 KISI DÖNÜŞÜMLÜ KONUŞUYOR):**
-- İki kişi DÖNÜŞÜMLÜ konuşuyor (alternating speakers, taking turns)
-- ERKEK: middle-aged Turkish farmer (40-55 yaş), weathered face, work clothes, endişeli ifade
-- KADIN: professional Turkish woman (30-40 yaş), IoT expert, confident posture
-- ZORUNLU: "both speaking alternately" veya "taking turns speaking" ifadesi KULLAN
-- ZORUNLU: "farmer speaks first with worried expression, woman responds confidently"
-- Medium two-shot, both visible and animated
-- 9:16 vertical format
-- Ingilizce yaz
+**VIDEO PROMPT (SORA İÇİN - TÜRKÇE KONUŞMA):**
+
+ZORUNLU KURALLAR:
+1. Prompt TAMAMEN İNGİLİZCE yaz (Sora İngilizce anlıyor)
+2. "TURKISH language" ve "speaking Turkish" ifadelerini MUTLAKA kullan
+3. Her karakter için "speaking Turkish" tekrarla
+4. "All dialogue in Turkish" cümlesini başa ekle
+5. Audio bölümünde "Clear Turkish dialogue" yaz
+6. Sahne için "rural Turkey" veya "Turkish countryside" kullan
+7. "clear lip movements synchronized with Turkish speech" ekle
+
+VIDEO PROMPT FORMATI:
+---
+Cinematic vertical video (9:16), 12 seconds, realistic style.
+
+LANGUAGE: TURKISH (All dialogue MUST be in Turkish language)
+
+SCENE: Outdoor setting in rural Turkey - farm, greenhouse, or agricultural field.
+Natural daylight, warm Mediterranean colors.
+
+CHARACTER 1 - FARMER:
+- Middle-aged man (45-55 years old) from Turkey
+- Weathered, sun-tanned face from outdoor work
+- Work clothes (simple shirt, vest, cap)
+- Speaking Turkish with concerned, questioning tone
+- Hand gestures while explaining problem
+- Clear lip movements synchronized with Turkish speech
+
+CHARACTER 2 - IOT EXPERT:
+- Professional woman (30-40 years old)
+- Confident posture, smart casual clothing
+- Speaking Turkish with reassuring tone
+- Explaining IoT solution with gestures
+- Clear lip movements synchronized with Turkish speech
+
+DIALOGUE: Natural Turkish conversation - farmer speaks first about problem,
+expert responds with solution. Both speaking fluent Turkish throughout.
+
+AUDIO: Clear Turkish dialogue, ambient outdoor sounds.
+
+CAMERA: Medium two-shot showing both characters, professional documentary style.
+---
 
 **B-ROLL PROMPT:**
 - Konu ile ilgili gorsel (sensörler, sera, fabrika vb.)
@@ -1850,7 +1883,7 @@ Sadece JSON döndür.
         {{"speaker": "male", "text": "Ikinci soru..."}},
         {{"speaker": "female", "text": "Ikinci cozum/kapanış..."}}
     ],
-    "video_prompt": "Medium two-shot of a middle-aged Turkish farmer (50 years old, weathered face, work clothes) and a professional Turkish woman (IoT expert, confident) having an animated conversation in a greenhouse. IMPORTANT: Both are speaking alternately - farmer speaks first looking worried about his crops, then woman responds confidently explaining the solution. They take turns naturally. Professional lighting, 9:16 vertical, cinematic, realistic, both faces clearly visible",
+    "video_prompt": "Cinematic vertical video (9:16), 12 seconds, realistic style. LANGUAGE: TURKISH - All dialogue in Turkish language. SCENE: Greenhouse in rural Turkey, natural daylight. CHARACTER 1: Middle-aged farmer (50 years old) from Turkey, weathered face, work clothes, speaking Turkish with worried expression about his crops, clear lip movements. CHARACTER 2: Professional female IoT consultant (35 years old), smart casual, speaking Turkish confidently, explaining solution with gestures, clear lip movements. DIALOGUE: Natural Turkish conversation - farmer speaks first about problem, expert responds with IoT solution. Both speaking fluent Turkish throughout with synchronized lip movements. AUDIO: Clear Turkish dialogue, ambient greenhouse sounds. CAMERA: Medium two-shot, professional documentary style.",
     "broll_prompt": "Cinematic close-up of IoT temperature sensors and control panels in modern greenhouse, morning light, 9:16 vertical, no people, professional documentary style",
     "broll_voiceover": "Olivenet IoT ile seraniz 7/24 guvende. Takip et, sorularini sor.",
     "caption": "Instagram caption metni...",
