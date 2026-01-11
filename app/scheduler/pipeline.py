@@ -3088,7 +3088,8 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 broll_merge_result = await merge_audio_video(
                     video_path=broll_video_path,
                     audio_path=broll_audio_path,
-                    target_duration=10
+                    target_duration=10,
+                    keep_video_duration=True  # Video süresini koru, audio kısa olabilir
                 )
                 broll_final_path = broll_merge_result.get("output_path", broll_video_path)
             else:
@@ -3122,12 +3123,20 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 from app.subtitle_helper import create_subtitle_file, extract_audio_from_video
                 from app.instagram_helper import add_subtitles_to_video
 
+                self.log(f"[CONV REELS] Audio extract başlıyor: {final_video_path}")
+
                 # Extract audio from final video for Whisper
                 extracted_audio = await extract_audio_from_video(final_video_path)
 
-                if extracted_audio.get("success"):
+                if not extracted_audio.get("success"):
+                    self.log(f"[CONV REELS] Audio extract hatası: {extracted_audio.get('error', 'Bilinmeyen hata')}")
+                else:
+                    self.log(f"[CONV REELS] Audio extracted: {extracted_audio.get('audio_path')} ({extracted_audio.get('duration', 0):.1f}s)")
+
                     full_script = " ".join([line.get("text", "") for line in dialog_lines])
                     full_script += " " + broll_voiceover
+
+                    self.log(f"[CONV REELS] Whisper transcription başlıyor (model: {os.getenv('WHISPER_MODEL_SIZE', 'base')})...")
 
                     sub_result = await create_subtitle_file(
                         audio_path=extracted_audio["audio_path"],
@@ -3136,17 +3145,27 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                         language="tr"
                     )
 
-                    if sub_result.get("success"):
+                    if not sub_result.get("success"):
+                        self.log(f"[CONV REELS] Whisper hatası: {sub_result.get('error', 'Bilinmeyen hata')}")
+                    else:
+                        self.log(f"[CONV REELS] Subtitle oluşturuldu: {sub_result.get('ass_path')} ({sub_result.get('subtitle_count', 0)} satır)")
+
+                        self.log("[CONV REELS] Subtitle burn başlıyor...")
                         burn_result = await add_subtitles_to_video(
                             video_path=final_video_path,
                             ass_path=sub_result["ass_path"]
                         )
+
                         if burn_result.get("success"):
                             final_video_path = burn_result["output_path"]
                             result["stages_completed"].append("subtitles")
-                            self.log("[CONV REELS] Altyazı eklendi")
+                            self.log(f"[CONV REELS] Altyazı eklendi: {final_video_path}")
+                        else:
+                            self.log(f"[CONV REELS] Subtitle burn hatası: {burn_result.get('error', 'Bilinmeyen hata')}")
             except Exception as e:
-                self.log(f"[CONV REELS] Altyazı hatası (devam): {e}")
+                import traceback
+                self.log(f"[CONV REELS] Altyazı hatası: {e}")
+                self.log(f"[CONV REELS] Traceback: {traceback.format_exc()}")
 
             # Update post
             if post_id:

@@ -654,29 +654,50 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ===== CONVERSATIONAL REELS - ONAYLA =====
     elif action.startswith("conv_approve:"):
         post_id = action.replace("conv_approve:", "")
-        await query.edit_message_text(
-            f"✅ *CONVERSATIONAL REELS* yayınlanıyor...\n\nPost ID: {post_id}",
-            parse_mode="Markdown"
-        )
+        # Video mesajları için caption düzenle, text mesajları için text düzenle
+        if query.message.video:
+            await query.edit_message_caption(
+                caption=f"✅ *CONVERSATIONAL REELS* yayınlanıyor...\n\nPost ID: {post_id}",
+                parse_mode="Markdown"
+            )
+        else:
+            await query.edit_message_text(
+                f"✅ *CONVERSATIONAL REELS* yayınlanıyor...\n\nPost ID: {post_id}",
+                parse_mode="Markdown"
+            )
         # TODO: Implement publish logic
         # asyncio.create_task(pipeline.publish_conversational_reels(post_id))
 
     # ===== CONVERSATIONAL REELS - YENİDEN ÜRET =====
     elif action.startswith("conv_regenerate:"):
         post_id = action.replace("conv_regenerate:", "")
-        await query.edit_message_text(
-            f"🔄 *CONVERSATIONAL REELS* yeniden üretiliyor...\n\nPost ID: {post_id}",
-            parse_mode="Markdown"
-        )
+        # Video mesajları için caption düzenle, text mesajları için text düzenle
+        if query.message.video:
+            await query.edit_message_caption(
+                caption=f"🔄 *CONVERSATIONAL REELS* yeniden üretiliyor...\n\nPost ID: {post_id}",
+                parse_mode="Markdown"
+            )
+        else:
+            await query.edit_message_text(
+                f"🔄 *CONVERSATIONAL REELS* yeniden üretiliyor...\n\nPost ID: {post_id}",
+                parse_mode="Markdown"
+            )
         asyncio.create_task(pipeline.run_conversational_reels())
 
     # ===== CONVERSATIONAL REELS - İPTAL =====
     elif action.startswith("conv_cancel:"):
         post_id = action.replace("conv_cancel:", "")
-        await query.edit_message_text(
-            f"❌ *CONVERSATIONAL REELS* iptal edildi.\n\nPost ID: {post_id}",
-            parse_mode="Markdown"
-        )
+        # Video mesajları için caption düzenle, text mesajları için text düzenle
+        if query.message.video:
+            await query.edit_message_caption(
+                caption=f"❌ *CONVERSATIONAL REELS* iptal edildi.\n\nPost ID: {post_id}",
+                parse_mode="Markdown"
+            )
+        else:
+            await query.edit_message_text(
+                f"❌ *CONVERSATIONAL REELS* iptal edildi.\n\nPost ID: {post_id}",
+                parse_mode="Markdown"
+            )
 
     # ===== REELS OLUŞTUR - MODEL SEÇİM MENÜSÜ =====
     elif action == "create_reels":

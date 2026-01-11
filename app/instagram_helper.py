@@ -214,7 +214,8 @@ async def merge_audio_video(
     target_duration: Optional[float] = None,
     audio_volume: float = 1.0,
     fade_out: bool = True,
-    fade_duration: float = 0.5  # 0.5s fade-out - audio kesilse bile yumuşak biter
+    fade_duration: float = 0.5,  # 0.5s fade-out - audio kesilse bile yumuşak biter
+    keep_video_duration: bool = False  # Video süresini koru, audio kısaysa sorun yok
 ) -> Dict[str, Any]:
     """
     Video ve audio dosyalarını birleştir.
@@ -228,6 +229,7 @@ async def merge_audio_video(
     Strateji:
     1. Audio süresi > Video süresi: Video'yu loop et
     2. Video süresi > Audio süresi: Video'yu audio süresine kırp + fade out
+    3. keep_video_duration=True: Video süresini koru, audio kısaysa sessiz kal
 
     Args:
         video_path: Kaynak video
@@ -236,6 +238,7 @@ async def merge_audio_video(
         audio_volume: Ses seviyesi (0.0-2.0)
         fade_out: Video sonunda fade-out efekti
         fade_duration: Fade-out süresi (saniye)
+        keep_video_duration: Video süresini koru (B-roll için)
 
     Returns:
         {
@@ -243,7 +246,7 @@ async def merge_audio_video(
             "output_path": str,
             "duration": float,
             "file_size_mb": float,
-            "strategy": str  # "trim_video" veya "loop_video"
+            "strategy": str  # "trim_video", "loop_video", "keep_video"
         }
     """
     if not os.path.exists(video_path):
@@ -281,7 +284,13 @@ async def merge_audio_video(
     LOOP_TOLERANCE = 3.0
     duration_diff = final_duration - video_duration
 
-    if video_duration >= final_duration:
+    if keep_video_duration:
+        # B-roll için: Video süresini koru, audio kısaysa sorun yok
+        strategy = "keep_video"
+        loop_video = False
+        final_duration = min(video_duration, 90.0)  # Video süresini kullan
+        print(f"[AUDIO-VIDEO MERGE] Strateji: keep_video (video {video_duration:.1f}s korunuyor, audio {audio_duration:.1f}s)")
+    elif video_duration >= final_duration:
         # Video yeterince uzun, kırp
         strategy = "trim_video"
         loop_video = False
