@@ -3237,7 +3237,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
 
             # ========== STAGE 12: Review & Approval ==========
             self.log("[CONV REELS] Aşama 12: Onay bekleniyor...")
-            self.state = PipelineState.AWAITING_APPROVAL
+            self.state = PipelineState.AWAITING_FINAL_APPROVAL
 
             # Hashtag string
             hashtag_str = " ".join(hashtags) if hashtags else "#Olivenet #KKTC #IoT"
