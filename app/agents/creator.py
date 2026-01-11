@@ -1811,13 +1811,15 @@ Sadece JSON döndür.
 - ERKEK: Merakli, problem odakli, samimi, endiseli
 - KADIN: Cozum odakli, guvenlı, bilgili, sakin
 
-**VIDEO PROMPT (2 KISI KONUSUYOR):**
-- Iki kisi karsılıklı konusuyor
-- Medium shot, 9:16 dikey format
-- Profesyonel ama samimi ortam
-- Lokasyon konuya uygun (sera, ofis, fabrika vb.)
-- "talking", "conversation", "discussing" ifadeleri KULLAN
-- Ingilizce yaz (Kling 2.6 Pro icin)
+**VIDEO PROMPT (2 KISI DÖNÜŞÜMLÜ KONUŞUYOR):**
+- İki kişi DÖNÜŞÜMLÜ konuşuyor (alternating speakers, taking turns)
+- ERKEK: middle-aged Turkish farmer (40-55 yaş), weathered face, work clothes, endişeli ifade
+- KADIN: professional Turkish woman (30-40 yaş), IoT expert, confident posture
+- ZORUNLU: "both speaking alternately" veya "taking turns speaking" ifadesi KULLAN
+- ZORUNLU: "farmer speaks first with worried expression, woman responds confidently"
+- Medium two-shot, both visible and animated
+- 9:16 vertical format
+- Ingilizce yaz
 
 **B-ROLL PROMPT:**
 - Konu ile ilgili gorsel (sensörler, sera, fabrika vb.)
@@ -1848,7 +1850,7 @@ Sadece JSON döndür.
         {{"speaker": "male", "text": "Ikinci soru..."}},
         {{"speaker": "female", "text": "Ikinci cozum/kapanış..."}}
     ],
-    "video_prompt": "Medium shot of two Turkish people having a conversation in a greenhouse, male farmer asking questions looking concerned, female IoT expert explaining confidently, professional natural lighting, 9:16 vertical format, cinematic, realistic",
+    "video_prompt": "Medium two-shot of a middle-aged Turkish farmer (50 years old, weathered face, work clothes) and a professional Turkish woman (IoT expert, confident) having an animated conversation in a greenhouse. IMPORTANT: Both are speaking alternately - farmer speaks first looking worried about his crops, then woman responds confidently explaining the solution. They take turns naturally. Professional lighting, 9:16 vertical, cinematic, realistic, both faces clearly visible",
     "broll_prompt": "Cinematic close-up of IoT temperature sensors and control panels in modern greenhouse, morning light, 9:16 vertical, no people, professional documentary style",
     "broll_voiceover": "Olivenet IoT ile seraniz 7/24 guvende. Takip et, sorularini sor.",
     "caption": "Instagram caption metni...",

@@ -3125,7 +3125,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             broll_video_result = await FalVideoGenerator.generate_video(
                 prompt=broll_prompt,
                 model="kling_26_pro",
-                duration=5,  # 5 seconds B-roll
+                duration=10,  # 10 seconds B-roll (max for Kling)
                 aspect_ratio="9:16",
                 generate_audio=False
             )
