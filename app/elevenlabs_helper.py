@@ -43,7 +43,8 @@ PRONUNCIATION_FIXES = {
     "olivenet": "olivnet",
     "OLIVENET": "OLİVNET",
     # Teknik terimler
-    "IoT": "ay o ti",
+    "IoT": "nesnelerin interneti",
+    "iot": "nesnelerin interneti",
     "LoRaWAN": "lora van",
     "LoRa": "lora",
     "MQTT": "em ku ti ti",

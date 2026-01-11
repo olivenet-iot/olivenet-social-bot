@@ -505,21 +505,20 @@ async def add_subtitles_to_video(
 
 
 def build_crossfade_filter(
-    video_count: int,
-    segment_duration: float,
+    video_durations: List[float],
     crossfade_duration: float = 0.5
 ) -> str:
     """
     N video için FFmpeg crossfade filter_complex string'i oluştur.
 
     Args:
-        video_count: Video sayısı (2-6 arası)
-        segment_duration: Her segment'in süresi (saniye)
+        video_durations: Her videonun gerçek süresi (saniye listesi)
         crossfade_duration: Crossfade geçiş süresi (saniye)
 
     Returns:
         FFmpeg filter_complex string
     """
+    video_count = len(video_durations)
     if video_count < 2:
         raise ValueError("En az 2 video gerekli")
 
@@ -534,14 +533,15 @@ def build_crossfade_filter(
 
     # Crossfade zincirleme
     if video_count == 2:
-        offset = segment_duration - crossfade_duration
+        # İlk videonun gerçek süresini kullan
+        offset = video_durations[0] - crossfade_duration
         filter_parts.append(
             f"[v0][v1]xfade=transition=fade:duration={crossfade_duration}:offset={offset:.2f}[vout]"
         )
     else:
         # N video için zincirleme xfade
         current_output = "v0"
-        cumulative_duration = segment_duration
+        cumulative_duration = video_durations[0]
 
         for i in range(1, video_count):
             offset = cumulative_duration - crossfade_duration
@@ -553,7 +553,8 @@ def build_crossfade_filter(
             )
 
             current_output = next_output
-            cumulative_duration += segment_duration - crossfade_duration
+            # Sonraki video süresini ekle (crossfade çıkar)
+            cumulative_duration += video_durations[i] - crossfade_duration
 
     return ";".join(filter_parts)
 
@@ -605,10 +606,21 @@ async def concatenate_videos_with_crossfade(
     print(f"[VIDEO CONCAT] Crossfade: {crossfade_duration}s")
 
     try:
-        # Filter complex oluştur
+        # Her videonun gerçek süresini al
+        video_durations = []
+        for path in video_paths:
+            duration = await get_video_duration(path)
+            if not duration:
+                # Fallback: segment_duration kullan
+                duration = segment_duration
+                print(f"[VIDEO CONCAT] Uyarı: {path} süresi alınamadı, {segment_duration}s varsayıldı")
+            video_durations.append(duration)
+
+        print(f"[VIDEO CONCAT] Video süreleri: {video_durations}")
+
+        # Filter complex oluştur (gerçek sürelerle)
         filter_complex = build_crossfade_filter(
-            video_count=len(video_paths),
-            segment_duration=segment_duration,
+            video_durations=video_durations,
             crossfade_duration=crossfade_duration
         )
 
