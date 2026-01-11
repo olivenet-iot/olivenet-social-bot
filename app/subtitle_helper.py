@@ -523,30 +523,40 @@ async def create_subtitle_file(
         original_words = tokenize_script(original_script)
         print(f"[SUBTITLE] Hybrid mode: {len(original_words)} original words, {len(whisper_words)} Whisper words")
 
-        # Align original words with Whisper timing
-        aligned_words = []
-        for i, orig_word in enumerate(original_words):
-            if i < len(whisper_words):
-                # Use original text with Whisper timing
-                aligned_words.append({
-                    "word": orig_word,
-                    "start": whisper_words[i]["start"],
-                    "end": whisper_words[i]["end"]
-                })
-            else:
-                # Extra original words - extend from last timing
-                if aligned_words:
-                    last_end = aligned_words[-1]["end"]
-                    # Estimate ~0.3s per extra word
+        # Calculate word count mismatch ratio
+        max_words = max(len(original_words), len(whisper_words), 1)
+        word_diff_ratio = abs(len(original_words) - len(whisper_words)) / max_words
+
+        if word_diff_ratio > 0.3:
+            # Word count mismatch too large - use pure Whisper transcription
+            print(f"[SUBTITLE] Hybrid mode SKIPPED - word mismatch {word_diff_ratio:.0%} > 30%")
+            print(f"[SUBTITLE] Using Whisper transcription directly")
+            # whisper_words and final_text remain unchanged (from Whisper)
+        else:
+            # Word counts similar - align original text with Whisper timing
+            aligned_words = []
+            for i, orig_word in enumerate(original_words):
+                if i < len(whisper_words):
+                    # Use original text with Whisper timing
                     aligned_words.append({
                         "word": orig_word,
-                        "start": last_end,
-                        "end": last_end + 0.3
+                        "start": whisper_words[i]["start"],
+                        "end": whisper_words[i]["end"]
                     })
+                else:
+                    # Extra original words - extend from last timing
+                    if aligned_words:
+                        last_end = aligned_words[-1]["end"]
+                        # Estimate ~0.3s per extra word
+                        aligned_words.append({
+                            "word": orig_word,
+                            "start": last_end,
+                            "end": last_end + 0.3
+                        })
 
-        whisper_words = aligned_words
-        final_text = original_script
-        print(f"[SUBTITLE] Using original script text for subtitles")
+            whisper_words = aligned_words
+            final_text = original_script
+            print(f"[SUBTITLE] Using original script text for subtitles")
 
     # Step 3: Group words into sentences
     subtitle_config = {**DEFAULT_SUBTITLE_CONFIG, **(config or {})}
