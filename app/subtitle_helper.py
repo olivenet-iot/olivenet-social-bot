@@ -598,6 +598,153 @@ async def create_subtitle_file(
     }
 
 
+def parse_ass_time(time_str: str) -> float:
+    """
+    Parse ASS time format (H:MM:SS.cc) to seconds.
+
+    Args:
+        time_str: Time string like "0:00:12.50"
+
+    Returns:
+        Time in seconds as float
+    """
+    parts = time_str.split(":")
+    hours = int(parts[0])
+    minutes = int(parts[1])
+    sec_parts = parts[2].split(".")
+    seconds = int(sec_parts[0])
+    centisecs = int(sec_parts[1]) if len(sec_parts) > 1 else 0
+
+    return hours * 3600 + minutes * 60 + seconds + centisecs / 100
+
+
+def merge_ass_files(
+    ass_files: List[Dict],
+    output_path: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Merge multiple ASS subtitle files with timing offsets.
+
+    Used for two-phase subtitle generation where conversation and B-roll
+    have separate subtitle sources that need to be combined.
+
+    Args:
+        ass_files: List of dicts with "path" and "offset" keys
+                   Example: [{"path": "conv.ass", "offset": 0},
+                            {"path": "broll.ass", "offset": 11.5}]
+        output_path: Output ASS file path (auto-generated if None)
+
+    Returns:
+        {
+            "success": bool,
+            "ass_path": str,
+            "subtitle_count": int,
+            "error": str (if failed)
+        }
+    """
+    try:
+        all_dialogues = []
+        header_content = None
+
+        for ass_file in ass_files:
+            file_path = ass_file.get("path")
+            offset = ass_file.get("offset", 0)
+
+            if not file_path or not os.path.exists(file_path):
+                print(f"[ASS MERGE] Dosya bulunamadı: {file_path}")
+                continue
+
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            # Extract header (everything before [Events])
+            if header_content is None:
+                events_idx = content.find("[Events]")
+                if events_idx > 0:
+                    header_content = content[:events_idx]
+
+            # Parse dialogue lines
+            for line in content.split("\n"):
+                if line.startswith("Dialogue:"):
+                    # Parse: Dialogue: 0,0:00:00.00,0:00:02.62,Default,,0,0,0,,Text here
+                    parts = line.split(",", 9)  # Split into max 10 parts
+                    if len(parts) >= 10:
+                        start_time_str = parts[1]
+                        end_time_str = parts[2]
+
+                        # Apply offset
+                        start_time = parse_ass_time(start_time_str) + offset
+                        end_time = parse_ass_time(end_time_str) + offset
+
+                        # Reconstruct dialogue with new timing
+                        new_start = format_ass_time(start_time)
+                        new_end = format_ass_time(end_time)
+
+                        new_line = f"Dialogue: {parts[0].split(': ')[1]},{new_start},{new_end},{','.join(parts[3:])}"
+                        all_dialogues.append({
+                            "start": start_time,
+                            "line": new_line
+                        })
+
+        if not all_dialogues:
+            return {
+                "success": False,
+                "error": "No dialogues found in ASS files"
+            }
+
+        # Sort dialogues by start time
+        all_dialogues.sort(key=lambda x: x["start"])
+
+        # Generate output
+        if not output_path:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            output_path = str(SUBTITLE_OUTPUT_DIR / f"merged_{timestamp}.ass")
+
+        # Use default header if none found
+        if header_content is None:
+            header_content = f"""[Script Info]
+Title: Olivenet Auto Subtitles (Merged)
+ScriptType: v4.00+
+PlayResX: 720
+PlayResY: 1280
+WrapStyle: 0
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,DejaVu Sans,48,&HFFFFFF,&H000000FF,&H000000,&H00000000,-1,0,0,0,100,100,0,0,1,3,0,2,20,20,150,1
+
+"""
+
+        # Build final ASS content
+        ass_content = header_content
+        ass_content += "[Events]\n"
+        ass_content += "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n"
+
+        for dialogue in all_dialogues:
+            ass_content += dialogue["line"] + "\n"
+
+        # Write to file
+        SUBTITLE_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write(ass_content)
+
+        print(f"[ASS MERGE] Merged {len(all_dialogues)} subtitles from {len(ass_files)} files")
+        print(f"[ASS MERGE] Output: {output_path}")
+
+        return {
+            "success": True,
+            "ass_path": output_path,
+            "subtitle_count": len(all_dialogues)
+        }
+
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
 def create_subtitle_file_sync(
     audio_path: str,
     original_script: Optional[str] = None,

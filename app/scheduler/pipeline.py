@@ -3117,43 +3117,87 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             result["final_duration"] = final_duration
             result["stages_completed"].append("concat")
 
-            # ========== STAGE 8: Whisper Transcription + Subtitles ==========
-            self.log("[CONV REELS] Aşama 8: Altyazı ekleniyor (Whisper)...")
+            # ========== STAGE 8: Two-Phase Subtitle Generation ==========
+            self.log("[CONV REELS] Aşama 8: İki aşamalı altyazı oluşturuluyor...")
             try:
-                from app.subtitle_helper import create_subtitle_file, extract_audio_from_video
+                from app.subtitle_helper import create_subtitle_file, extract_audio_from_video, merge_ass_files
                 from app.instagram_helper import add_subtitles_to_video
 
-                self.log(f"[CONV REELS] Audio extract başlıyor: {final_video_path}")
+                conv_sub_path = None
+                broll_sub_path = None
+                conv_duration = 12.0  # Default fallback
 
-                # Extract audio from final video for Whisper
-                extracted_audio = await extract_audio_from_video(final_video_path)
+                # Phase 1: Conversation Subtitle (Pure Whisper - Sora native speech)
+                self.log("[CONV REELS] Phase 1: Conversation altyazısı (Pure Whisper)...")
+                conv_audio = await extract_audio_from_video(conversation_video_path)
 
-                if not extracted_audio.get("success"):
-                    self.log(f"[CONV REELS] Audio extract hatası: {extracted_audio.get('error', 'Bilinmeyen hata')}")
-                else:
-                    self.log(f"[CONV REELS] Audio extracted: {extracted_audio.get('audio_path')} ({extracted_audio.get('duration', 0):.1f}s)")
+                if conv_audio.get("success"):
+                    conv_duration = conv_audio.get("duration", 12.0)
+                    self.log(f"[CONV REELS] Conversation audio: {conv_duration:.1f}s")
 
-                    full_script = " ".join([line.get("text", "") for line in dialog_lines])
-                    full_script += " " + broll_voiceover
-
-                    self.log(f"[CONV REELS] Whisper transcription başlıyor (model: {os.getenv('WHISPER_MODEL_SIZE', 'base')})...")
-
-                    sub_result = await create_subtitle_file(
-                        audio_path=extracted_audio["audio_path"],
-                        original_script=full_script,
+                    conv_sub = await create_subtitle_file(
+                        audio_path=conv_audio["audio_path"],
+                        original_script=None,  # Pure Whisper - Sora generates its own speech
                         model_size=os.getenv("WHISPER_MODEL_SIZE", "base"),
                         language="tr"
                     )
 
-                    if not sub_result.get("success"):
-                        self.log(f"[CONV REELS] Whisper hatası: {sub_result.get('error', 'Bilinmeyen hata')}")
+                    if conv_sub.get("success"):
+                        conv_sub_path = conv_sub["ass_path"]
+                        self.log(f"[CONV REELS] Conversation subtitle: {conv_sub.get('subtitle_count', 0)} satır")
                     else:
-                        self.log(f"[CONV REELS] Subtitle oluşturuldu: {sub_result.get('ass_path')} ({sub_result.get('subtitle_count', 0)} satır)")
+                        self.log(f"[CONV REELS] Conversation subtitle hatası: {conv_sub.get('error')}")
+                else:
+                    self.log(f"[CONV REELS] Conversation audio extract hatası: {conv_audio.get('error')}")
 
-                        self.log("[CONV REELS] Subtitle burn başlıyor...")
+                # Phase 2: B-roll Subtitle (TTS text - hybrid mode)
+                self.log("[CONV REELS] Phase 2: B-roll altyazısı (TTS metni)...")
+                if broll_audio_path:
+                    broll_sub = await create_subtitle_file(
+                        audio_path=broll_audio_path,  # TTS audio from Stage 5
+                        original_script=broll_voiceover,  # TTS text - hybrid mode works here
+                        model_size=os.getenv("WHISPER_MODEL_SIZE", "base"),
+                        language="tr"
+                    )
+
+                    if broll_sub.get("success"):
+                        broll_sub_path = broll_sub["ass_path"]
+                        self.log(f"[CONV REELS] B-roll subtitle: {broll_sub.get('subtitle_count', 0)} satır")
+                    else:
+                        self.log(f"[CONV REELS] B-roll subtitle hatası: {broll_sub.get('error')}")
+                else:
+                    self.log("[CONV REELS] B-roll audio yok, B-roll subtitle atlanıyor")
+
+                # Phase 3: Merge ASS files with timing offset
+                if conv_sub_path or broll_sub_path:
+                    self.log("[CONV REELS] Phase 3: ASS dosyaları birleştiriliyor...")
+
+                    ass_files_to_merge = []
+                    crossfade_duration = 0.5
+
+                    if conv_sub_path:
+                        ass_files_to_merge.append({"path": conv_sub_path, "offset": 0})
+
+                    if broll_sub_path:
+                        # B-roll starts at conversation_duration - crossfade
+                        broll_offset = conv_duration - crossfade_duration
+                        ass_files_to_merge.append({"path": broll_sub_path, "offset": broll_offset})
+                        self.log(f"[CONV REELS] B-roll offset: {broll_offset:.1f}s")
+
+                    if len(ass_files_to_merge) > 1:
+                        merged_ass = merge_ass_files(ass_files_to_merge)
+                        final_ass_path = merged_ass.get("ass_path") if merged_ass.get("success") else conv_sub_path
+                        total_subtitle_count = merged_ass.get("subtitle_count", 0)
+                    else:
+                        final_ass_path = ass_files_to_merge[0]["path"] if ass_files_to_merge else None
+                        total_subtitle_count = conv_sub.get("subtitle_count", 0) if conv_sub_path else broll_sub.get("subtitle_count", 0)
+
+                    # Phase 4: Burn merged subtitles
+                    if final_ass_path:
+                        self.log(f"[CONV REELS] Phase 4: Subtitle burn ({total_subtitle_count} satır)...")
                         burn_result = await add_subtitles_to_video(
                             video_path=final_video_path,
-                            ass_path=sub_result["ass_path"]
+                            ass_path=final_ass_path
                         )
 
                         if burn_result.get("success"):
@@ -3162,6 +3206,9 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                             self.log(f"[CONV REELS] Altyazı eklendi: {final_video_path}")
                         else:
                             self.log(f"[CONV REELS] Subtitle burn hatası: {burn_result.get('error', 'Bilinmeyen hata')}")
+                else:
+                    self.log("[CONV REELS] Hiçbir subtitle oluşturulamadı")
+
             except Exception as e:
                 import traceback
                 self.log(f"[CONV REELS] Altyazı hatası: {e}")
