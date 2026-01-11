@@ -127,6 +127,9 @@ class Settings(BaseSettings):
     tts_similarity_boost: float = Field(default=0.75, description="Voice similarity boost (0.0-1.0)")
     tts_speed: float = Field(default=1.0, description="Speech speed (0.5-2.0)")
 
+    # ElevenLabs Conversational Reels Settings
+    elevenlabs_voice_id_female: str = Field(default="EJGs6dWlD5VrB3llhBqB", description="Female Turkish voice ID for conversational reels")
+
     # Claude Code Settings
     claude_timeout_post: int = Field(default=60, description="Timeout for post generation (seconds)")
     claude_timeout_visual: int = Field(default=90, description="Timeout for visual generation (seconds)")

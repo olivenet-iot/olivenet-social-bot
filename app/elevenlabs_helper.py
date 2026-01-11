@@ -450,3 +450,160 @@ async def generate_speech_with_retry(
         "success": False,
         "error": f"All retries failed: {last_error}"
     }
+
+
+async def generate_dialog_audio(
+    dialog_lines: list,
+    male_voice_id: Optional[str] = None,
+    female_voice_id: Optional[str] = None,
+    pause_between_ms: int = 300
+) -> Dict[str, Any]:
+    """
+    Generate multi-voice dialog audio for conversational reels.
+
+    Each line is generated with the appropriate voice and concatenated
+    with pauses between lines using pydub.
+
+    Args:
+        dialog_lines: List of dialog items, each containing:
+            - "speaker": "male" or "female"
+            - "text": Line text
+        male_voice_id: ElevenLabs voice ID for male (env default if None)
+        female_voice_id: ElevenLabs voice ID for female (config default if None)
+        pause_between_ms: Silence gap between lines (default 300ms)
+
+    Returns:
+        {
+            "success": bool,
+            "audio_path": str,           # Combined audio file path
+            "audio_segments": list,      # Per-line segment info with timestamps
+            "total_duration": float,     # Total duration in seconds
+            "line_count": int,
+            "error": str (if failed)
+        }
+
+    Example dialog_lines:
+        [
+            {"speaker": "male", "text": "Serada nem oranı nasıl kontrol edilir?"},
+            {"speaker": "female", "text": "IoT sensörlerle otomatik takip yapılabilir."},
+            {"speaker": "male", "text": "Peki maliyet?"},
+            {"speaker": "female", "text": "Yüzde kırk tasarruf sağlar."}
+        ]
+    """
+    try:
+        from pydub import AudioSegment
+    except ImportError:
+        logger.error("[TTS] pydub not installed. Run: pip install pydub")
+        return {
+            "success": False,
+            "error": "pydub not installed. Run: pip install pydub"
+        }
+
+    ElevenLabsHelper._ensure_output_dir()
+
+    # Get voice IDs
+    if not male_voice_id:
+        male_voice_id = os.getenv("ELEVENLABS_VOICE_ID", "")
+    if not female_voice_id:
+        female_voice_id = settings.elevenlabs_voice_id_female or os.getenv("ELEVENLABS_VOICE_ID_FEMALE", "")
+
+    if not male_voice_id:
+        return {"success": False, "error": "Male voice ID not configured"}
+    if not female_voice_id:
+        return {"success": False, "error": "Female voice ID not configured"}
+
+    logger.info(f"[TTS] Generating dialog audio: {len(dialog_lines)} lines")
+    logger.info(f"[TTS] Male voice: {male_voice_id[:8]}..., Female voice: {female_voice_id[:8]}...")
+
+    audio_segments = []
+    temp_audio_paths = []
+    combined_audio = AudioSegment.empty()
+    current_position_ms = 0
+
+    try:
+        for i, line in enumerate(dialog_lines):
+            speaker = line.get("speaker", "male")
+            text = line.get("text", "")
+
+            if not text.strip():
+                logger.warning(f"[TTS] Skipping empty line {i}")
+                continue
+
+            # Select voice ID based on speaker
+            voice_id = male_voice_id if speaker == "male" else female_voice_id
+
+            logger.info(f"[TTS] Line {i+1}/{len(dialog_lines)}: {speaker} - '{text[:30]}...'")
+
+            # Generate TTS for this line
+            tts_result = await ElevenLabsHelper.generate_speech(
+                text=text,
+                voice_id=voice_id
+            )
+
+            if not tts_result.get("success"):
+                error_msg = tts_result.get("error", "Unknown TTS error")
+                logger.error(f"[TTS] Failed to generate line {i+1}: {error_msg}")
+                return {
+                    "success": False,
+                    "error": f"TTS failed for line {i+1}: {error_msg}"
+                }
+
+            audio_path = tts_result.get("audio_path")
+            temp_audio_paths.append(audio_path)
+
+            # Load audio segment
+            segment = AudioSegment.from_mp3(audio_path)
+            duration_ms = len(segment)
+
+            # Record segment timing
+            audio_segments.append({
+                "speaker": speaker,
+                "start_ms": current_position_ms,
+                "end_ms": current_position_ms + duration_ms,
+                "duration_ms": duration_ms,
+                "text": text,
+                "temp_audio_path": audio_path
+            })
+
+            # Add to combined audio
+            combined_audio += segment
+            current_position_ms += duration_ms
+
+            # Add pause between lines (except after last line)
+            if i < len(dialog_lines) - 1:
+                silence = AudioSegment.silent(duration=pause_between_ms)
+                combined_audio += silence
+                current_position_ms += pause_between_ms
+
+        if len(combined_audio) == 0:
+            return {
+                "success": False,
+                "error": "No audio generated (all lines were empty)"
+            }
+
+        # Export combined audio
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_filename = f"dialog_{timestamp}.mp3"
+        output_path = AUDIO_OUTPUT_DIR / output_filename
+
+        combined_audio.export(str(output_path), format="mp3")
+
+        total_duration = len(combined_audio) / 1000.0  # Convert ms to seconds
+
+        logger.info(f"[TTS] Dialog audio generated: {output_path}")
+        logger.info(f"[TTS] Total duration: {total_duration:.2f}s, Lines: {len(audio_segments)}")
+
+        return {
+            "success": True,
+            "audio_path": str(output_path),
+            "audio_segments": audio_segments,
+            "total_duration": total_duration,
+            "line_count": len(audio_segments)
+        }
+
+    except Exception as e:
+        logger.error(f"[TTS] Dialog audio generation failed: {e}")
+        return {
+            "success": False,
+            "error": str(e)
+        }

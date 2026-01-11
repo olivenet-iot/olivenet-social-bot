@@ -190,6 +190,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             InlineKeyboardButton("🎥 Uzun Video", callback_data="create_long_video")
         ],
         [
+            InlineKeyboardButton("🎭 Conversational", callback_data="create_conversational"),
             InlineKeyboardButton("🤖 Otonom", callback_data="start_autonomous")
         ],
         # Planlama
@@ -487,6 +488,10 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ],
             [
                 InlineKeyboardButton("🎠 Carousel", callback_data="create_carousel"),
+                InlineKeyboardButton("🎥 Uzun Video", callback_data="create_long_video")
+            ],
+            [
+                InlineKeyboardButton("🎭 Conversational", callback_data="create_conversational"),
                 InlineKeyboardButton("🤖 Otonom", callback_data="start_autonomous")
             ],
             # Planlama
@@ -590,6 +595,88 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         # Otonom pipeline'ı arka planda çalıştır
         asyncio.create_task(pipeline.run_autonomous_content(min_score=7))
+
+    # ===== CONVERSATIONAL REELS - MENÜ =====
+    elif action == "create_conversational":
+        keyboard = [
+            [InlineKeyboardButton("🤖 Otomatik Konu", callback_data="conv_auto")],
+            [InlineKeyboardButton("✏️ Manuel Konu", callback_data="conv_manual")],
+            [InlineKeyboardButton("◀️ Geri", callback_data="main_menu")]
+        ]
+        await query.edit_message_text(
+            "🎭 *CONVERSATIONAL REELS*\n\n"
+            "İki karakter arasında dialog video:\n"
+            "• 👨 ERKEK: Problem/soru sorar\n"
+            "• 👩 KADIN: Çözüm sunar\n"
+            "• 🎬 B-roll segment ile bitirir\n\n"
+            "⏱️ *Toplam süre:* ~15 saniye\n"
+            "🎤 *Lip-sync:* Gerçekçi dudak hareketi\n"
+            "🔊 *Multi-voice:* 2 farklı ses\n\n"
+            "Konu nasıl belirlensin?",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+
+    # ===== CONVERSATIONAL REELS - OTOMATİK KONU =====
+    elif action == "conv_auto":
+        await query.edit_message_text(
+            "🎭 *CONVERSATIONAL REELS* başlatılıyor...\n\n"
+            "Pipeline aşamaları:\n"
+            "1️⃣ Konu seçimi (AI)\n"
+            "2️⃣ Dialog içeriği\n"
+            "3️⃣ Multi-voice TTS\n"
+            "4️⃣ Avatar video\n"
+            "5️⃣ Lip-sync\n"
+            "6️⃣ B-roll video\n"
+            "7️⃣ Video birleştirme\n"
+            "8️⃣ Instagram yayını\n\n"
+            "⏳ Bu işlem 8-12 dakika sürebilir...",
+            parse_mode="Markdown"
+        )
+        asyncio.create_task(pipeline.run_conversational_reels())
+
+    # ===== CONVERSATIONAL REELS - MANUEL KONU =====
+    elif action == "conv_manual":
+        pending_input["type"] = "conv_topic"
+        pending_input["user_id"] = query.from_user.id
+        await query.edit_message_text(
+            "✏️ *MANUEL KONU GİRİŞİ*\n\n"
+            "Conversational Reels için konu yazın:\n\n"
+            "📌 *Örnekler:*\n"
+            "• Serada nem kontrolü\n"
+            "• Fabrikada enerji izleme\n"
+            "• LoRaWAN ile uzaktan takip\n"
+            "• Akıllı sulama otomasyonu\n\n"
+            "💬 Konunuzu yazın:",
+            parse_mode="Markdown"
+        )
+
+    # ===== CONVERSATIONAL REELS - ONAYLA =====
+    elif action.startswith("conv_approve:"):
+        post_id = action.replace("conv_approve:", "")
+        await query.edit_message_text(
+            f"✅ *CONVERSATIONAL REELS* yayınlanıyor...\n\nPost ID: {post_id}",
+            parse_mode="Markdown"
+        )
+        # TODO: Implement publish logic
+        # asyncio.create_task(pipeline.publish_conversational_reels(post_id))
+
+    # ===== CONVERSATIONAL REELS - YENİDEN ÜRET =====
+    elif action.startswith("conv_regenerate:"):
+        post_id = action.replace("conv_regenerate:", "")
+        await query.edit_message_text(
+            f"🔄 *CONVERSATIONAL REELS* yeniden üretiliyor...\n\nPost ID: {post_id}",
+            parse_mode="Markdown"
+        )
+        asyncio.create_task(pipeline.run_conversational_reels())
+
+    # ===== CONVERSATIONAL REELS - İPTAL =====
+    elif action.startswith("conv_cancel:"):
+        post_id = action.replace("conv_cancel:", "")
+        await query.edit_message_text(
+            f"❌ *CONVERSATIONAL REELS* iptal edildi.\n\nPost ID: {post_id}",
+            parse_mode="Markdown"
+        )
 
     # ===== REELS OLUŞTUR - MODEL SEÇİM MENÜSÜ =====
     elif action == "create_reels":
@@ -2008,6 +2095,35 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pending_input = {}
         await update.message.reply_text("🚀 İçerik oluşturuluyor...")
         # TODO: Manuel topic ile pipeline
+
+    elif pending_input.get("type") == "conv_topic":
+        # Conversational Reels için manuel konu girişi
+        input_type = pending_input.pop("type", None)
+        if input_type != "conv_topic":
+            return
+
+        topic = text.strip()
+        pending_input.clear()
+
+        await update.message.reply_text(
+            f"🎭 *CONVERSATIONAL REELS* başlatılıyor...\n\n"
+            f"📋 *Konu:* {escape_markdown(topic[:60])}{'...' if len(topic) > 60 else ''}\n\n"
+            "Pipeline aşamaları:\n"
+            "1️⃣ Konu işleme\n"
+            "2️⃣ Dialog içeriği\n"
+            "3️⃣ Multi-voice TTS\n"
+            "4️⃣ Avatar video\n"
+            "5️⃣ Lip-sync\n"
+            "6️⃣ B-roll video\n"
+            "7️⃣ Video birleştirme\n\n"
+            "⏳ Bu işlem 8-12 dakika sürebilir...",
+            parse_mode="Markdown"
+        )
+
+        asyncio.create_task(pipeline.run_conversational_reels(
+            topic=topic,
+            manual_topic_mode=True
+        ))
 
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:

@@ -46,6 +46,8 @@ class CreatorAgent(BaseAgent):
             return await self.process_manual_topic(input_data)
         elif action == "create_multi_scene_prompts":
             return await self.create_multi_scene_prompts(input_data)
+        elif action == "create_conversation_content":
+            return await self.create_conversation_content(input_data)
         else:
             return {"error": f"Unknown action: {action}"}
 
@@ -1736,4 +1738,199 @@ Sadece JSON döndür.
                 "error": str(e),
                 "processed_topic": user_input,
                 "original_input": user_input
+            }
+
+    async def create_conversation_content(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Generate conversational dialog content for Conversational Reels.
+
+        Creates a dialog between two characters:
+        - Male: Presents problem/asks questions (curious, concerned)
+        - Female: Provides solution (confident, knowledgeable)
+
+        Args:
+            input_data: {
+                "topic": str - Main topic
+                "category": str - Content category (egitici, tanitim)
+                "target_duration": int - Target dialog duration in seconds (6-10s)
+            }
+
+        Returns:
+            {
+                "success": bool,
+                "dialog_lines": [{"speaker": "male"/"female", "text": "..."}],
+                "video_prompt": str,      # Two-person conversation video prompt
+                "broll_prompt": str,      # B-roll video prompt
+                "broll_voiceover": str,   # Voiceover for B-roll segment
+                "caption": str,           # Instagram caption
+                "hashtags": list
+            }
+        """
+        self.log("Conversational dialog oluşturuluyor...")
+
+        topic = input_data.get("topic", "")
+        category = input_data.get("category", "egitici")
+        target_duration = input_data.get("target_duration", 8)
+
+        # Load context
+        company_profile = self.load_context("company-profile.md")
+        brand_voice = self.load_context("social-media-expert.md")
+
+        # Calculate word targets (~1.9 words/second for ElevenLabs Turkish TTS)
+        dialog_words = int(target_duration * 1.9)
+        broll_words = int(4 * 1.9)  # ~4 seconds B-roll voiceover
+
+        prompt = f"""
+## GOREV: Konusmali Instagram Reels Icerigi Uret
+
+### KONU
+{topic}
+
+### KATEGORI
+{category}
+
+### SIRKET PROFILI
+{company_profile[:1500]}
+
+### MARKA SESI
+{brand_voice[:800]}
+
+---
+
+## FORMAT KURALLARI:
+
+**DIALOG YAPISI (ZORUNLU):**
+- ERKEK (speaker: "male"): Problem/soru sorar (merakli, endiseli)
+- KADIN (speaker: "female"): Cozum sunar (guvenlı, bilgili)
+- 4-6 satir dialog (alternating male/female ile basla)
+- Toplam ~{dialog_words} kelime ({target_duration} saniye)
+- Her satir kisa: 5-12 kelime
+- Dogal konusma dili, EMOJI KULLANMA
+
+**KARAKTER TON:**
+- ERKEK: Merakli, problem odakli, samimi, endiseli
+- KADIN: Cozum odakli, guvenlı, bilgili, sakin
+
+**VIDEO PROMPT (2 KISI KONUSUYOR):**
+- Iki kisi karsılıklı konusuyor
+- Medium shot, 9:16 dikey format
+- Profesyonel ama samimi ortam
+- Lokasyon konuya uygun (sera, ofis, fabrika vb.)
+- "talking", "conversation", "discussing" ifadeleri KULLAN
+- Ingilizce yaz (Kling 2.6 Pro icin)
+
+**B-ROLL PROMPT:**
+- Konu ile ilgili gorsel (sensörler, sera, fabrika vb.)
+- Konusan kisi OLMAMALI
+- Cinematic, 9:16 format
+- 7 saniye icin uygun
+- Ingilizce yaz
+
+**B-ROLL VOICEOVER:**
+- ~{broll_words} kelime (~4 saniye)
+- CTA icermeli: "Takip et", "Kaydet" veya soru
+- Tek ses (narrator/kadin)
+- Turkce
+
+**INSTAGRAM CAPTION:**
+- Max 50 kelime
+- Hook + deger + CTA
+- 8-12 hashtag (ZORUNLU: #Olivenet #KKTC #IoT)
+
+---
+
+## CIKTI FORMATI (JSON):
+```json
+{{
+    "dialog_lines": [
+        {{"speaker": "male", "text": "Ilk soru/problem..."}},
+        {{"speaker": "female", "text": "Ilk cozum..."}},
+        {{"speaker": "male", "text": "Ikinci soru..."}},
+        {{"speaker": "female", "text": "Ikinci cozum/kapanış..."}}
+    ],
+    "video_prompt": "Medium shot of two Turkish people having a conversation in a greenhouse, male farmer asking questions looking concerned, female IoT expert explaining confidently, professional natural lighting, 9:16 vertical format, cinematic, realistic",
+    "broll_prompt": "Cinematic close-up of IoT temperature sensors and control panels in modern greenhouse, morning light, 9:16 vertical, no people, professional documentary style",
+    "broll_voiceover": "Olivenet IoT ile seraniz 7/24 guvende. Takip et, sorularini sor.",
+    "caption": "Instagram caption metni...",
+    "hashtags": ["#Olivenet", "#KKTC", "#IoT", "#AkilliTarim", ...]
+}}
+```
+
+### ORNEKLER:
+ERKEK: "Serada don olunca 50 fide kaybettim gecen yil."
+KADIN: "IoT sensorler ile 3 saat onceden uyari alabilirsin."
+ERKEK: "Peki bu sistem nasil calisiyor?"
+KADIN: "Sicaklik dusunce telefonuna aninda bildirim geliyor."
+
+### ONEMLI:
+1. Dialog dogal ve akıcı olmali
+2. Olivenet cozumleri dogal sekilde cikmali
+3. Video prompt'u iki kisiyi konusurken gostermeli
+4. B-roll prompt'ta insan OLMAMALI
+
+Sadece JSON dondur.
+"""
+
+        try:
+            response = await self.call_claude(prompt, timeout=120)
+            result = json.loads(self._clean_json_response(response))
+
+            # Validate dialog structure
+            dialog_lines = result.get("dialog_lines", [])
+            if len(dialog_lines) < 4:
+                self.log(f"Dialog cok kisa: {len(dialog_lines)} satir")
+                return {
+                    "success": False,
+                    "error": f"Insufficient dialog lines: {len(dialog_lines)}, minimum 4 required"
+                }
+
+            # Log action
+            log_agent_action(
+                agent_name=self.name,
+                action="create_conversation_content",
+                input_data={"topic": topic, "target_duration": target_duration},
+                output_data={"line_count": len(dialog_lines)},
+                success=True
+            )
+
+            self.log(f"Conversation content olusturuldu: {len(dialog_lines)} dialog satiri")
+
+            return {
+                "success": True,
+                "dialog_lines": dialog_lines,
+                "video_prompt": result.get("video_prompt", ""),
+                "broll_prompt": result.get("broll_prompt", ""),
+                "broll_voiceover": result.get("broll_voiceover", ""),
+                "caption": result.get("caption", ""),
+                "hashtags": result.get("hashtags", ["#Olivenet", "#KKTC", "#IoT"]),
+                "topic": topic
+            }
+
+        except json.JSONDecodeError as e:
+            self.log(f"JSON parse hatasi: {e}")
+            log_agent_action(
+                agent_name=self.name,
+                action="create_conversation_content",
+                input_data={"topic": topic},
+                success=False,
+                error_message=f"JSON parse error: {e}"
+            )
+            return {
+                "success": False,
+                "error": f"JSON parse error: {e}",
+                "raw_response": response[:500] if response else ""
+            }
+
+        except Exception as e:
+            self.log(f"Conversation content hatasi: {e}")
+            log_agent_action(
+                agent_name=self.name,
+                action="create_conversation_content",
+                input_data={"topic": topic},
+                success=False,
+                error_message=str(e)
+            )
+            return {
+                "success": False,
+                "error": str(e)
             }

@@ -138,3 +138,63 @@ async def delete_from_cloudinary(public_id: str) -> Dict[str, Any]:
 
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+
+async def upload_audio_to_cloudinary(audio_path: str, folder: str = "olivenet-audio") -> Dict[str, Any]:
+    """
+    Audio dosyasini Cloudinary'ye yukle.
+    Lip-sync API icin public URL gerekli.
+
+    Args:
+        audio_path: Yerel audio dosyasi yolu (MP3)
+        folder: Cloudinary klasoru
+
+    Returns:
+        {"success": True, "url": "https://...", "public_id": "...", "duration": float}
+    """
+
+    if not configure_cloudinary():
+        return {"success": False, "error": "Cloudinary not configured"}
+
+    if not os.path.exists(audio_path):
+        print(f"[CLOUDINARY] Audio dosya bulunamadi: {audio_path}")
+        return {"success": False, "error": f"File not found: {audio_path}"}
+
+    file_size = os.path.getsize(audio_path) / 1024 / 1024
+    print(f"[CLOUDINARY] Audio yukleniyor: {audio_path}")
+    print(f"[CLOUDINARY] Boyut: {file_size:.2f} MB")
+
+    try:
+        import cloudinary.uploader
+
+        loop = asyncio.get_event_loop()
+
+        def do_upload():
+            # Cloudinary uses "video" resource_type for audio files too
+            return cloudinary.uploader.upload(
+                audio_path,
+                resource_type="video",  # audio is handled as video in Cloudinary
+                folder=folder,
+                overwrite=True
+            )
+
+        result = await loop.run_in_executor(None, do_upload)
+
+        secure_url = result.get("secure_url")
+        public_id = result.get("public_id")
+        duration = result.get("duration")
+
+        print(f"[CLOUDINARY] Audio yukleme basarili!")
+        print(f"[CLOUDINARY] URL: {secure_url}")
+
+        return {
+            "success": True,
+            "url": secure_url,
+            "public_id": public_id,
+            "duration": duration,
+            "format": result.get("format", "mp3")
+        }
+
+    except Exception as e:
+        print(f"[CLOUDINARY] Audio yukleme hatasi: {str(e)}")
+        return {"success": False, "error": str(e)}

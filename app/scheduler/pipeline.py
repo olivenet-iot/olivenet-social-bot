@@ -2907,3 +2907,376 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             )
 
             return result
+
+    async def run_conversational_reels(
+        self,
+        topic: str = None,
+        manual_topic_mode: bool = False
+    ) -> Dict[str, Any]:
+        """
+        Conversational Reels pipeline with lip-sync.
+
+        Creates two-character dialog video (male problem, female solution)
+        followed by B-roll segment with voiceover.
+
+        Pipeline Steps:
+        1. Topic selection (Planner/manual)
+        2. Conversation content generation (Creator)
+        3. Dialog audio generation (ElevenLabs multi-voice)
+        4. Avatar talking head video generation (Kling 2.6)
+        5. Upload to Cloudinary (video + audio)
+        6. Lip-sync processing (Sync Lipsync V2 Pro)
+        7. B-roll video generation (Kling)
+        8. B-roll voiceover generation (ElevenLabs)
+        9. B-roll merge (FFmpeg)
+        10. Concat conversation + B-roll
+        11. Optional subtitles
+        12. Review + Publish
+
+        Args:
+            topic: Topic (None uses Planner suggestion)
+            manual_topic_mode: Process topic through Creator if True
+
+        Returns:
+            Pipeline result dict
+        """
+        self.log("[CONV REELS] Pipeline başlatılıyor...")
+        self.state = PipelineState.PLANNING
+
+        result = {
+            "success": False,
+            "stages_completed": [],
+            "conversational_reels": True,
+            "topic": topic
+        }
+
+        post_id = None
+
+        try:
+            # ========== STAGE 1: Topic Selection ==========
+            if not topic:
+                self.log("[CONV REELS] Aşama 1: Konu seçimi...")
+                planner_result = await self.planner.execute({
+                    "action": "suggest_topic",
+                    "content_type": "reels",
+                    "count": 1
+                })
+
+                if planner_result.get("success") and planner_result.get("topics"):
+                    topic_data = planner_result["topics"][0]
+                    topic = topic_data.get("topic", "")
+                    category = topic_data.get("category", "egitici")
+                    self.log(f"[CONV REELS] Konu seçildi: {topic[:50]}...")
+                else:
+                    raise Exception("Konu seçilemedi")
+            else:
+                category = "egitici"
+                if manual_topic_mode:
+                    # Process manual topic
+                    processed = await self.creator.execute({
+                        "action": "process_manual_topic",
+                        "user_input": topic
+                    })
+                    if processed.get("success"):
+                        topic = processed.get("processed_topic", topic)
+                        category = processed.get("category", "egitici")
+
+            result["topic"] = topic
+            result["category"] = category
+            result["stages_completed"].append("topic_selection")
+
+            # ========== STAGE 2: Conversation Content ==========
+            self.log("[CONV REELS] Aşama 2: Dialog içeriği oluşturuluyor...")
+            self.state = PipelineState.CREATING_CONTENT
+
+            conv_result = await self.creator.execute({
+                "action": "create_conversation_content",
+                "topic": topic,
+                "category": category,
+                "target_duration": 8  # ~8 seconds dialog
+            })
+
+            if not conv_result.get("success"):
+                raise Exception(f"Dialog içerik hatası: {conv_result.get('error')}")
+
+            dialog_lines = conv_result.get("dialog_lines", [])
+            video_prompt = conv_result.get("video_prompt", "")
+            broll_prompt = conv_result.get("broll_prompt", "")
+            broll_voiceover = conv_result.get("broll_voiceover", "")
+            caption = conv_result.get("caption", "")
+            hashtags = conv_result.get("hashtags", [])
+
+            self.log(f"[CONV REELS] Dialog oluşturuldu: {len(dialog_lines)} satır")
+            result["dialog_line_count"] = len(dialog_lines)
+            result["stages_completed"].append("conversation_content")
+
+            # Create post in database
+            from app.database import create_post, update_post
+            post_id = create_post(
+                topic=topic,
+                post_text=caption,
+                post_text_ig=caption,
+                visual_type="reels",
+                platform="instagram",
+                topic_category=category,
+                voice_mode=True
+            )
+            result["post_id"] = post_id
+
+            # ========== STAGE 3: Dialog Audio Generation ==========
+            self.log("[CONV REELS] Aşama 3: Dialog ses üretimi...")
+
+            from app.elevenlabs_helper import generate_dialog_audio
+
+            dialog_audio_result = await generate_dialog_audio(
+                dialog_lines=dialog_lines,
+                pause_between_ms=300
+            )
+
+            if not dialog_audio_result.get("success"):
+                raise Exception(f"Dialog audio hatası: {dialog_audio_result.get('error')}")
+
+            dialog_audio_path = dialog_audio_result.get("audio_path")
+            dialog_duration = dialog_audio_result.get("total_duration", 8)
+
+            self.log(f"[CONV REELS] Dialog audio: {dialog_duration:.1f}s")
+            result["dialog_audio_duration"] = dialog_duration
+            result["stages_completed"].append("dialog_audio")
+
+            # ========== STAGE 4: Avatar Video Generation ==========
+            self.log("[CONV REELS] Aşama 4: Avatar video üretimi (Kling 2.6 Pro)...")
+            self.state = PipelineState.CREATING_VISUAL
+
+            from app.fal_helper import FalVideoGenerator
+
+            # Generate talking head video with proper duration
+            avatar_duration = min(10, int(dialog_duration) + 2)  # Buffer, max 10s
+
+            avatar_result = await FalVideoGenerator.generate_video(
+                prompt=video_prompt,
+                model="kling_26_pro",
+                duration=avatar_duration,
+                aspect_ratio="9:16",
+                generate_audio=False  # No native audio - we'll add TTS
+            )
+
+            if not avatar_result.get("success"):
+                raise Exception(f"Avatar video hatası: {avatar_result.get('error')}")
+
+            avatar_video_path = avatar_result.get("video_path")
+            self.log(f"[CONV REELS] Avatar video üretildi: {avatar_video_path}")
+            result["stages_completed"].append("avatar_video")
+
+            # ========== STAGE 5: Upload to Cloudinary ==========
+            self.log("[CONV REELS] Aşama 5: Cloudinary'ye yükleme...")
+
+            from app.cloudinary_helper import upload_video_to_cloudinary, upload_audio_to_cloudinary
+
+            # Upload video
+            video_cdn = await upload_video_to_cloudinary(avatar_video_path, folder="olivenet-lipsync")
+            if not video_cdn.get("success"):
+                raise Exception(f"Video CDN yükleme hatası: {video_cdn.get('error')}")
+
+            video_cdn_url = video_cdn.get("url")
+
+            # Upload audio
+            audio_cdn = await upload_audio_to_cloudinary(dialog_audio_path, folder="olivenet-lipsync")
+            if not audio_cdn.get("success"):
+                raise Exception(f"Audio CDN yükleme hatası: {audio_cdn.get('error')}")
+
+            audio_cdn_url = audio_cdn.get("url")
+
+            self.log(f"[CONV REELS] CDN yükleme tamamlandı")
+            result["stages_completed"].append("cdn_upload")
+
+            # ========== STAGE 6: Lip-sync Processing ==========
+            self.log("[CONV REELS] Aşama 6: Lip-sync işleniyor...")
+
+            from app.sync_lipsync_helper import apply_lipsync
+
+            lipsync_result = await apply_lipsync(
+                video_url=video_cdn_url,
+                audio_url=audio_cdn_url,
+                sync_mode="cut_off"
+            )
+
+            if lipsync_result.get("success"):
+                conversation_video_path = lipsync_result.get("video_path")
+                self.log(f"[CONV REELS] Lip-sync başarılı!")
+                result["lipsync_success"] = True
+            else:
+                # Fallback: merge video and audio without lip-sync
+                self.log(f"[CONV REELS] Lip-sync başarısız, fallback merge...")
+                from app.instagram_helper import merge_audio_video
+
+                merge_result = await merge_audio_video(
+                    video_path=avatar_video_path,
+                    audio_path=dialog_audio_path,
+                    target_duration=dialog_duration
+                )
+                conversation_video_path = merge_result.get("output_path", avatar_video_path)
+                result["lipsync_success"] = False
+
+            result["stages_completed"].append("lipsync")
+
+            # ========== STAGE 7: B-roll Video Generation ==========
+            self.log("[CONV REELS] Aşama 7: B-roll video üretimi...")
+
+            broll_video_result = await FalVideoGenerator.generate_video(
+                prompt=broll_prompt,
+                model="kling_26_pro",
+                duration=5,  # 5 seconds B-roll
+                aspect_ratio="9:16",
+                generate_audio=False
+            )
+
+            if not broll_video_result.get("success"):
+                raise Exception(f"B-roll video hatası: {broll_video_result.get('error')}")
+
+            broll_video_path = broll_video_result.get("video_path")
+            self.log(f"[CONV REELS] B-roll video üretildi")
+            result["stages_completed"].append("broll_video")
+
+            # ========== STAGE 8: B-roll Voiceover ==========
+            self.log("[CONV REELS] Aşama 8: B-roll voiceover...")
+
+            from app.elevenlabs_helper import generate_speech_with_retry
+            from app.config import settings
+
+            broll_audio_result = await generate_speech_with_retry(
+                text=broll_voiceover,
+                voice_id=settings.elevenlabs_voice_id_female,  # Female narrator
+                max_retries=3
+            )
+
+            if not broll_audio_result.get("success"):
+                self.log(f"[CONV REELS] B-roll voiceover başarısız, sessiz B-roll kullanılacak")
+                broll_audio_path = None
+            else:
+                broll_audio_path = broll_audio_result.get("audio_path")
+
+            result["stages_completed"].append("broll_voiceover")
+
+            # ========== STAGE 9: B-roll Merge ==========
+            self.log("[CONV REELS] Aşama 9: B-roll merge...")
+
+            from app.instagram_helper import merge_audio_video
+
+            if broll_audio_path:
+                broll_merge_result = await merge_audio_video(
+                    video_path=broll_video_path,
+                    audio_path=broll_audio_path,
+                    target_duration=5
+                )
+                broll_final_path = broll_merge_result.get("output_path", broll_video_path)
+            else:
+                broll_final_path = broll_video_path
+
+            result["stages_completed"].append("broll_merge")
+
+            # ========== STAGE 10: Concat Videos ==========
+            self.log("[CONV REELS] Aşama 10: Video birleştirme...")
+
+            from app.instagram_helper import concatenate_videos_with_crossfade
+
+            concat_result = await concatenate_videos_with_crossfade(
+                video_paths=[conversation_video_path, broll_final_path],
+                crossfade_duration=0.5
+            )
+
+            if not concat_result.get("success"):
+                raise Exception(f"Video concat hatası: {concat_result.get('error')}")
+
+            final_video_path = concat_result.get("output_path")
+            final_duration = concat_result.get("total_duration", 15)
+
+            self.log(f"[CONV REELS] Final video: {final_duration:.1f}s")
+            result["final_duration"] = final_duration
+            result["stages_completed"].append("concat")
+
+            # ========== STAGE 11: Optional Subtitles ==========
+            if os.getenv("SUBTITLE_ENABLED", "").lower() == "true":
+                self.log("[CONV REELS] Aşama 11: Altyazı ekleniyor...")
+                try:
+                    from app.subtitle_helper import create_subtitle_file
+                    from app.instagram_helper import add_subtitles_to_video
+
+                    # Combine dialog texts for subtitle
+                    full_script = " ".join([line.get("text", "") for line in dialog_lines])
+                    full_script += " " + broll_voiceover
+
+                    sub_result = await create_subtitle_file(
+                        audio_path=dialog_audio_path,
+                        original_script=full_script,
+                        model_size=os.getenv("WHISPER_MODEL_SIZE", "base"),
+                        language="tr"
+                    )
+
+                    if sub_result.get("success"):
+                        burn_result = await add_subtitles_to_video(
+                            video_path=final_video_path,
+                            ass_path=sub_result["ass_path"]
+                        )
+                        if burn_result.get("success"):
+                            final_video_path = burn_result["output_path"]
+                            result["stages_completed"].append("subtitles")
+                            self.log("[CONV REELS] Altyazı eklendi")
+                except Exception as e:
+                    self.log(f"[CONV REELS] Altyazı hatası (devam): {e}")
+
+            # Update post
+            if post_id:
+                update_post(
+                    post_id,
+                    visual_path=final_video_path,
+                    total_video_duration=final_duration,
+                    audio_path=dialog_audio_path,
+                    audio_duration=dialog_duration,
+                    voice_mode=True
+                )
+
+            # ========== STAGE 12: Review & Approval ==========
+            self.log("[CONV REELS] Aşama 12: Onay bekleniyor...")
+            self.state = PipelineState.AWAITING_APPROVAL
+
+            # Hashtag string
+            hashtag_str = " ".join(hashtags) if hashtags else "#Olivenet #KKTC #IoT"
+            full_caption = f"{caption}\n\n{hashtag_str}"
+
+            await self.notify_telegram(
+                message=f"🎭 *CONVERSATIONAL REELS* - Onay Bekliyor\n\n"
+                f"📋 *Konu:* {_escape_md(topic[:50])}...\n"
+                f"💬 *Dialog:* {len(dialog_lines)} satır\n"
+                f"⏱️ *Süre:* {final_duration:.0f}s\n"
+                f"🎤 *Lip-sync:* {'✓' if result.get('lipsync_success') else '✗ (fallback)'}\n\n"
+                f"*Caption:*\n{_escape_md(full_caption[:200])}...",
+                data={"video_path": final_video_path},
+                buttons=[
+                    {"text": "✅ Onayla ve Yayınla", "callback": f"conv_approve:{post_id}"},
+                    {"text": "🔄 Yeniden Üret", "callback": f"conv_regenerate:{post_id}"},
+                    {"text": "❌ İptal", "callback": f"conv_cancel:{post_id}"}
+                ]
+            )
+
+            result["success"] = True
+            result["awaiting_approval"] = True
+            result["final_video_path"] = final_video_path
+            result["caption"] = full_caption
+            result["stages_completed"].append("awaiting_approval")
+
+            self.log("[CONV REELS] Pipeline tamamlandı - onay bekleniyor")
+            return result
+
+        except Exception as e:
+            self.log(f"[CONV REELS] Pipeline hatası: {str(e)}")
+            self.state = PipelineState.ERROR
+            result["error"] = str(e)
+            result["final_state"] = self.state.value
+
+            await self.notify_telegram(
+                message=f"❌ *CONVERSATIONAL REELS* - Hata\n\n{_escape_md(str(e))}",
+                data={"error": str(e)},
+                buttons=[]
+            )
+
+            return result
