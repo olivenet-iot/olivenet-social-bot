@@ -1889,10 +1889,23 @@ CAMERA: Medium two-shot showing both characters, professional documentary style.
 - Tek ses (narrator/kadin)
 - Turkce
 
-**INSTAGRAM CAPTION:**
-- Max 50 kelime
-- Hook + deger + CTA
-- 8-12 hashtag (ZORUNLU: #Olivenet #KKTC #IoT)
+**INSTAGRAM CAPTION (ÇOK ÖNEMLİ!):**
+- MAX 80 KELİME (kesinlikle aşma!)
+- Hook ile başla (dikkat çekici soru veya istatistik - dialogdaki problem)
+- 2-3 cümle ana mesaj (dialogdaki çözümü özetle)
+- Kapanışta soru veya "📌 Kaydet!" ekle
+- 8-12 hashtag (ZORUNLU: #Olivenet #KKTC #IoT + 5-9 sektörel)
+- MARKDOWN KULLANMA (Instagram desteklemiyor)
+- Vurgu için BÜYÜK HARF veya emoji kullan
+
+ÖRNEK FORMAT:
+🌡️ [Dikkat çekici hook - dialogdaki problem]
+
+[Ana mesaj - çözümü özetle]
+
+📌 Kaydet, lazım olduğunda kullan!
+
+#Olivenet #KKTC #IoT #AkıllıTarım ...
 
 ---
 
