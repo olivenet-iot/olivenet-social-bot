@@ -129,6 +129,7 @@ class Settings(BaseSettings):
 
     # ElevenLabs Conversational Reels Settings
     elevenlabs_voice_id_female: str = Field(default="EJGs6dWlD5VrB3llhBqB", description="Female Turkish voice ID for conversational reels")
+    elevenlabs_voice_id_narrator: str = Field(default="7VqWGAWwo2HMrylfKrcm", description="Narrator voice ID for B-roll voiceover")
 
     # Claude Code Settings
     claude_timeout_post: int = Field(default=60, description="Timeout for post generation (seconds)")

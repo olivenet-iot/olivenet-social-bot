@@ -3145,7 +3145,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
 
             broll_audio_result = await generate_speech_with_retry(
                 text=broll_voiceover,
-                voice_id=settings.elevenlabs_voice_id_female,  # Female narrator
+                voice_id=settings.elevenlabs_voice_id_narrator,  # Narrator voice for B-roll
                 max_retries=3
             )
 
