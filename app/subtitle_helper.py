@@ -42,6 +42,52 @@ def check_whisper_installed() -> bool:
         return False
 
 
+async def extract_audio_from_video(video_path: str, output_path: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Extract audio track from a video file using FFmpeg.
+    Used for Whisper transcription of Sora-generated videos.
+    """
+    if not os.path.exists(video_path):
+        return {"success": False, "error": f"Video file not found: {video_path}"}
+
+    if not output_path:
+        AUDIO_OUTPUT_DIR = Path("/opt/olivenet-social-bot/outputs/audio")
+        AUDIO_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_path = str(AUDIO_OUTPUT_DIR / f"extracted_{timestamp}.mp3")
+
+    try:
+        cmd = [
+            "ffmpeg", "-y", "-i", video_path,
+            "-vn", "-acodec", "libmp3lame",
+            "-ar", "44100", "-ac", "2", "-b:a", "192k",
+            output_path
+        ]
+
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await process.communicate()
+
+        if process.returncode != 0:
+            return {"success": False, "error": stderr.decode()}
+
+        # Get duration
+        probe_cmd = ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+                     "-of", "default=noprint_wrappers=1:nokey=1", output_path]
+        probe_process = await asyncio.create_subprocess_exec(
+            *probe_cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+        )
+        probe_stdout, _ = await probe_process.communicate()
+        duration = float(probe_stdout.decode().strip()) if probe_stdout else 0.0
+
+        return {"success": True, "audio_path": output_path, "duration": duration}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
 def tokenize_script(script: str) -> List[str]:
     """
     Tokenize script into words while preserving punctuation attached to words.

@@ -2914,24 +2914,24 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
         manual_topic_mode: bool = False
     ) -> Dict[str, Any]:
         """
-        Conversational Reels pipeline with lip-sync.
+        Conversational Reels pipeline with Sora native speech.
 
         Creates two-character dialog video (male problem, female solution)
         followed by B-roll segment with voiceover.
 
-        Pipeline Steps:
+        Pipeline Steps (Simplified):
         1. Topic selection (Planner/manual)
         2. Conversation content generation (Creator)
-        3. Dialog audio generation (ElevenLabs multi-voice)
-        4. Avatar talking head video generation (Kling 2.6)
-        5. Upload to Cloudinary (video + audio)
-        6. Lip-sync processing (Sync Lipsync V2 Pro)
-        7. B-roll video generation (Kling)
-        8. B-roll voiceover generation (ElevenLabs)
-        9. B-roll merge (FFmpeg)
-        10. Concat conversation + B-roll
-        11. Optional subtitles
-        12. Review + Publish
+        3. Conversation video generation (Sora 12s - native Turkish speech)
+        4. B-roll video generation (Sora 10s)
+        5. B-roll voiceover generation (ElevenLabs narrator)
+        6. B-roll merge (FFmpeg)
+        7. Concat conversation + B-roll
+        8. Whisper transcription + subtitles
+        9. Review + Publish
+
+        Note: Sora natively generates Turkish dialog with lip-sync.
+        No TTS or Lipsync API needed.
 
         Args:
             topic: Topic (None uses Planner suggestion)
@@ -2993,7 +2993,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 "action": "create_conversation_content",
                 "topic": topic,
                 "category": category,
-                "target_duration": 8  # ~8 seconds dialog
+                "target_duration": 12  # ~12 seconds dialog (Sora max)
             })
 
             if not conv_result.get("success"):
@@ -3023,102 +3023,28 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             )
             result["post_id"] = post_id
 
-            # ========== STAGE 3: Dialog Audio Generation ==========
-            self.log("[CONV REELS] Aşama 3: Dialog ses üretimi...")
-
-            from app.elevenlabs_helper import generate_dialog_audio
-
-            dialog_audio_result = await generate_dialog_audio(
-                dialog_lines=dialog_lines,
-                pause_between_ms=300
-            )
-
-            if not dialog_audio_result.get("success"):
-                raise Exception(f"Dialog audio hatası: {dialog_audio_result.get('error')}")
-
-            dialog_audio_path = dialog_audio_result.get("audio_path")
-            dialog_duration = dialog_audio_result.get("total_duration", 8)
-
-            self.log(f"[CONV REELS] Dialog audio: {dialog_duration:.1f}s")
-            result["dialog_audio_duration"] = dialog_duration
-            result["stages_completed"].append("dialog_audio")
-
-            # ========== STAGE 4: Avatar Video Generation ==========
-            self.log("[CONV REELS] Aşama 4: Avatar video üretimi (Sora)...")
+            # ========== STAGE 3: Conversation Video (Sora Native Speech) ==========
+            self.log("[CONV REELS] Aşama 3: Conversation video üretimi (Sora 12s)...")
             self.state = PipelineState.CREATING_VISUAL
 
             from app.sora_helper import generate_video_sora
 
-            # Generate talking head video with proper duration
-            avatar_duration = min(10, int(dialog_duration) + 2)  # Buffer, max 10s
-
-            avatar_result = await generate_video_sora(
+            conversation_result = await generate_video_sora(
                 prompt=video_prompt,
-                duration=avatar_duration,  # Sora otomatik 4/8/12'ye yuvarlar
-                size="720x1280"  # 9:16 aspect ratio
+                duration=12,  # Sora max duration
+                size="720x1280"
             )
 
-            if not avatar_result.get("success"):
-                raise Exception(f"Avatar video hatası: {avatar_result.get('error')}")
+            if not conversation_result.get("success"):
+                raise Exception(f"Conversation video hatası: {conversation_result.get('error')}")
 
-            avatar_video_path = avatar_result.get("video_path")
-            self.log(f"[CONV REELS] Avatar video üretildi: {avatar_video_path}")
-            result["stages_completed"].append("avatar_video")
+            conversation_video_path = conversation_result.get("video_path")
+            self.log(f"[CONV REELS] Conversation video üretildi: {conversation_video_path}")
+            result["stages_completed"].append("conversation_video")
+            result["sora_native_speech"] = True
 
-            # ========== STAGE 5: Upload to Cloudinary ==========
-            self.log("[CONV REELS] Aşama 5: Cloudinary'ye yükleme...")
-
-            from app.cloudinary_helper import upload_video_to_cloudinary, upload_audio_to_cloudinary
-
-            # Upload video
-            video_cdn = await upload_video_to_cloudinary(avatar_video_path, folder="olivenet-lipsync")
-            if not video_cdn.get("success"):
-                raise Exception(f"Video CDN yükleme hatası: {video_cdn.get('error')}")
-
-            video_cdn_url = video_cdn.get("url")
-
-            # Upload audio
-            audio_cdn = await upload_audio_to_cloudinary(dialog_audio_path, folder="olivenet-lipsync")
-            if not audio_cdn.get("success"):
-                raise Exception(f"Audio CDN yükleme hatası: {audio_cdn.get('error')}")
-
-            audio_cdn_url = audio_cdn.get("url")
-
-            self.log(f"[CONV REELS] CDN yükleme tamamlandı")
-            result["stages_completed"].append("cdn_upload")
-
-            # ========== STAGE 6: Lip-sync Processing ==========
-            self.log("[CONV REELS] Aşama 6: Lip-sync işleniyor...")
-
-            from app.sync_lipsync_helper import apply_lipsync
-
-            lipsync_result = await apply_lipsync(
-                video_url=video_cdn_url,
-                audio_url=audio_cdn_url,
-                sync_mode="cut_off"
-            )
-
-            if lipsync_result.get("success"):
-                conversation_video_path = lipsync_result.get("video_path")
-                self.log(f"[CONV REELS] Lip-sync başarılı!")
-                result["lipsync_success"] = True
-            else:
-                # Fallback: merge video and audio without lip-sync
-                self.log(f"[CONV REELS] Lip-sync başarısız, fallback merge...")
-                from app.instagram_helper import merge_audio_video
-
-                merge_result = await merge_audio_video(
-                    video_path=avatar_video_path,
-                    audio_path=dialog_audio_path,
-                    target_duration=dialog_duration
-                )
-                conversation_video_path = merge_result.get("output_path", avatar_video_path)
-                result["lipsync_success"] = False
-
-            result["stages_completed"].append("lipsync")
-
-            # ========== STAGE 7: B-roll Video Generation ==========
-            self.log("[CONV REELS] Aşama 7: B-roll video üretimi...")
+            # ========== STAGE 4: B-roll Video Generation ==========
+            self.log("[CONV REELS] Aşama 4: B-roll video üretimi...")
 
             broll_video_result = await generate_video_sora(
                 prompt=broll_prompt,
@@ -3133,8 +3059,8 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             self.log(f"[CONV REELS] B-roll video üretildi")
             result["stages_completed"].append("broll_video")
 
-            # ========== STAGE 8: B-roll Voiceover ==========
-            self.log("[CONV REELS] Aşama 8: B-roll voiceover...")
+            # ========== STAGE 5: B-roll Voiceover ==========
+            self.log("[CONV REELS] Aşama 5: B-roll voiceover...")
 
             from app.elevenlabs_helper import generate_speech_with_retry
             from app.config import settings
@@ -3153,8 +3079,8 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
 
             result["stages_completed"].append("broll_voiceover")
 
-            # ========== STAGE 9: B-roll Merge ==========
-            self.log("[CONV REELS] Aşama 9: B-roll merge...")
+            # ========== STAGE 6: B-roll Merge ==========
+            self.log("[CONV REELS] Aşama 6: B-roll merge...")
 
             from app.instagram_helper import merge_audio_video
 
@@ -3162,7 +3088,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 broll_merge_result = await merge_audio_video(
                     video_path=broll_video_path,
                     audio_path=broll_audio_path,
-                    target_duration=5
+                    target_duration=10
                 )
                 broll_final_path = broll_merge_result.get("output_path", broll_video_path)
             else:
@@ -3170,8 +3096,8 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
 
             result["stages_completed"].append("broll_merge")
 
-            # ========== STAGE 10: Concat Videos ==========
-            self.log("[CONV REELS] Aşama 10: Video birleştirme...")
+            # ========== STAGE 7: Concat Videos ==========
+            self.log("[CONV REELS] Aşama 7: Video birleştirme...")
 
             from app.instagram_helper import concatenate_videos_with_crossfade
 
@@ -3190,19 +3116,21 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             result["final_duration"] = final_duration
             result["stages_completed"].append("concat")
 
-            # ========== STAGE 11: Optional Subtitles ==========
-            if os.getenv("SUBTITLE_ENABLED", "").lower() == "true":
-                self.log("[CONV REELS] Aşama 11: Altyazı ekleniyor...")
-                try:
-                    from app.subtitle_helper import create_subtitle_file
-                    from app.instagram_helper import add_subtitles_to_video
+            # ========== STAGE 8: Whisper Transcription + Subtitles ==========
+            self.log("[CONV REELS] Aşama 8: Altyazı ekleniyor (Whisper)...")
+            try:
+                from app.subtitle_helper import create_subtitle_file, extract_audio_from_video
+                from app.instagram_helper import add_subtitles_to_video
 
-                    # Combine dialog texts for subtitle
+                # Extract audio from final video for Whisper
+                extracted_audio = await extract_audio_from_video(final_video_path)
+
+                if extracted_audio.get("success"):
                     full_script = " ".join([line.get("text", "") for line in dialog_lines])
                     full_script += " " + broll_voiceover
 
                     sub_result = await create_subtitle_file(
-                        audio_path=dialog_audio_path,
+                        audio_path=extracted_audio["audio_path"],
                         original_script=full_script,
                         model_size=os.getenv("WHISPER_MODEL_SIZE", "base"),
                         language="tr"
@@ -3217,8 +3145,8 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                             final_video_path = burn_result["output_path"]
                             result["stages_completed"].append("subtitles")
                             self.log("[CONV REELS] Altyazı eklendi")
-                except Exception as e:
-                    self.log(f"[CONV REELS] Altyazı hatası (devam): {e}")
+            except Exception as e:
+                self.log(f"[CONV REELS] Altyazı hatası (devam): {e}")
 
             # Update post
             if post_id:
@@ -3226,13 +3154,11 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                     post_id,
                     visual_path=final_video_path,
                     total_video_duration=final_duration,
-                    audio_path=dialog_audio_path,
-                    audio_duration=dialog_duration,
                     voice_mode=True
                 )
 
-            # ========== STAGE 12: Review & Approval ==========
-            self.log("[CONV REELS] Aşama 12: Onay bekleniyor...")
+            # ========== STAGE 9: Review & Approval ==========
+            self.log("[CONV REELS] Aşama 9: Onay bekleniyor...")
             self.state = PipelineState.AWAITING_FINAL_APPROVAL
 
             # Hashtag string
@@ -3244,7 +3170,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 f"📋 *Konu:* {_escape_md(topic[:50])}...\n"
                 f"💬 *Dialog:* {len(dialog_lines)} satır\n"
                 f"⏱️ *Süre:* {final_duration:.0f}s\n"
-                f"🎤 *Lip-sync:* {'✓' if result.get('lipsync_success') else '✗ (fallback)'}\n\n"
+                f"🗣️ *Sora Native Speech:* ✓\n\n"
                 f"*Caption:*\n{_escape_md(full_caption[:200])}...",
                 data={"video_path": final_video_path},
                 buttons=[
