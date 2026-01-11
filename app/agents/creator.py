@@ -1814,6 +1814,13 @@ Sadece JSON döndür.
 - Son kareye kadar konuşma OLMAMALI
 - Dialog net bir kapanış ile bitmeli (yarım cümle değil)
 
+**VIDEO ENDING (SORA İÇİN KRİTİK):**
+- Konuşma {target_duration - 2}. saniyede TAMAMEN bitiyor
+- Son 1-2 saniye: Karakterler sessizce bakışıyor veya baş sallıyor
+- Son 0.5 saniye: Hareketsiz "hold" - final frame
+- Prompt örneği: "The conversation concludes by second {target_duration - 2},
+  both characters share a satisfied nod. Video ends with a 0.5-second hold."
+
 **KARAKTER TON:**
 - ERKEK: Merakli, problem odakli, samimi, endiseli
 - KADIN: Cozum odakli, guvenlı, bilgili, sakin
@@ -1859,6 +1866,7 @@ DIALOGUE FLOW:
 - Conversation MUST conclude naturally by second {target_duration - 2}
 - Final exchange should be a clear conclusion (not mid-thought)
 - Last 2 seconds: satisfied nods, smiles, or natural reaction shot
+- Final 0.5 seconds: static hold on the final satisfied expressions
 - DO NOT let characters speak until the very last frame
 
 AUDIO: Clear Turkish dialogue, ambient outdoor sounds, natural silence at end.

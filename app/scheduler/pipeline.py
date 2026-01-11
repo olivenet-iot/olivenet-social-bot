@@ -3043,24 +3043,8 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             result["stages_completed"].append("conversation_video")
             result["sora_native_speech"] = True
 
-            # ========== STAGE 4: B-roll Video Generation ==========
-            self.log("[CONV REELS] Aşama 4: B-roll video üretimi...")
-
-            broll_video_result = await generate_video_sora(
-                prompt=broll_prompt,
-                duration=10,  # Sora otomatik 12'ye yuvarlar
-                size="720x1280"  # 9:16 aspect ratio
-            )
-
-            if not broll_video_result.get("success"):
-                raise Exception(f"B-roll video hatası: {broll_video_result.get('error')}")
-
-            broll_video_path = broll_video_result.get("video_path")
-            self.log(f"[CONV REELS] B-roll video üretildi")
-            result["stages_completed"].append("broll_video")
-
-            # ========== STAGE 5: B-roll Voiceover ==========
-            self.log("[CONV REELS] Aşama 5: B-roll voiceover...")
+            # ========== STAGE 4: B-roll Voiceover (TTS önce) ==========
+            self.log("[CONV REELS] Aşama 4: B-roll voiceover...")
 
             from app.elevenlabs_helper import generate_speech_with_retry
             from app.config import settings
@@ -3071,13 +3055,41 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 max_retries=3
             )
 
-            if not broll_audio_result.get("success"):
+            if broll_audio_result.get("success"):
+                broll_audio_path = broll_audio_result.get("audio_path")
+                # TTS süresini ölç
+                from app.instagram_helper import get_audio_duration
+                tts_duration = await get_audio_duration(broll_audio_path)
+                # Sora duration: 8 veya 12 (4'ün katları)
+                if tts_duration <= 6:
+                    broll_video_duration = 8
+                elif tts_duration <= 10:
+                    broll_video_duration = 12
+                else:
+                    broll_video_duration = 12  # max
+                self.log(f"[CONV REELS] TTS süresi: {tts_duration:.1f}s → Video: {broll_video_duration}s")
+            else:
                 self.log(f"[CONV REELS] B-roll voiceover başarısız, sessiz B-roll kullanılacak")
                 broll_audio_path = None
-            else:
-                broll_audio_path = broll_audio_result.get("audio_path")
+                broll_video_duration = 8  # fallback
 
             result["stages_completed"].append("broll_voiceover")
+
+            # ========== STAGE 5: B-roll Video (TTS süresine göre dinamik) ==========
+            self.log(f"[CONV REELS] Aşama 5: B-roll video üretimi (Sora {broll_video_duration}s)...")
+
+            broll_video_result = await generate_video_sora(
+                prompt=broll_prompt,
+                duration=broll_video_duration,  # Dinamik süre
+                size="720x1280"  # 9:16 aspect ratio
+            )
+
+            if not broll_video_result.get("success"):
+                raise Exception(f"B-roll video hatası: {broll_video_result.get('error')}")
+
+            broll_video_path = broll_video_result.get("video_path")
+            self.log(f"[CONV REELS] B-roll video üretildi")
+            result["stages_completed"].append("broll_video")
 
             # ========== STAGE 6: B-roll Merge ==========
             self.log("[CONV REELS] Aşama 6: B-roll merge...")
@@ -3088,8 +3100,8 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 broll_merge_result = await merge_audio_video(
                     video_path=broll_video_path,
                     audio_path=broll_audio_path,
-                    target_duration=10,
-                    keep_video_duration=True  # Video süresini koru, audio kısa olabilir
+                    target_duration=broll_video_duration
+                    # keep_video_duration kaldırıldı - artık süreler uyumlu
                 )
                 broll_final_path = broll_merge_result.get("output_path", broll_video_path)
             else:
