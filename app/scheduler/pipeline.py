@@ -3044,20 +3044,18 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             result["stages_completed"].append("dialog_audio")
 
             # ========== STAGE 4: Avatar Video Generation ==========
-            self.log("[CONV REELS] Aşama 4: Avatar video üretimi (Kling 2.6 Pro)...")
+            self.log("[CONV REELS] Aşama 4: Avatar video üretimi (Sora)...")
             self.state = PipelineState.CREATING_VISUAL
 
-            from app.fal_helper import FalVideoGenerator
+            from app.sora_helper import generate_video_sora
 
             # Generate talking head video with proper duration
             avatar_duration = min(10, int(dialog_duration) + 2)  # Buffer, max 10s
 
-            avatar_result = await FalVideoGenerator.generate_video(
+            avatar_result = await generate_video_sora(
                 prompt=video_prompt,
-                model="kling_26_pro",
-                duration=avatar_duration,
-                aspect_ratio="9:16",
-                generate_audio=False  # No native audio - we'll add TTS
+                duration=avatar_duration,  # Sora otomatik 4/8/12'ye yuvarlar
+                size="720x1280"  # 9:16 aspect ratio
             )
 
             if not avatar_result.get("success"):
