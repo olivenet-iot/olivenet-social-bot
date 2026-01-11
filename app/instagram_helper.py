@@ -518,14 +518,14 @@ def build_crossfade_filter(
     crossfade_duration: float = 0.5
 ) -> str:
     """
-    N video için FFmpeg crossfade filter_complex string'i oluştur.
+    N video için FFmpeg crossfade filter_complex string'i oluştur (video + audio).
 
     Args:
         video_durations: Her videonun gerçek süresi (saniye listesi)
         crossfade_duration: Crossfade geçiş süresi (saniye)
 
     Returns:
-        FFmpeg filter_complex string
+        FFmpeg filter_complex string ([vout] ve [aout] output'ları ile)
     """
     video_count = len(video_durations)
     if video_count < 2:
@@ -533,35 +533,54 @@ def build_crossfade_filter(
 
     filter_parts = []
 
-    # Her input için scale ve format
+    # Her input için video scale ve format
     for i in range(video_count):
         filter_parts.append(
             f"[{i}:v]setpts=PTS-STARTPTS,scale=720:1280:force_original_aspect_ratio=decrease,"
             f"pad=720:1280:(ow-iw)/2:(oh-ih)/2,fps=30,format=yuv420p[v{i}]"
         )
 
-    # Crossfade zincirleme
+    # Her input için audio normalization
+    for i in range(video_count):
+        filter_parts.append(
+            f"[{i}:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[a{i}]"
+        )
+
+    # Video ve Audio crossfade zincirleme
     if video_count == 2:
         # İlk videonun gerçek süresini kullan
         offset = video_durations[0] - crossfade_duration
+        # Video crossfade
         filter_parts.append(
             f"[v0][v1]xfade=transition=fade:duration={crossfade_duration}:offset={offset:.2f}[vout]"
         )
+        # Audio crossfade
+        filter_parts.append(
+            f"[a0][a1]acrossfade=d={crossfade_duration}:c1=tri:c2=tri[aout]"
+        )
     else:
         # N video için zincirleme xfade
-        current_output = "v0"
+        current_v_output = "v0"
+        current_a_output = "a0"
         cumulative_duration = video_durations[0]
 
         for i in range(1, video_count):
             offset = cumulative_duration - crossfade_duration
-            next_output = "vout" if i == video_count - 1 else f"vt{i}"
+            next_v_output = "vout" if i == video_count - 1 else f"vt{i}"
+            next_a_output = "aout" if i == video_count - 1 else f"at{i}"
 
+            # Video xfade
             filter_parts.append(
-                f"[{current_output}][v{i}]xfade=transition=fade:"
-                f"duration={crossfade_duration}:offset={offset:.2f}[{next_output}]"
+                f"[{current_v_output}][v{i}]xfade=transition=fade:"
+                f"duration={crossfade_duration}:offset={offset:.2f}[{next_v_output}]"
+            )
+            # Audio crossfade
+            filter_parts.append(
+                f"[{current_a_output}][a{i}]acrossfade=d={crossfade_duration}:c1=tri:c2=tri[{next_a_output}]"
             )
 
-            current_output = next_output
+            current_v_output = next_v_output
+            current_a_output = next_a_output
             # Sonraki video süresini ekle (crossfade çıkar)
             cumulative_duration += video_durations[i] - crossfade_duration
 
@@ -643,12 +662,15 @@ async def concatenate_videos_with_crossfade(
         # Filter complex
         ffmpeg_cmd.extend(["-filter_complex", filter_complex])
 
-        # Output mapping ve codec
+        # Output mapping ve codec (video + audio)
         ffmpeg_cmd.extend([
             "-map", "[vout]",
+            "-map", "[aout]",
             "-c:v", "libx264",
             "-preset", "medium",
             "-crf", "23",
+            "-c:a", "aac",
+            "-b:a", "128k",
             "-movflags", "+faststart",
             "-pix_fmt", "yuv420p",
             output_path
