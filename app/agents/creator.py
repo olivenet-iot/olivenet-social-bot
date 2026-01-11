@@ -1807,6 +1807,13 @@ Sadece JSON döndür.
 - Her satir kisa: 5-12 kelime
 - Dogal konusma dili, EMOJI KULLANMA
 
+**TIMING (ÇOK ÖNEMLİ):**
+- Video süresi: {target_duration} saniye
+- Dialog {target_duration - 2} saniyede BİTMELİ
+- Son 2 saniye: Doğal kapanış (baş sallama, gülümseme)
+- Son kareye kadar konuşma OLMAMALI
+- Dialog net bir kapanış ile bitmeli (yarım cümle değil)
+
 **KARAKTER TON:**
 - ERKEK: Merakli, problem odakli, samimi, endiseli
 - KADIN: Cozum odakli, guvenlı, bilgili, sakin
@@ -1846,10 +1853,15 @@ CHARACTER 2 - IOT EXPERT:
 - Explaining IoT solution with gestures
 - Clear lip movements synchronized with Turkish speech
 
-DIALOGUE: Natural Turkish conversation - farmer speaks first about problem,
-expert responds with solution. Both speaking fluent Turkish throughout.
+DIALOGUE FLOW:
+- Natural Turkish conversation - farmer speaks first about problem
+- Expert responds with solution, both speaking fluent Turkish
+- Conversation MUST conclude naturally by second {target_duration - 2}
+- Final exchange should be a clear conclusion (not mid-thought)
+- Last 2 seconds: satisfied nods, smiles, or natural reaction shot
+- DO NOT let characters speak until the very last frame
 
-AUDIO: Clear Turkish dialogue, ambient outdoor sounds.
+AUDIO: Clear Turkish dialogue, ambient outdoor sounds, natural silence at end.
 
 CAMERA: Medium two-shot showing both characters, professional documentary style.
 ---
@@ -1858,7 +1870,9 @@ CAMERA: Medium two-shot showing both characters, professional documentary style.
 - Konu ile ilgili gorsel (sensörler, sera, fabrika vb.)
 - Konusan kisi OLMAMALI
 - Cinematic, 9:16 format
-- 7 saniye icin uygun
+- 10 saniye icin uygun
+- Smooth ending with natural fade or static shot
+- No abrupt cuts at the end
 - Ingilizce yaz
 
 **B-ROLL VOICEOVER:**
@@ -1883,7 +1897,7 @@ CAMERA: Medium two-shot showing both characters, professional documentary style.
         {{"speaker": "male", "text": "Ikinci soru..."}},
         {{"speaker": "female", "text": "Ikinci cozum/kapanış..."}}
     ],
-    "video_prompt": "Cinematic vertical video (9:16), 12 seconds, realistic style. LANGUAGE: TURKISH - All dialogue in Turkish language. SCENE: Greenhouse in rural Turkey, natural daylight. CHARACTER 1: Middle-aged farmer (50 years old) from Turkey, weathered face, work clothes, speaking Turkish with worried expression about his crops, clear lip movements. CHARACTER 2: Professional female IoT consultant (35 years old), smart casual, speaking Turkish confidently, explaining solution with gestures, clear lip movements. DIALOGUE: Natural Turkish conversation - farmer speaks first about problem, expert responds with IoT solution. Both speaking fluent Turkish throughout with synchronized lip movements. AUDIO: Clear Turkish dialogue, ambient greenhouse sounds. CAMERA: Medium two-shot, professional documentary style.",
+    "video_prompt": "Cinematic vertical video (9:16), 12 seconds, realistic style. LANGUAGE: TURKISH - All dialogue in Turkish language. SCENE: Greenhouse in rural Turkey, natural daylight. CHARACTER 1: Middle-aged farmer (50 years old) from Turkey, weathered face, work clothes, speaking Turkish with worried expression about his crops, clear lip movements. CHARACTER 2: Professional female IoT consultant (35 years old), smart casual, speaking Turkish confidently, explaining solution with gestures, clear lip movements. DIALOGUE: Natural Turkish conversation - farmer speaks first about problem, expert responds with IoT solution. Both speaking fluent Turkish throughout with synchronized lip movements. The conversation concludes naturally by second 10, with a moment of satisfied expressions and nods before video ends. AUDIO: Clear Turkish dialogue, ambient greenhouse sounds, natural silence at end. CAMERA: Medium two-shot, professional documentary style.",
     "broll_prompt": "Cinematic close-up of IoT temperature sensors and control panels in modern greenhouse, morning light, 9:16 vertical, no people, professional documentary style",
     "broll_voiceover": "Olivenet IoT ile seraniz 7/24 guvende. Takip et, sorularini sor.",
     "caption": "Instagram caption metni...",
@@ -1902,6 +1916,10 @@ KADIN: "Sicaklik dusunce telefonuna aninda bildirim geliyor."
 2. Olivenet cozumleri dogal sekilde cikmali
 3. Video prompt'u iki kisiyi konusurken gostermeli
 4. B-roll prompt'ta insan OLMAMALI
+5. Konuşma video süresinden 2 saniye ÖNCE bitmeli
+6. Son cümle net bir kapanış olmalı (yarım kalmış düşünce değil)
+7. "conversation concludes by second X" ifadesini video_prompt'a ekle (12s video için X=10)
+8. Video sonunda karakterler gülümseme/baş sallama ile kapanış yapsın
 
 Sadece JSON dondur.
 """
