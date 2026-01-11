@@ -665,8 +665,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"✅ *CONVERSATIONAL REELS* yayınlanıyor...\n\nPost ID: {post_id}",
                 parse_mode="Markdown"
             )
-        # TODO: Implement publish logic
-        # asyncio.create_task(pipeline.publish_conversational_reels(post_id))
+        asyncio.create_task(pipeline.publish_conversational_reels(int(post_id)))
 
     # ===== CONVERSATIONAL REELS - YENİDEN ÜRET =====
     elif action.startswith("conv_regenerate:"):

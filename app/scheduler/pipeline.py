@@ -3280,3 +3280,69 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             )
 
             return result
+
+    async def publish_conversational_reels(self, post_id: int) -> Dict[str, Any]:
+        """Conversational Reels'i Instagram'a yayınla (Telegram onayı sonrası)"""
+        from app.database.crud import get_post, update_post
+
+        result = {
+            "success": False,
+            "post_id": post_id,
+            "instagram_post_id": None,
+            "error": None
+        }
+
+        try:
+            # Database'den post bilgilerini al
+            post = get_post(post_id)
+            if not post:
+                raise Exception(f"Post bulunamadı: {post_id}")
+
+            video_path = post.get("visual_path")
+            caption = post.get("post_text_ig") or post.get("post_text", "")
+
+            if not video_path:
+                raise Exception(f"Video yolu bulunamadı: post_id={post_id}")
+
+            self.log(f"[CONV REELS PUBLISH] Post {post_id} yayınlanıyor...")
+            self.log(f"[CONV REELS PUBLISH] Video: {video_path}")
+
+            # Instagram'a yayınla
+            publish_result = await self.publisher.execute({
+                "action": "publish",
+                "post_id": post_id,
+                "post_text": caption,
+                "post_text_ig": caption,
+                "video_path": video_path,
+                "platform": "instagram"
+            })
+
+            if publish_result.get("success"):
+                result["success"] = True
+                result["instagram_post_id"] = publish_result.get("instagram_post_id")
+
+                self.log(f"[CONV REELS PUBLISH] Başarıyla yayınlandı! IG: {publish_result.get('instagram_post_id')}")
+
+                await self.notify_telegram(
+                    message=f"🎉 *CONVERSATIONAL REELS* - Yayınlandı!\n\n"
+                    f"📋 Post ID: {post_id}\n"
+                    f"📸 IG Post: {publish_result.get('instagram_post_id', 'N/A')}",
+                    data=publish_result,
+                    buttons=[]
+                )
+            else:
+                raise Exception(f"Publish hatası: {publish_result.get('error')}")
+
+            return result
+
+        except Exception as e:
+            self.log(f"[CONV REELS PUBLISH] Hata: {str(e)}")
+            result["error"] = str(e)
+
+            await self.notify_telegram(
+                message=f"❌ *CONVERSATIONAL REELS PUBLISH* - Hata\n\n{_escape_md(str(e))}",
+                data={"error": str(e)},
+                buttons=[]
+            )
+
+            return result
