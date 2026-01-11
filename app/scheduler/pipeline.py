@@ -3120,12 +3120,10 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             # ========== STAGE 7: B-roll Video Generation ==========
             self.log("[CONV REELS] Aşama 7: B-roll video üretimi...")
 
-            broll_video_result = await FalVideoGenerator.generate_video(
+            broll_video_result = await generate_video_sora(
                 prompt=broll_prompt,
-                model="kling_26_pro",
-                duration=10,  # 10 seconds B-roll (max for Kling)
-                aspect_ratio="9:16",
-                generate_audio=False
+                duration=10,  # Sora otomatik 12'ye yuvarlar
+                size="720x1280"  # 9:16 aspect ratio
             )
 
             if not broll_video_result.get("success"):
