@@ -900,7 +900,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         elif video_type == "conv":
             # Conversational: Konu girişi bekle
-            pending_input["type"] = "conversational_topic"
+            pending_input["type"] = "conv_topic"
             pending_input["visual_style"] = style_id
             pending_input["user_id"] = query.from_user.id
             pending_input["username"] = query.from_user.username or query.from_user.first_name
