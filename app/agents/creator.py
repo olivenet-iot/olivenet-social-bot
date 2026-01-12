@@ -14,6 +14,7 @@ from app.database import (
     check_duplicate_prompt
 )
 from app.config import settings
+from app.video_styles import get_style_config, get_style_prefix
 
 class CreatorAgent(BaseAgent):
     """İçerik üretici - post metni ve görsel üretir"""
@@ -656,6 +657,8 @@ Sadece JSON döndür.
         post_id = input_data.get("post_id")
         speech_structure = input_data.get("speech_structure", [])
         voice_mode = input_data.get("voice_mode", False)
+        visual_style = input_data.get("visual_style", "cinematic_4k")
+        style_prefix = get_style_prefix(visual_style)
 
         # Context yükle
         reels_guide = self.load_context("reels-prompts.md")
@@ -695,6 +698,10 @@ Bu video TTS voiceover ile birleştirilecek. Her shot, aşağıdaki speech içer
 
 ### Post Metni (varsa)
 {post_text[:300] if post_text else "Yok"}
+
+### Görsel Stil
+Seçilen stil: {visual_style}
+Tüm video prompt'larının BAŞINA şu stil prefix'ini ekle: "{style_prefix}"
 
 ### Şirket Bilgisi
 {company_profile[:800]}
@@ -879,6 +886,7 @@ Sadece JSON döndür, başka açıklama ekleme.
         segment_duration = input_data.get("segment_duration", 10)
         speech_structure = input_data.get("speech_structure", [])
         model_id = input_data.get("model_id", "kling-2.6-pro")
+        visual_style = input_data.get("visual_style", "cinematic_4k")
 
         # Segment sayısı sınırla
         segment_count = max(2, min(6, segment_count))
@@ -996,13 +1004,9 @@ Sadece JSON döndür.
                 # Scenes'i segment_count'a kırp
                 result["scenes"] = scenes[:segment_count]
 
-                # Style prefix yoksa varsayılan ekle
+                # Style prefix yoksa seçilen stilden al
                 if not result.get("style_prefix"):
-                    result["style_prefix"] = (
-                        "4K cinematic, professional studio lighting, "
-                        "color palette: olive green, sky blue, clean white background, "
-                        "no text or labels, smooth camera movement, "
-                    )
+                    result["style_prefix"] = get_style_prefix(visual_style)
 
                 self.log(f"Multi-scene promptlar oluşturuldu")
                 self.log(f"   Segment sayısı: {len(result['scenes'])}")
@@ -1771,6 +1775,8 @@ Sadece JSON döndür.
         topic = input_data.get("topic", "")
         category = input_data.get("category", "egitici")
         target_duration = input_data.get("target_duration", 8)
+        visual_style = input_data.get("visual_style", "cinematic_4k")
+        style_prefix = get_style_prefix(visual_style)
 
         # Load context
         company_profile = self.load_context("company-profile.md")
@@ -1794,6 +1800,10 @@ Sadece JSON döndür.
 
 ### MARKA SESI
 {brand_voice[:800]}
+
+### GÖRSEL STİL
+Seçilen stil: {visual_style}
+Video prompt'unun başına şu stil prefix'ini ekle: "{style_prefix}"
 
 ---
 

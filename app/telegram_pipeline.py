@@ -26,6 +26,7 @@ from app.database import (
 )
 from app.config import settings
 from app.video_models import VIDEO_MODELS, get_model_config, get_model_durations
+from app.video_styles import VIDEO_STYLES, STYLE_CATEGORIES, get_style_config, get_styles_by_category
 
 # Global değişkenler
 pipeline: ContentPipeline = None
@@ -596,13 +597,17 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Otonom pipeline'ı arka planda çalıştır
         asyncio.create_task(pipeline.run_autonomous_content(min_score=7))
 
-    # ===== CONVERSATIONAL REELS - MENÜ =====
+    # ===== CONVERSATIONAL REELS - MENÜ (STİL KATEGORİSİ) =====
     elif action == "create_conversational":
-        keyboard = [
-            [InlineKeyboardButton("🤖 Otomatik Konu", callback_data="conv_auto")],
-            [InlineKeyboardButton("✏️ Manuel Konu", callback_data="conv_manual")],
-            [InlineKeyboardButton("◀️ Geri", callback_data="main_menu")]
-        ]
+        # Stil kategorisi seçim menüsü göster
+        keyboard = []
+        for cat_id, cat_info in STYLE_CATEGORIES.items():
+            keyboard.append([InlineKeyboardButton(
+                cat_info["name"],
+                callback_data=f"style_cat:sora-2:{cat_id}:conv"
+            )])
+        keyboard.append([InlineKeyboardButton("◀️ Geri", callback_data="main_menu")])
+
         await query.edit_message_text(
             "🎭 *CONVERSATIONAL REELS*\n\n"
             "İki karakter arasında dialog video:\n"
@@ -610,17 +615,18 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "• 👩 KADIN: Çözüm sunar\n"
             "• 🎬 B-roll segment ile bitirir\n\n"
             "⏱️ *Toplam süre:* ~15 saniye\n"
-            "🎤 *Lip-sync:* Gerçekçi dudak hareketi\n"
-            "🔊 *Multi-voice:* 2 farklı ses\n\n"
-            "Konu nasıl belirlensin?",
+            "📹 *Model:* Sora 2 (sabit)\n\n"
+            "🎨 *Önce görsel stil kategorisi seç:*",
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
 
-    # ===== CONVERSATIONAL REELS - OTOMATİK KONU =====
+    # ===== CONVERSATIONAL REELS - OTOMATİK KONU (backward compat) =====
     elif action == "conv_auto":
+        # Default stil ile başlat (geriye uyumluluk)
         await query.edit_message_text(
             "🎭 *CONVERSATIONAL REELS* başlatılıyor...\n\n"
+            "🎨 Stil: 🎬 Sinematik 4K (default)\n\n"
             "Pipeline aşamaları:\n"
             "1️⃣ Konu seçimi (AI)\n"
             "2️⃣ Dialog içeriği\n"
@@ -633,14 +639,16 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "⏳ Bu işlem 8-12 dakika sürebilir...",
             parse_mode="Markdown"
         )
-        asyncio.create_task(pipeline.run_conversational_reels())
+        asyncio.create_task(pipeline.run_conversational_reels(visual_style="cinematic_4k"))
 
-    # ===== CONVERSATIONAL REELS - MANUEL KONU =====
+    # ===== CONVERSATIONAL REELS - MANUEL KONU (backward compat) =====
     elif action == "conv_manual":
         pending_input["type"] = "conv_topic"
+        pending_input["visual_style"] = "cinematic_4k"  # Default stil
         pending_input["user_id"] = query.from_user.id
         await query.edit_message_text(
             "✏️ *MANUEL KONU GİRİŞİ*\n\n"
+            "🎨 Stil: 🎬 Sinematik 4K (default)\n\n"
             "Conversational Reels için konu yazın:\n\n"
             "📌 *Örnekler:*\n"
             "• Serada nem kontrolü\n"
@@ -739,7 +747,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=video_model_keyboard
         )
 
-    # ===== VIDEO MODEL SEÇİMİ - KONU SEÇİM MENÜSÜ =====
+    # ===== VIDEO MODEL SEÇİMİ - STİL KATEGORİSİ MENÜSÜ =====
     elif action.startswith("video_model:"):
         model = action.replace("video_model:", "")
 
@@ -754,24 +762,165 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         }
         model_name = model_names.get(model, model)
 
-        # Konu seçim menüsü göster
-        keyboard = [
-            [InlineKeyboardButton("🤖 Otomatik Konu", callback_data=f"reels_auto:{model}"),
-             InlineKeyboardButton("✏️ Manuel Konu", callback_data=f"reels_manual:{model}")],
-            [InlineKeyboardButton("◀️ Geri", callback_data="create_reels")]
-        ]
+        # Stil kategorisi seçim menüsü göster
+        keyboard = []
+        for cat_id, cat_info in STYLE_CATEGORIES.items():
+            keyboard.append([InlineKeyboardButton(
+                cat_info["name"],
+                callback_data=f"style_cat:{model}:{cat_id}:silent"
+            )])
+        keyboard.append([InlineKeyboardButton("◀️ Geri", callback_data="create_reels")])
+
         await query.edit_message_text(
-            f"🎬 *Reels - {model_name}*\n\n"
-            "Konu seçimi:\n"
-            "• *Otomatik*: AI trend konuyu seçer\n"
-            "• *Manuel*: Kendi konunu yaz",
+            f"🎬 *Sessiz Reels - {model_name}*\n\n"
+            "🎨 *Görsel stil kategorisi seç:*",
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
 
+    # ===== STİL KATEGORİSİ SEÇİLDİ - STİL MENÜSÜ =====
+    elif action.startswith("style_cat:"):
+        parts = action.replace("style_cat:", "").split(":")
+        model = parts[0]
+        category = parts[1]
+        video_type = parts[2]  # silent, voice, long, conv
+
+        cat_info = STYLE_CATEGORIES.get(category, {})
+        cat_name = cat_info.get("name", category)
+
+        keyboard = []
+        for style_id in get_styles_by_category(category):
+            config = VIDEO_STYLES[style_id]
+            keyboard.append([InlineKeyboardButton(
+                f"{config['emoji']} {config['name']}",
+                callback_data=f"style_sel:{model}:{style_id}:{video_type}"
+            )])
+
+        # Geri butonu - video tipine göre
+        if video_type == "silent":
+            back_data = f"video_model:{model}"
+        elif video_type == "voice":
+            back_data = f"voice_model:{model}"
+        elif video_type == "long":
+            back_data = f"long_model:{model}"
+        else:
+            back_data = "create_conversational"
+
+        keyboard.append([InlineKeyboardButton("◀️ Geri", callback_data=back_data)])
+
+        await query.edit_message_text(
+            f"🎨 *{cat_name}* stilleri:\n\n"
+            "Bir stil seç:",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+
+    # ===== STİL SEÇİLDİ - SONRAKİ ADIM =====
+    elif action.startswith("style_sel:"):
+        parts = action.replace("style_sel:", "").split(":")
+        model = parts[0]
+        style_id = parts[1]
+        video_type = parts[2]
+
+        style_config = get_style_config(style_id)
+        style_name = f"{style_config['emoji']} {style_config['name']}"
+
+        if video_type == "silent":
+            # Sessiz reels: Konu seçim menüsü
+            model_names = {
+                "veo3": "Veo 3", "sora2": "Sora 2", "kling_pro": "Kling 2.5",
+                "kling_26_pro": "Kling 2.6", "hailuo_pro": "Hailuo", "wan_26": "Wan 2.6",
+                "kling_master": "Kling Master"
+            }
+            model_name = model_names.get(model, model)
+
+            keyboard = [
+                [InlineKeyboardButton("🤖 Otomatik Konu", callback_data=f"reels_auto:{model}:{style_id}"),
+                 InlineKeyboardButton("✏️ Manuel Konu", callback_data=f"reels_manual:{model}:{style_id}")],
+                [InlineKeyboardButton("◀️ Geri", callback_data=f"video_model:{model}")]
+            ]
+            await query.edit_message_text(
+                f"🎬 *Sessiz Reels*\n\n"
+                f"📹 Model: {model_name}\n"
+                f"🎨 Stil: {style_name}\n\n"
+                "📝 Konu seçimi:",
+                parse_mode="Markdown",
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
+
+        elif video_type == "voice":
+            # Sesli reels: Süre seçim menüsü
+            config = get_model_config(model)
+            durations = get_model_durations(model)
+
+            keyboard = []
+            for duration in durations:
+                is_default = duration == config.get("default_duration")
+                emoji = "⭐" if is_default else "⏱️"
+                suffix = " (önerilen)" if is_default else ""
+                button_text = f"{emoji} {duration} saniye{suffix}"
+                keyboard.append([InlineKeyboardButton(button_text, callback_data=f"voice_duration:{model}:{style_id}:{duration}")])
+
+            keyboard.append([InlineKeyboardButton("◀️ Geri", callback_data=f"voice_model:{model}")])
+
+            await query.edit_message_text(
+                f"🎙️ *Sesli Reels*\n\n"
+                f"📹 Model: {config.get('name', model)}\n"
+                f"🎨 Stil: {style_name}\n\n"
+                "⏱️ Video süresini seç:",
+                parse_mode="Markdown",
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
+
+        elif video_type == "long":
+            # Uzun video: model parametresinde duration:model formatı var
+            long_parts = model.split("_dur_")
+            if len(long_parts) == 2:
+                duration = int(long_parts[0])
+                model_id = long_parts[1]
+            else:
+                duration = 30
+                model_id = model
+
+            config = get_model_config(model_id)
+            keyboard = [
+                [InlineKeyboardButton("🎲 Otomatik Konu", callback_data=f"long_topic:{duration}:{model_id}:{style_id}:auto")],
+                [InlineKeyboardButton("✏️ Manuel Konu", callback_data=f"long_topic:{duration}:{model_id}:{style_id}:manual")],
+                [InlineKeyboardButton("◀️ Geri", callback_data=f"long_model:{duration}:{model_id}")]
+            ]
+            await query.edit_message_text(
+                f"🎥 *Uzun Video*\n\n"
+                f"⏱️ Süre: {duration}s\n"
+                f"📹 Model: {config.get('name', model_id)}\n"
+                f"🎨 Stil: {style_name}\n\n"
+                "📝 Konu seçimi:",
+                parse_mode="Markdown",
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
+
+        elif video_type == "conv":
+            # Conversational: Konu girişi bekle
+            pending_input["type"] = "conversational_topic"
+            pending_input["visual_style"] = style_id
+            pending_input["user_id"] = query.from_user.id
+            pending_input["username"] = query.from_user.username or query.from_user.first_name
+
+            keyboard = [[InlineKeyboardButton("❌ İptal", callback_data="create_conversational")]]
+            await query.edit_message_text(
+                f"🎭 *Conversational Reels*\n\n"
+                f"🎨 Stil: {style_name}\n"
+                f"📹 Model: Sora 2 (sabit)\n\n"
+                "✏️ Şimdi video konusunu yaz:\n"
+                "_Örnek: Serada sıcaklık takibi nasıl yapılır?_",
+                parse_mode="Markdown",
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
+
     # ===== REELS - OTOMATİK KONU =====
     elif action.startswith("reels_auto:"):
-        model = action.replace("reels_auto:", "")
+        parts = action.replace("reels_auto:", "").split(":")
+        model = parts[0]
+        style_id = parts[1] if len(parts) > 1 else "cinematic_4k"
 
         model_names = {
             "veo3": "Veo 3 (Google)",
@@ -783,10 +932,13 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "kling_master": "Kling 2.1 Master (fal.ai)"
         }
         model_name = model_names.get(model, model)
+        style_config = get_style_config(style_id)
+        style_name = f"{style_config['emoji']} {style_config['name']}"
 
         await query.edit_message_text(
             f"🎬 *REELS MOD* başlatılıyor...\n\n"
-            f"🎯 *Model:* {model_name}\n\n"
+            f"🎯 *Model:* {model_name}\n"
+            f"🎨 *Stil:* {style_name}\n\n"
             "Video içeriği oluşturulacak:\n"
             "• Konu seçimi (AI)\n"
             "• Caption üretimi (IG+FB)\n"
@@ -796,11 +948,13 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "⏳ Bu işlem 5-10 dakika sürebilir...",
             parse_mode="Markdown"
         )
-        asyncio.create_task(pipeline.run_reels_content(force_model=model))
+        asyncio.create_task(pipeline.run_reels_content(force_model=model, visual_style=style_id))
 
     # ===== REELS - MANUEL KONU =====
     elif action.startswith("reels_manual:"):
-        model = action.replace("reels_manual:", "")
+        parts = action.replace("reels_manual:", "").split(":")
+        model = parts[0]
+        style_id = parts[1] if len(parts) > 1 else "cinematic_4k"
 
         model_names = {
             "veo3": "Veo 3 (Google)",
@@ -812,13 +966,17 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "kling_master": "Kling 2.1 Master (fal.ai)"
         }
         model_name = model_names.get(model, model)
+        style_config = get_style_config(style_id)
+        style_name = f"{style_config['emoji']} {style_config['name']}"
 
         pending_input["type"] = "reels_manual_topic"
         pending_input["model"] = model
+        pending_input["visual_style"] = style_id
         pending_input["user_id"] = query.from_user.id
         await query.edit_message_text(
             f"✏️ *Manuel Konu Girişi*\n\n"
-            f"🎬 Model: {model_name}\n\n"
+            f"🎬 Model: {model_name}\n"
+            f"🎨 Stil: {style_name}\n\n"
             "Reels için konu yazın:\n\n"
             "Örnek:\n"
             "• `YOLOv8 ile kalite kontrol`\n"
@@ -856,26 +1014,23 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
 
-    # ===== SESLİ REELS - MODEL SEÇİLDİ → SÜRE MENÜSÜ =====
+    # ===== SESLİ REELS - MODEL SEÇİLDİ → STİL KATEGORİSİ =====
     elif action.startswith("voice_model:"):
         model_id = action.replace("voice_model:", "")
         config = get_model_config(model_id)
-        durations = get_model_durations(model_id)
 
+        # Stil kategorisi seçim menüsü göster
         keyboard = []
-        for duration in durations:
-            is_default = duration == config.get("default_duration")
-            emoji = "⭐" if is_default else "⏱️"
-            suffix = " (önerilen)" if is_default else ""
-            button_text = f"{emoji} {duration} saniye{suffix}"
-            keyboard.append([InlineKeyboardButton(button_text, callback_data=f"voice_duration:{model_id}:{duration}")])
-
+        for cat_id, cat_info in STYLE_CATEGORIES.items():
+            keyboard.append([InlineKeyboardButton(
+                cat_info["name"],
+                callback_data=f"style_cat:{model_id}:{cat_id}:voice"
+            )])
         keyboard.append([InlineKeyboardButton("⬅️ Geri", callback_data="voice_reels_menu")])
 
         await query.edit_message_text(
-            f"⏱️ *{config['emoji']} {config['name']}* - Süre Seç\n\n"
-            f"_{config['description']}_\n\n"
-            "Kaç saniyelik video oluşturmak istersin?",
+            f"🎙️ *Sesli Reels - {config['emoji']} {config['name']}*\n\n"
+            "🎨 *Görsel stil kategorisi seç:*",
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
@@ -884,18 +1039,29 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif action.startswith("voice_duration:"):
         parts = action.split(":")
         model_id = parts[1]
-        duration = int(parts[2])
+        # Yeni format: voice_duration:{model_id}:{style_id}:{duration}
+        # Eski format: voice_duration:{model_id}:{duration} (backward compat)
+        if len(parts) >= 4:
+            style_id = parts[2]
+            duration = int(parts[3])
+        else:
+            style_id = "cinematic_4k"
+            duration = int(parts[2])
+
         config = get_model_config(model_id)
+        style_config = get_style_config(style_id)
+        style_name = f"{style_config['emoji']} {style_config['name']}"
 
         keyboard = [
-            [InlineKeyboardButton("🎲 Otomatik Konu", callback_data=f"voice_topic:{model_id}:{duration}:auto")],
-            [InlineKeyboardButton("✏️ Manuel Konu", callback_data=f"voice_topic:{model_id}:{duration}:manual")],
+            [InlineKeyboardButton("🎲 Otomatik Konu", callback_data=f"voice_topic:{model_id}:{style_id}:{duration}:auto")],
+            [InlineKeyboardButton("✏️ Manuel Konu", callback_data=f"voice_topic:{model_id}:{style_id}:{duration}:manual")],
             [InlineKeyboardButton("⬅️ Geri", callback_data=f"voice_model:{model_id}")]
         ]
 
         await query.edit_message_text(
             f"📝 *Konu Seç*\n\n"
             f"🎬 Model: {config['emoji']} {config['name']}\n"
+            f"🎨 Stil: {style_name}\n"
             f"⏱️ Süre: {duration} saniye\n\n"
             "Konu nasıl belirlensin?",
             parse_mode="Markdown",
@@ -904,18 +1070,33 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # ===== SESLİ REELS - KONU SEÇİLDİ =====
     elif action.startswith("voice_topic:") and ":" in action[12:]:
-        # Yeni format: voice_topic:{model}:{duration}:{auto|manual}
+        # Yeni format: voice_topic:{model_id}:{style_id}:{duration}:{auto|manual}
+        # Eski format: voice_topic:{model}:{duration}:{auto|manual}
         parts = action.split(":")
         model_id = parts[1]
-        duration = int(parts[2])
-        topic_mode = parts[3]
+
+        # Format kontrolü
+        if len(parts) >= 5:
+            # Yeni format
+            style_id = parts[2]
+            duration = int(parts[3])
+            topic_mode = parts[4]
+        else:
+            # Eski format (backward compat)
+            style_id = "cinematic_4k"
+            duration = int(parts[2])
+            topic_mode = parts[3]
+
         config = get_model_config(model_id)
+        style_config = get_style_config(style_id)
+        style_name = f"{style_config['emoji']} {style_config['name']}"
 
         if topic_mode == "auto":
             # Otomatik konu ile pipeline başlat
             await query.edit_message_text(
                 f"🎙️ *SESLİ REELS* başlatılıyor...\n\n"
                 f"🎬 *Model:* {config['emoji']} {config['name']}\n"
+                f"🎨 *Stil:* {style_name}\n"
                 f"⏱️ *Süre:* {duration} saniye\n"
                 f"🔊 *Ses:* Türkçe AI voiceover\n\n"
                 "Pipeline aşamaları:\n"
@@ -933,13 +1114,15 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Pipeline başlat
             asyncio.create_task(pipeline.run_reels_voice_content(
                 target_duration=duration,
-                model_id=model_id
+                model_id=model_id,
+                visual_style=style_id
             ))
         else:
             # Manuel konu girişi bekle
             pending_input["type"] = "voice_topic_manual"
             pending_input["model_id"] = model_id
             pending_input["duration"] = duration
+            pending_input["visual_style"] = style_id
             pending_input["user_id"] = query.from_user.id
             pending_input["username"] = query.from_user.username or query.from_user.first_name
 
@@ -950,6 +1133,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text(
                 f"✏️ *MANUEL KONU GİRİŞİ*\n\n"
                 f"🎬 Model: {config['emoji']} {config['name']}\n"
+                f"🎨 Stil: {style_name}\n"
                 f"⏱️ Süre: {duration}s\n\n"
                 "Sesli Reels için konu veya anahtar kelimeler yaz:\n\n"
                 "💡 *Örnekler:*\n"
@@ -1136,16 +1320,21 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         model_config = get_model_config(model_id)
         model_name = model_config.get("name", model_id)
 
-        keyboard = [
-            [InlineKeyboardButton("🎲 Otomatik Konu", callback_data=f"long_topic:{duration}:{model_id}:auto")],
-            [InlineKeyboardButton("✏️ Manuel Konu", callback_data=f"long_topic:{duration}:{model_id}:manual")],
-            [InlineKeyboardButton("◀️ Geri", callback_data=f"long_duration:{duration}")]
-        ]
+        # Stil kategorisi seçim menüsü göster
+        keyboard = []
+        for cat_id, cat_info in STYLE_CATEGORIES.items():
+            # Model parametresinde duration_dur_model formatı kullan
+            keyboard.append([InlineKeyboardButton(
+                cat_info["name"],
+                callback_data=f"style_cat:{duration}_dur_{model_id}:{cat_id}:long"
+            )])
+        keyboard.append([InlineKeyboardButton("◀️ Geri", callback_data=f"long_duration:{duration}")])
+
         await query.edit_message_text(
-            f"🎥 *UZUN VIDEO*\n\n"
-            f"⏱️ *Süre:* {duration}s\n"
-            f"🎬 *Model:* {model_name}\n\n"
-            "📝 *Konu seçin:*",
+            f"🎥 *Uzun Video*\n\n"
+            f"⏱️ Süre: {duration}s\n"
+            f"🎬 Model: {model_name}\n\n"
+            "🎨 *Görsel stil kategorisi seç:*",
             reply_markup=InlineKeyboardMarkup(keyboard),
             parse_mode="Markdown"
         )
@@ -1154,14 +1343,27 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parts = action.split(":")
         duration = int(parts[1])
         model_id = parts[2]
-        topic_mode = parts[3]
+
+        # Format kontrolü
+        if len(parts) >= 5:
+            # Yeni format: long_topic:{duration}:{model_id}:{style_id}:{auto|manual}
+            style_id = parts[3]
+            topic_mode = parts[4]
+        else:
+            # Eski format: long_topic:{duration}:{model_id}:{auto|manual}
+            style_id = "cinematic_4k"
+            topic_mode = parts[3]
+
         segment_count = duration // 10
+        style_config = get_style_config(style_id)
+        style_name = f"{style_config['emoji']} {style_config['name']}"
 
         if topic_mode == "auto":
             await query.edit_message_text(
                 f"🎥 *UZUN VIDEO* başlatılıyor...\n\n"
                 f"⏱️ *Süre:* {duration}s ({segment_count} segment)\n"
                 f"🎬 *Model:* {model_id}\n"
+                f"🎨 *Stil:* {style_name}\n"
                 f"📝 *Konu:* Otomatik\n\n"
                 "Pipeline aşamaları:\n"
                 "1️⃣ Konu seçimi\n"
@@ -1178,20 +1380,24 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             asyncio.create_task(pipeline.run_long_video_pipeline(
                 total_duration=duration,
-                model_id=model_id
+                model_id=model_id,
+                visual_style=style_id
             ))
         else:
             pending_input["type"] = "long_video_manual"
             pending_input["duration"] = duration
             pending_input["model_id"] = model_id
+            pending_input["visual_style"] = style_id
             pending_input["user_id"] = query.from_user.id
 
             cancel_keyboard = InlineKeyboardMarkup([
                 [InlineKeyboardButton("❌ İptal", callback_data="create_long_video")]
             ])
 
+            style_text = f"🎨 Stil: {style_name}\n"
             await query.edit_message_text(
-                "✏️ *MANUEL KONU GİRİŞİ*\n\n"
+                f"✏️ *MANUEL KONU GİRİŞİ*\n\n"
+                f"{style_text}\n"
                 "Uzun video için konu yazın:\n\n"
                 "💡 *Örnekler:*\n"
                 "• Kestirimci bakım ile makine arızalarını önleyin\n"
@@ -1926,6 +2132,7 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         topic = text.strip()
         model = pending_input.get("model", "kling_pro")
+        visual_style = pending_input.get("visual_style", "cinematic_4k")
 
         if len(topic) < 5:
             pending_input["type"] = "reels_manual_topic"
@@ -1955,7 +2162,7 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "⏳ Bu işlem 5-10 dakika sürebilir...",
             parse_mode="Markdown"
         )
-        asyncio.create_task(pipeline.run_reels_content(force_model=model, topic=topic, manual_topic_mode=True))
+        asyncio.create_task(pipeline.run_reels_content(force_model=model, topic=topic, manual_topic_mode=True, visual_style=visual_style))
 
     elif pending_input.get("type") == "carousel_manual_topic":
         # ATOMIC: Race condition önlemek için hemen pop et
@@ -2009,6 +2216,7 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Multi-model flow: model_id ve duration zaten pending_input'ta mı?
         model_id = pending_input.get("model_id")
         duration = pending_input.get("duration")
+        visual_style = pending_input.get("visual_style", "cinematic_4k")
 
         if model_id and duration:
             # YENİ FLOW: Model ve süre zaten seçildi, direkt pipeline başlat
@@ -2030,7 +2238,8 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 topic=topic,
                 target_duration=duration,
                 model_id=model_id,
-                manual_topic_mode=True
+                manual_topic_mode=True,
+                visual_style=visual_style
             ))
         else:
             # ESKİ FLOW (backward compatibility): Süre henüz seçilmedi
@@ -2078,6 +2287,7 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         duration = pending_input.get("duration", 30)
         model_id = pending_input.get("model_id", "kling-2.6-pro")
+        visual_style = pending_input.get("visual_style", "cinematic_4k")
         segment_count = duration // 10
         pending_input.clear()
 
@@ -2107,7 +2317,8 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
             topic=topic,
             total_duration=duration,
             model_id=model_id,
-            manual_topic_mode=True
+            manual_topic_mode=True,
+            visual_style=visual_style
         ))
 
     elif pending_input.get("type") == "manual_topic":
@@ -2123,6 +2334,7 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         topic = text.strip()
+        visual_style = pending_input.get("visual_style", "cinematic_4k")
         pending_input.clear()
 
         await update.message.reply_text(
@@ -2142,7 +2354,8 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         asyncio.create_task(pipeline.run_conversational_reels(
             topic=topic,
-            manual_topic_mode=True
+            manual_topic_mode=True,
+            visual_style=visual_style
         ))
 
 

@@ -1040,7 +1040,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             result["error"] = str(e)
             return result
 
-    async def run_reels_content(self, topic: str = None, force_model: str = None, manual_topic_mode: bool = False) -> Dict[str, Any]:
+    async def run_reels_content(self, topic: str = None, force_model: str = None, manual_topic_mode: bool = False, visual_style: str = "cinematic_4k") -> Dict[str, Any]:
         """
         Instagram Reels içeriği üret ve yayınla
         Sora 2 Pro → Sora 2 → Veo 3 fallback zinciri ile
@@ -1049,6 +1049,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             topic: Konu (None ise Planner'dan alınır)
             force_model: Model zorla ("sora-2", "sora-2-pro", "veo3")
             manual_topic_mode: Manuel konu modu (planner atlanır)
+            visual_style: Görsel stil (cinematic_4k, anime, vb.)
 
         Returns:
             Pipeline sonucu
@@ -1123,7 +1124,8 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 "topic": topic,
                 "category": topic_data.get("category", "tanitim"),
                 "post_text": content_result.get("post_text_ig", ""),
-                "post_id": content_result.get("post_id")
+                "post_id": content_result.get("post_id"),
+                "visual_style": visual_style
             })
 
             if not reels_prompt_result.get("success"):
@@ -1288,7 +1290,8 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
         force_model: str = None,
         target_duration: int = 15,
         manual_topic_mode: bool = False,
-        model_id: str = "sora-2"
+        model_id: str = "sora-2",
+        visual_style: str = "cinematic_4k"
     ) -> Dict[str, Any]:
         """
         Sesli Instagram Reels içeriği üret ve yayınla.
@@ -1313,6 +1316,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             target_duration: Hedef süre (modele göre max sınır uygulanır)
             manual_topic_mode: True ise topic Creator ile profesyonelleştirilir
             model_id: Video model ID (sora-2, veo-2, kling-2.1, wan-2.1, minimax)
+            visual_style: Görsel stil (cinematic_4k, anime, vb.)
 
         Returns:
             Pipeline sonucu
@@ -1506,7 +1510,8 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 "post_text": content_result.get("post_text_ig", ""),
                 "post_id": content_result.get("post_id"),
                 "speech_structure": speech_structure,  # Senkronizasyon için
-                "voice_mode": True  # Sesli reels modu
+                "voice_mode": True,  # Sesli reels modu
+                "visual_style": visual_style
             })
 
             if not reels_prompt_result.get("success"):
@@ -2506,7 +2511,8 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
         model_id: str = "kling-2.6-pro",
         transition_type: str = "crossfade",
         transition_duration: float = 0.5,
-        manual_topic_mode: bool = False
+        manual_topic_mode: bool = False,
+        visual_style: str = "cinematic_4k"
     ) -> Dict[str, Any]:
         """
         Multi-segment uzun video pipeline.
@@ -2534,6 +2540,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             transition_type: Geçiş tipi (crossfade, cut)
             transition_duration: Crossfade süresi (0.5s default)
             manual_topic_mode: True ise topic Creator ile işlenir
+            visual_style: Görsel stil (cinematic_4k, anime, vb.)
 
         Returns:
             Pipeline sonucu
@@ -2693,7 +2700,8 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 "segment_count": segment_count,
                 "segment_duration": actual_segment_duration,
                 "speech_structure": shot_structure,
-                "model_id": model_id
+                "model_id": model_id,
+                "visual_style": visual_style
             })
 
             if not scene_result.get("success"):
@@ -2911,7 +2919,8 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
     async def run_conversational_reels(
         self,
         topic: str = None,
-        manual_topic_mode: bool = False
+        manual_topic_mode: bool = False,
+        visual_style: str = "cinematic_4k"
     ) -> Dict[str, Any]:
         """
         Conversational Reels pipeline with Sora native speech.
@@ -2936,6 +2945,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
         Args:
             topic: Topic (None uses Planner suggestion)
             manual_topic_mode: Process topic through Creator if True
+            visual_style: Görsel stil (cinematic_4k, anime, vb.)
 
         Returns:
             Pipeline result dict
@@ -2993,7 +3003,8 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 "action": "create_conversation_content",
                 "topic": topic,
                 "category": category,
-                "target_duration": 12  # ~12 seconds dialog (Sora max)
+                "target_duration": 12,  # ~12 seconds dialog (Sora max)
+                "visual_style": visual_style
             })
 
             if not conv_result.get("success"):
