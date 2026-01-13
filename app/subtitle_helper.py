@@ -766,6 +766,103 @@ def create_subtitle_file_sync(
     ))
 
 
+def get_last_word_end_time(words: List[Dict]) -> float:
+    """
+    Get the end time of the last word from a Whisper word list.
+
+    Args:
+        words: List of word dicts with 'word', 'start', 'end' keys
+
+    Returns:
+        End time in seconds (0.0 if list is empty)
+    """
+    if not words:
+        return 0.0
+    return words[-1].get("end", 0.0)
+
+
+async def verify_and_correct_subtitles(
+    audio_path: str,
+    initial_transcript: str,
+    model_size_verify: str = "medium"
+) -> Dict[str, Any]:
+    """
+    Verify and correct subtitles by comparing with a larger Whisper model.
+
+    Compares the initial transcript with a re-transcription using a larger model.
+    If similarity is below threshold, returns the corrected version.
+
+    Args:
+        audio_path: Path to the audio file
+        initial_transcript: The initial Whisper transcript to verify
+        model_size_verify: Whisper model for verification (default: medium)
+
+    Returns:
+        {
+            "success": bool,
+            "corrected": bool,  # Whether corrections were made
+            "transcript": str,  # Final transcript (original or corrected)
+            "corrections": list,  # List of corrections made
+            "similarity": float,  # Similarity ratio (0-1)
+            "words": list  # Word timestamps (if corrected)
+        }
+    """
+    print(f"[SUBTITLE VERIFY] Verifying subtitles with {model_size_verify} model...")
+
+    # Re-transcribe with larger model
+    verify_result = await extract_word_timestamps(
+        audio_path=audio_path,
+        model_size=model_size_verify,
+        language="tr"
+    )
+
+    if not verify_result.get("success"):
+        print(f"[SUBTITLE VERIFY] Verification failed, using original")
+        return {
+            "success": True,
+            "corrected": False,
+            "transcript": initial_transcript,
+            "corrections": [],
+            "similarity": 1.0
+        }
+
+    verified_text = verify_result.get("full_text", "")
+
+    # Calculate similarity using difflib
+    from difflib import SequenceMatcher
+    similarity = SequenceMatcher(
+        None,
+        initial_transcript.lower(),
+        verified_text.lower()
+    ).ratio()
+
+    if similarity < 0.95:  # Below 95% similarity threshold
+        print(f"[SUBTITLE VERIFY] Difference found (similarity: {similarity:.1%})")
+        print(f"[SUBTITLE VERIFY] Original: {initial_transcript[:100]}...")
+        print(f"[SUBTITLE VERIFY] Corrected: {verified_text[:100]}...")
+
+        return {
+            "success": True,
+            "corrected": True,
+            "transcript": verified_text,
+            "corrections": [{
+                "original": initial_transcript,
+                "corrected": verified_text
+            }],
+            "similarity": similarity,
+            "words": verify_result.get("words", [])
+        }
+    else:
+        print(f"[SUBTITLE VERIFY] Transcript verified (similarity: {similarity:.1%})")
+        return {
+            "success": True,
+            "corrected": False,
+            "transcript": initial_transcript,
+            "corrections": [],
+            "similarity": similarity
+        }
+
+
 # Quick test function
 if __name__ == "__main__":
     import sys

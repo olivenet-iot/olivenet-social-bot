@@ -280,8 +280,8 @@ async def merge_audio_video(
     print(f"[AUDIO-VIDEO MERGE] Hedef süre: {final_duration:.1f}s")
 
     # Strateji belirle
-    # Küçük fark toleransı (3 saniye) - gereksiz loop önlemek için
-    LOOP_TOLERANCE = 3.0
+    # Küçük fark toleransı (1 saniye) - gereksiz loop önlemek için
+    LOOP_TOLERANCE = 1.0
     duration_diff = final_duration - video_duration
 
     if keep_video_duration:

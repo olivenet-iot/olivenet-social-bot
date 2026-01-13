@@ -15,6 +15,61 @@ from app.validators.text_validator import validate_html_content, fix_common_issu
 from app.video_models import get_model_config, get_prompt_key, validate_duration, should_disable_audio, get_max_duration
 from telegram.helpers import escape_markdown
 
+# Conversational Reels Constants
+BROLL_AUDIO_DELAY = 1.5  # Silence at start of B-roll audio (seconds)
+CONV_FREEZE_BUFFER = 0.3  # Buffer after last word for freeze frame
+
+
+def calculate_freeze_duration(video_duration: float, last_word_end: float) -> float:
+    """
+    Calculate freeze frame duration based on audio timing.
+    Only returns > 0 if audio extends beyond video.
+
+    Args:
+        video_duration: Duration of video in seconds
+        last_word_end: End time of last spoken word in seconds
+
+    Returns:
+        Freeze duration in seconds (0 if not needed)
+    """
+    audio_end_with_buffer = last_word_end + CONV_FREEZE_BUFFER
+    if audio_end_with_buffer > video_duration:
+        return audio_end_with_buffer - video_duration
+    return 0
+
+
+async def add_freeze_frame(video_path: str, duration: float) -> str:
+    """
+    Add freeze frame to end of video using FFmpeg tpad filter.
+
+    Args:
+        video_path: Path to input video
+        duration: Duration of freeze in seconds
+
+    Returns:
+        Path to output video with freeze frame
+    """
+    import subprocess
+
+    output_path = video_path.replace(".mp4", "_freeze.mp4")
+
+    cmd = [
+        "ffmpeg", "-y",
+        "-i", video_path,
+        "-vf", f"tpad=stop_mode=clone:stop_duration={duration}",
+        "-c:a", "copy",
+        output_path
+    ]
+
+    print(f"[FREEZE FRAME] Adding {duration:.1f}s freeze to video...")
+    result = subprocess.run(cmd, capture_output=True, text=True)
+
+    if result.returncode != 0:
+        raise Exception(f"Freeze frame failed: {result.stderr}")
+
+    print(f"[FREEZE FRAME] Output: {output_path}")
+    return output_path
+
 
 def _escape_md(value) -> str:
     """Telegram Markdown için güvenli escape - None ve boş değerleri de handle eder"""
@@ -3241,19 +3296,64 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             self.log("[CONV REELS] Aşama 6: B-roll merge...")
 
             from app.instagram_helper import merge_audio_video
+            from app.audio_utils import add_silence_prefix
 
             if broll_audio_path:
+                # Add delay to B-roll audio (standard 1.5s silence at start)
+                self.log(f"[CONV REELS] B-roll audio'ya {BROLL_AUDIO_DELAY}s delay ekleniyor...")
+                try:
+                    delayed_broll_audio = await add_silence_prefix(
+                        audio_path=broll_audio_path,
+                        silence_duration=BROLL_AUDIO_DELAY
+                    )
+                    self.log(f"[CONV REELS] Delay eklendi: {delayed_broll_audio}")
+                except Exception as e:
+                    self.log(f"[CONV REELS] Delay eklenemedi, orijinal kullanılıyor: {e}")
+                    delayed_broll_audio = broll_audio_path
+
                 broll_merge_result = await merge_audio_video(
                     video_path=broll_video_path,
-                    audio_path=broll_audio_path,
+                    audio_path=delayed_broll_audio,
                     target_duration=broll_video_duration
-                    # keep_video_duration kaldırıldı - artık süreler uyumlu
                 )
                 broll_final_path = broll_merge_result.get("output_path", broll_video_path)
             else:
                 broll_final_path = broll_video_path
 
             result["stages_completed"].append("broll_merge")
+
+            # ========== STAGE 6.5: Dynamic Freeze Frame (if needed) ==========
+            # Apply freeze frame to conversation video if audio extends beyond video
+            try:
+                from app.subtitle_helper import extract_word_timestamps, get_last_word_end_time
+                from app.instagram_helper import get_video_duration
+
+                # Get conversation video duration
+                conv_video_duration = await get_video_duration(conversation_video_path)
+
+                # Extract audio and get last word timing
+                from app.subtitle_helper import extract_audio_from_video
+                conv_audio_extract = await extract_audio_from_video(conversation_video_path)
+
+                if conv_audio_extract.get("success"):
+                    whisper_result = await extract_word_timestamps(
+                        conv_audio_extract["audio_path"],
+                        model_size="small",
+                        language="tr"
+                    )
+
+                    if whisper_result.get("success"):
+                        last_word_end = get_last_word_end_time(whisper_result.get("words", []))
+                        freeze_duration = calculate_freeze_duration(conv_video_duration, last_word_end)
+
+                        if freeze_duration > 0:
+                            self.log(f"[CONV REELS] Freeze frame gerekli: {freeze_duration:.1f}s (son kelime: {last_word_end:.1f}s, video: {conv_video_duration:.1f}s)")
+                            conversation_video_path = await add_freeze_frame(conversation_video_path, freeze_duration)
+                            self.log(f"[CONV REELS] Freeze frame eklendi")
+                        else:
+                            self.log(f"[CONV REELS] Freeze frame gerekmedi (son kelime: {last_word_end:.1f}s, video: {conv_video_duration:.1f}s)")
+            except Exception as e:
+                self.log(f"[CONV REELS] Freeze frame kontrolü başarısız: {e}")
 
             # ========== STAGE 7: Concat Videos ==========
             self.log("[CONV REELS] Aşama 7: Video birleştirme...")
@@ -3303,6 +3403,36 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                     if conv_sub.get("success"):
                         conv_sub_path = conv_sub["ass_path"]
                         self.log(f"[CONV REELS] Conversation subtitle: {conv_sub.get('subtitle_count', 0)} satır")
+
+                        # Subtitle verification with larger model
+                        try:
+                            from app.subtitle_helper import verify_and_correct_subtitles
+
+                            initial_transcript = conv_sub.get("full_text", "")
+                            if initial_transcript:
+                                self.log("[CONV REELS] Altyazı doğrulanıyor (medium model)...")
+                                verify_result = await verify_and_correct_subtitles(
+                                    audio_path=conv_audio["audio_path"],
+                                    initial_transcript=initial_transcript,
+                                    model_size_verify="medium"
+                                )
+
+                                if verify_result.get("corrected"):
+                                    self.log(f"[CONV REELS] Altyazı düzeltildi (benzerlik: {verify_result.get('similarity', 0):.1%})")
+                                    # Regenerate ASS file with corrected transcript
+                                    conv_sub = await create_subtitle_file(
+                                        audio_path=conv_audio["audio_path"],
+                                        original_script=verify_result["transcript"],
+                                        model_size=os.getenv("WHISPER_MODEL_SIZE", "base"),
+                                        language="tr"
+                                    )
+                                    if conv_sub.get("success"):
+                                        conv_sub_path = conv_sub["ass_path"]
+                                        self.log(f"[CONV REELS] Düzeltilmiş subtitle oluşturuldu")
+                                else:
+                                    self.log(f"[CONV REELS] Altyazı doğrulandı (benzerlik: {verify_result.get('similarity', 0):.1%})")
+                        except Exception as e:
+                            self.log(f"[CONV REELS] Altyazı doğrulama atlandı: {e}")
                     else:
                         self.log(f"[CONV REELS] Conversation subtitle hatası: {conv_sub.get('error')}")
                 else:

@@ -1789,7 +1789,14 @@ Sadece JSON döndür.
         # Sora konuşmayı daha yavaş üretir, 4 saniye buffer bırak
         effective_dialog_duration = target_duration - 4  # 12s video için 8s dialog
         dialog_words = int(effective_dialog_duration * 1.7)  # ~1.7 kelime/saniye
-        broll_words = int(4 * 1.9)  # ~4 seconds B-roll voiceover
+
+        # Dynamic B-roll word limit based on expected video duration
+        # Default: 8s video, 1.5s delay, 0.5s buffer = 6s available
+        expected_broll_duration = input_data.get("expected_broll_duration", 8)
+        broll_delay = 1.5  # Standard silence at start
+        broll_buffer = 0.5  # End buffer
+        available_broll_duration = expected_broll_duration - broll_delay - broll_buffer
+        broll_words = int(available_broll_duration * 1.7)  # ~1.7 kelime/saniye
 
         prompt = f"""
 ## GOREV: Konusmali Instagram Reels Icerigi Uret
@@ -1902,7 +1909,8 @@ CAMERA: Medium two-shot showing both characters, professional composition.
 - Smooth ending - abrupt kesme olmasın
 
 **B-ROLL VOICEOVER:**
-- ~{broll_words} kelime (~4 saniye)
+- MAKSIMUM {broll_words} kelime (~{available_broll_duration:.0f} saniye)
+- B-roll video {expected_broll_duration}s, başta {broll_delay}s delay var - KISA TUT!
 - CTA icermeli: "Takip et", "Kaydet" veya soru
 - Tek ses (narrator)
 - Turkce
