@@ -3059,10 +3059,19 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
 
             from app.elevenlabs_helper import generate_speech_with_retry
             from app.config import settings
+            from app.video_styles import should_use_cartoon_voices
+
+            # Stil bazlı narrator voice seçimi
+            if should_use_cartoon_voices(visual_style):
+                narrator_voice = settings.elevenlabs_voice_id_cartoon_female
+                self.log(f"[CONV REELS] Cartoon narrator voice kullanılıyor")
+            else:
+                narrator_voice = settings.elevenlabs_voice_id_narrator
+                self.log(f"[CONV REELS] Realistic narrator voice kullanılıyor")
 
             broll_audio_result = await generate_speech_with_retry(
                 text=broll_voiceover,
-                voice_id=settings.elevenlabs_voice_id_narrator,  # Narrator voice for B-roll
+                voice_id=narrator_voice,
                 max_retries=3
             )
 

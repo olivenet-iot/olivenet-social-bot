@@ -131,6 +131,10 @@ class Settings(BaseSettings):
     elevenlabs_voice_id_female: str = Field(default="EJGs6dWlD5VrB3llhBqB", description="Female Turkish voice ID for conversational reels")
     elevenlabs_voice_id_narrator: str = Field(default="7VqWGAWwo2HMrylfKrcm", description="Narrator voice ID for B-roll voiceover")
 
+    # ElevenLabs Cartoon/Animation Voice IDs
+    elevenlabs_voice_id_cartoon_male: str = Field(default="DUnzBkwtjRWXPr6wRbmL", description="Cartoon male voice (Mark - fun, cheerful)")
+    elevenlabs_voice_id_cartoon_female: str = Field(default="xyqF3vGMQlPk3e7yA4DI", description="Cartoon female voice (Ahu - cheerful, inviting)")
+
     # Claude Code Settings
     claude_timeout_post: int = Field(default=60, description="Timeout for post generation (seconds)")
     claude_timeout_visual: int = Field(default=90, description="Timeout for visual generation (seconds)")

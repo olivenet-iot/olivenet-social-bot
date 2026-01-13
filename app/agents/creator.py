@@ -14,7 +14,7 @@ from app.database import (
     check_duplicate_prompt
 )
 from app.config import settings
-from app.video_styles import get_style_config, get_style_prefix
+from app.video_styles import get_style_config, get_style_prefix, get_character_descriptions, get_voice_type
 
 class CreatorAgent(BaseAgent):
     """İçerik üretici - post metni ve görsel üretir"""
@@ -1777,6 +1777,9 @@ Sadece JSON döndür.
         target_duration = input_data.get("target_duration", 8)
         visual_style = input_data.get("visual_style", "cinematic_4k")
         style_prefix = get_style_prefix(visual_style)
+        style_config = get_style_config(visual_style)
+        char_desc = get_character_descriptions(visual_style)
+        voice_type = get_voice_type(visual_style)
 
         # Load context
         company_profile = self.load_context("company-profile.md")
@@ -1802,8 +1805,9 @@ Sadece JSON döndür.
 {brand_voice[:800]}
 
 ### GÖRSEL STİL
-Seçilen stil: {visual_style}
-Video prompt'unun başına şu stil prefix'ini ekle: "{style_prefix}"
+Seçilen stil: {visual_style} ({style_config.get('description', '')})
+Stil prefix: "{style_prefix}"
+Ses tipi: {voice_type}
 
 ---
 
@@ -1811,7 +1815,7 @@ Video prompt'unun başına şu stil prefix'ini ekle: "{style_prefix}"
 
 **DIALOG YAPISI (ZORUNLU):**
 - ERKEK (speaker: "male"): Problem/soru sorar (merakli, endiseli)
-- KADIN (speaker: "female"): Cozum sunar (guvenlı, bilgili)
+- KADIN (speaker: "female"): Cozum sunar (guvenli, bilgili)
 - 4-6 satir dialog (alternating male/female ile basla)
 - Toplam ~{dialog_words} kelime ({target_duration} saniye)
 - Her satir kisa: 5-12 kelime
@@ -1824,98 +1828,87 @@ Video prompt'unun başına şu stil prefix'ini ekle: "{style_prefix}"
 - Son kareye kadar konuşma OLMAMALI
 - Dialog net bir kapanış ile bitmeli (yarım cümle değil)
 
-**VIDEO ENDING (SORA İÇİN KRİTİK):**
-- Konuşma {target_duration - 2}. saniyede TAMAMEN bitiyor
-- Son 1-2 saniye: Karakterler sessizce bakışıyor veya baş sallıyor
-- Son 0.5 saniye: Hareketsiz "hold" - final frame
-- Prompt örneği: "The conversation concludes by second {target_duration - 2},
-  both characters share a satisfied nod. Video ends with a 0.5-second hold."
-
 **KARAKTER TON:**
 - ERKEK: Merakli, problem odakli, samimi, endiseli
-- KADIN: Cozum odakli, guvenlı, bilgili, sakin
+- KADIN: Cozum odakli, guvenli, bilgili, sakin
 
-**VIDEO PROMPT (SORA İÇİN - TÜRKÇE KONUŞMA):**
+---
 
-ZORUNLU KURALLAR:
+## VIDEO PROMPT KURALLARI (SORA İÇİN - DİNAMİK STİL)
+
+**ZORUNLU KURALLAR:**
 1. Prompt TAMAMEN İNGİLİZCE yaz (Sora İngilizce anlıyor)
 2. "TURKISH language" ve "speaking Turkish" ifadelerini MUTLAKA kullan
 3. Her karakter için "speaking Turkish" tekrarla
 4. "All dialogue in Turkish" cümlesini başa ekle
 5. Audio bölümünde "Clear Turkish dialogue" yaz
-6. Sahne için "rural Turkey" veya "Turkish countryside" kullan
-7. "clear lip movements synchronized with Turkish speech" ekle
+6. "clear lip movements synchronized with Turkish speech" ekle
 
-VIDEO PROMPT FORMATI:
+**STİL-BAZLI KARAKTER TANIMLARI (BUNU KULLAN!):**
+
+SAHNE:
+{char_desc['scene']}
+
+KARAKTER 1 - ERKEK:
+{char_desc['male']}
+- Speaking Turkish with concerned, questioning tone
+- Clear lip movements synchronized with Turkish speech
+
+KARAKTER 2 - KADIN:
+{char_desc['female']}
+- Speaking Turkish with reassuring, confident tone
+- Clear lip movements synchronized with Turkish speech
+
+**VIDEO PROMPT ŞABLONU:**
 ---
-Cinematic vertical video (9:16), 12 seconds, realistic style.
+{style_prefix}vertical video (9:16), {target_duration} seconds.
 
 LANGUAGE: TURKISH (All dialogue MUST be in Turkish language)
 
-SCENE: Outdoor setting in rural Turkey - farm, greenhouse, or agricultural field.
-Natural daylight, warm Mediterranean colors.
+SCENE: {char_desc['scene']}
 
-CHARACTER 1 - FARMER:
-- Middle-aged man (45-55 years old) from Turkey
-- Weathered, sun-tanned face from outdoor work
-- Work clothes (simple shirt, vest, cap)
-- Speaking Turkish with concerned, questioning tone
-- Hand gestures while explaining problem
-- Clear lip movements synchronized with Turkish speech
+CHARACTER 1 - MALE:
+{char_desc['male']}
+Speaking Turkish with concerned questioning tone about the problem.
+Clear lip movements synchronized with Turkish speech.
 
-CHARACTER 2 - IOT EXPERT:
-- Professional woman (30-40 years old)
-- Confident posture, smart casual clothing
-- Speaking Turkish with reassuring tone
-- Explaining IoT solution with gestures
-- Clear lip movements synchronized with Turkish speech
+CHARACTER 2 - FEMALE:
+{char_desc['female']}
+Speaking Turkish with reassuring confident tone, explaining the solution.
+Clear lip movements synchronized with Turkish speech.
 
 DIALOGUE FLOW:
-- Natural Turkish conversation - farmer speaks first about problem
-- Expert responds with solution, both speaking fluent Turkish
+- Natural Turkish conversation - male speaks first about problem
+- Female responds with IoT solution, both speaking fluent Turkish
 - Conversation MUST conclude naturally by second {target_duration - 2}
 - Final exchange should be a clear conclusion (not mid-thought)
 - Last 2 seconds: satisfied nods, smiles, or natural reaction shot
-- Final 0.5 seconds: static hold on the final satisfied expressions
-- DO NOT let characters speak until the very last frame
+- Final 0.5 seconds: static hold on the final expressions
 
-AUDIO: Clear Turkish dialogue, ambient outdoor sounds, natural silence at end.
+AUDIO: Clear Turkish dialogue, ambient sounds matching the scene, natural silence at end.
 
-CAMERA: Medium two-shot showing both characters, professional documentary style.
+CAMERA: Medium two-shot showing both characters, professional composition.
 ---
 
 **B-ROLL PROMPT:**
-- Konu ile ilgili gorsel (sensörler, sera, fabrika vb.)
+- {style_prefix} görsel (sensörler, sera, fabrika vb.)
 - Konusan kisi OLMAMALI
-- Cinematic, 9:16 format
-- 10 saniye icin uygun
-- Smooth ending with natural fade or static shot
-- No abrupt cuts at the end
+- 9:16 format, 10 saniye
 - Ingilizce yaz
+- Stil ile uyumlu atmosfer
 
 **B-ROLL VOICEOVER:**
 - ~{broll_words} kelime (~4 saniye)
 - CTA icermeli: "Takip et", "Kaydet" veya soru
-- Tek ses (narrator/kadin)
+- Tek ses (narrator)
 - Turkce
 
-**INSTAGRAM CAPTION (ÇOK ÖNEMLİ!):**
-- MAX 80 KELİME (kesinlikle aşma!)
-- Hook ile başla (dikkat çekici soru veya istatistik - dialogdaki problem)
-- 2-3 cümle ana mesaj (dialogdaki çözümü özetle)
-- Kapanışta soru veya "📌 Kaydet!" ekle
-- 8-12 hashtag (ZORUNLU: #Olivenet #KKTC #IoT + 5-9 sektörel)
-- MARKDOWN KULLANMA (Instagram desteklemiyor)
-- Vurgu için BÜYÜK HARF veya emoji kullan
-
-ÖRNEK FORMAT:
-🌡️ [Dikkat çekici hook - dialogdaki problem]
-
-[Ana mesaj - çözümü özetle]
-
-📌 Kaydet, lazım olduğunda kullan!
-
-#Olivenet #KKTC #IoT #AkıllıTarım ...
+**INSTAGRAM CAPTION:**
+- MAX 80 KELİME
+- Hook ile başla (dikkat çekici soru veya istatistik)
+- 2-3 cümle ana mesaj
+- Kapanışta soru veya "📌 Kaydet!"
+- 8-12 hashtag (ZORUNLU: #Olivenet #KKTC #IoT + sektörel)
 
 ---
 
@@ -1928,31 +1921,22 @@ CAMERA: Medium two-shot showing both characters, professional documentary style.
         {{"speaker": "male", "text": "Ikinci soru..."}},
         {{"speaker": "female", "text": "Ikinci cozum/kapanış..."}}
     ],
-    "video_prompt": "Cinematic vertical video (9:16), 12 seconds, realistic style. LANGUAGE: TURKISH - All dialogue in Turkish language. SCENE: Greenhouse in rural Turkey, natural daylight. CHARACTER 1: Middle-aged farmer (50 years old) from Turkey, weathered face, work clothes, speaking Turkish with worried expression about his crops, clear lip movements. CHARACTER 2: Professional female IoT consultant (35 years old), smart casual, speaking Turkish confidently, explaining solution with gestures, clear lip movements. DIALOGUE: Natural Turkish conversation - farmer speaks first about problem, expert responds with IoT solution. Both speaking fluent Turkish throughout with synchronized lip movements. The conversation concludes naturally by second 10, with a moment of satisfied expressions and nods before video ends. AUDIO: Clear Turkish dialogue, ambient greenhouse sounds, natural silence at end. CAMERA: Medium two-shot, professional documentary style.",
-    "broll_prompt": "Cinematic close-up of IoT temperature sensors and control panels in modern greenhouse, morning light, 9:16 vertical, no people, professional documentary style",
-    "broll_voiceover": "Olivenet IoT ile seraniz 7/24 guvende. Takip et, sorularini sor.",
+    "video_prompt": "{style_prefix}vertical video (9:16), {target_duration} seconds. LANGUAGE: TURKISH - All dialogue in Turkish language. SCENE: [Stile uygun sahne]. CHARACTER 1: [Stile uygun erkek karakter], speaking Turkish with worried expression, clear lip movements. CHARACTER 2: [Stile uygun kadın karakter], speaking Turkish confidently, clear lip movements. DIALOGUE: Natural Turkish conversation... AUDIO: Clear Turkish dialogue. CAMERA: Medium two-shot.",
+    "broll_prompt": "{style_prefix}close-up of IoT sensors in [stile uygun ortam], 9:16 vertical, no people",
+    "broll_voiceover": "Olivenet IoT ile [konu] kolaylaşıyor. Takip et, sorularını sor.",
     "caption": "Instagram caption metni...",
-    "hashtags": ["#Olivenet", "#KKTC", "#IoT", "#AkilliTarim", ...]
+    "hashtags": ["#Olivenet", "#KKTC", "#IoT", ...]
 }}
 ```
 
-### ORNEKLER:
-ERKEK: "Serada don olunca 50 fide kaybettim gecen yil."
-KADIN: "IoT sensorler ile 3 saat onceden uyari alabilirsin."
-ERKEK: "Peki bu sistem nasil calisiyor?"
-KADIN: "Sicaklik dusunce telefonuna aninda bildirim geliyor."
+ÖNEMLI:
+- Video prompt'un BAŞINA stil prefix'ini ({style_prefix}) ekle
+- Karakter tanımlarını yukarıda verilen stil-bazlı tanımlardan al
+- Sahne tanımını stil ile uyumlu yap
+- B-roll prompt'u da aynı stilde olmalı
+- Konuşma video süresinden 2 saniye ÖNCE bitmeli
 
-### ONEMLI:
-1. Dialog dogal ve akıcı olmali
-2. Olivenet cozumleri dogal sekilde cikmali
-3. Video prompt'u iki kisiyi konusurken gostermeli
-4. B-roll prompt'ta insan OLMAMALI
-5. Konuşma video süresinden 2 saniye ÖNCE bitmeli
-6. Son cümle net bir kapanış olmalı (yarım kalmış düşünce değil)
-7. "conversation concludes by second X" ifadesini video_prompt'a ekle (12s video için X=10)
-8. Video sonunda karakterler gülümseme/baş sallama ile kapanış yapsın
-
-Sadece JSON dondur.
+Sadece JSON döndür.
 """
 
         try:
