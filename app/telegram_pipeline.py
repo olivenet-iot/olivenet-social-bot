@@ -601,9 +601,9 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif action == "create_conversational":
         # Model seçim menüsü göster
         conv_models = {
-            "sora-2": {"name": "Sora 2", "emoji": "🌟", "desc": "Native Turkish speech ⭐"},
-            "veo-2": {"name": "Veo 2", "emoji": "🎥", "desc": "TTS + Lipsync"},
-            "kling-2.5-pro": {"name": "Kling 2.5 Pro", "emoji": "🎬", "desc": "TTS + Lipsync"},
+            "sora-2": {"name": "Sora 2", "emoji": "🌟", "desc": "Native speech (12s max)"},
+            "veo-3.1": {"name": "Veo 3.1", "emoji": "🎬", "desc": "Native speech (8s max) ⭐"},
+            "kling-2.5-pro": {"name": "Kling 2.5 Pro", "emoji": "⚡", "desc": "TTS + Lipsync (10s)"},
         }
 
         keyboard = []
@@ -620,8 +620,8 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "• 👨 ERKEK: Problem/soru sorar\n"
             "• 👩 KADIN: Çözüm sunar\n\n"
             "📹 *Model Seç:*\n\n"
-            "⭐ *Sora 2*: Native Turkish speech (en iyi)\n"
-            "🎥 *Diğerleri*: TTS + Lipsync API",
+            "🌟 *Sora 2 / Veo 3.1*: Native speech\n"
+            "⚡ *Kling*: TTS + Lipsync API",
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
@@ -639,7 +639,8 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )])
         keyboard.append([InlineKeyboardButton("◀️ Geri", callback_data="create_conversational")])
 
-        speech_info = "🗣️ Native Turkish speech" if model_id == "sora-2" else "🗣️ TTS + Lipsync API"
+        native_speech_models = ["sora-2", "veo-3.1"]
+        speech_info = "🗣️ Native Turkish speech" if model_id in native_speech_models else "🗣️ TTS + Lipsync API"
 
         await query.edit_message_text(
             f"🎭 *Conversational Reels*\n\n"
@@ -939,7 +940,8 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             model_config = get_model_config(model)
             model_name = f"{model_config.get('emoji', '🎬')} {model_config.get('name', model)}"
-            speech_mode = "Native Turkish speech" if model == "sora-2" else "TTS + Lipsync API"
+            native_speech_models = ["sora-2", "veo-3.1"]
+            speech_mode = "Native Turkish speech" if model in native_speech_models else "TTS + Lipsync API"
 
             keyboard = [[InlineKeyboardButton("❌ İptal", callback_data=f"conv_model:{model}")]]
             await query.edit_message_text(
@@ -2378,12 +2380,13 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
         model_config = get_model_config(model_id)
         model_name = f"{model_config.get('emoji', '🎬')} {model_config.get('name', model_id)}"
 
-        if model_id == "sora-2":
-            pipeline_info = "Sora native speech"
+        native_speech_models = ["sora-2", "veo-3.1"]
+        if model_id in native_speech_models:
+            pipeline_info = f"{model_id.upper()} native speech"
             pipeline_steps = (
                 "1️⃣ Konu işleme\n"
                 "2️⃣ Dialog içeriği\n"
-                "3️⃣ Conversation video (Sora native speech)\n"
+                f"3️⃣ Conversation video ({model_id} native speech)\n"
                 "4️⃣ B-roll voiceover (TTS)\n"
                 "5️⃣ B-roll video\n"
                 "6️⃣ Video birleştirme\n"

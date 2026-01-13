@@ -3018,6 +3018,19 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             result["category"] = category
             result["stages_completed"].append("topic_selection")
 
+            # Model'e göre dialog süresi ayarla
+            from app.video_models import get_model_config
+            model_config = get_model_config(model_id)
+            max_duration = model_config.get("max_duration", 12)
+
+            native_speech_models = ["sora-2", "veo-3.1"]
+            if model_id in native_speech_models:
+                target_duration = min(12, max_duration)  # Sora=12, Veo=8
+            else:
+                target_duration = 12  # TTS+Lipsync için sabit
+
+            self.log(f"[CONV REELS] Target duration: {target_duration}s (model: {model_id})")
+
             # ========== STAGE 2: Conversation Content ==========
             self.log("[CONV REELS] Aşama 2: Dialog içeriği oluşturuluyor...")
             self.state = PipelineState.CREATING_CONTENT
@@ -3026,7 +3039,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 "action": "create_conversation_content",
                 "topic": topic,
                 "category": category,
-                "target_duration": 12,  # ~12 seconds dialog (Sora max)
+                "target_duration": target_duration,  # Model'e göre dinamik
                 "visual_style": visual_style
             })
 
@@ -3061,22 +3074,33 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             self.log(f"[CONV REELS] Aşama 3: Conversation video ({model_id})...")
             self.state = PipelineState.CREATING_VISUAL
 
-            if model_id == "sora-2":
-                # ===== SORA 2: Native Turkish Speech =====
-                from app.sora_helper import generate_video_sora
+            if model_id in native_speech_models:
+                # ===== NATIVE SPEECH MODELS (Sora 2, Veo 3.1) =====
+                self.log(f"[CONV REELS] Native speech modu ({model_id})")
 
-                conversation_result = await generate_video_sora(
-                    prompt=video_prompt,
-                    duration=12,  # Sora max duration
-                    size="720x1280"
-                )
+                if model_id == "sora-2":
+                    from app.sora_helper import generate_video_sora
+                    conversation_result = await generate_video_sora(
+                        prompt=video_prompt,
+                        duration=12,
+                        size="720x1280"
+                    )
+                else:  # veo-3.1
+                    from app.veo_helper import generate_video_veo
+                    conversation_result = await generate_video_veo(
+                        prompt=video_prompt,
+                        duration_seconds=8,
+                        aspect_ratio="9:16",
+                        model="veo-3.1-generate-preview"
+                    )
 
                 if not conversation_result.get("success"):
                     raise Exception(f"Conversation video hatası: {conversation_result.get('error')}")
 
                 conversation_video_path = conversation_result.get("video_path")
-                result["sora_native_speech"] = True
-                self.log(f"[CONV REELS] Sora native speech video üretildi")
+                result["native_speech"] = True
+                result["native_speech_model"] = model_id
+                self.log(f"[CONV REELS] {model_id} native speech video üretildi")
 
             else:
                 # ===== DİĞER MODELLER: TTS + Video + Lipsync =====

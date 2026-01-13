@@ -40,6 +40,22 @@ VIDEO_MODELS: Dict[str, dict] = {
         "helper_function": "generate_video_veo",
         "model_id": "veo-2"
     },
+    "veo-3.1": {
+        "name": "Veo 3.1",
+        "provider": "google",
+        "emoji": "🎬",
+        "durations": [4, 6, 8],
+        "default_duration": 8,
+        "max_duration": 8,
+        "aspect_ratio": "9:16",
+        "prompt_key": "video_prompt_veo",
+        "description": "Native audio + lip-sync (en iyi kalite)",
+        "helper_module": "veo_helper",
+        "helper_function": "generate_video_veo",
+        "model_id": "veo-3.1-generate-preview",
+        "has_native_audio": True,
+        "supports_speech": True
+    },
     "kling-2.5-pro": {
         "name": "Kling 2.5 Pro",
         "provider": "fal",

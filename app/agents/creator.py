@@ -1785,8 +1785,10 @@ Sadece JSON döndür.
         company_profile = self.load_context("company-profile.md")
         brand_voice = self.load_context("social-media-expert.md")
 
-        # Calculate word targets (~1.9 words/second for ElevenLabs Turkish TTS)
-        dialog_words = int(target_duration * 1.9)
+        # Calculate word targets for Sora native speech
+        # Sora konuşmayı daha yavaş üretir, 4 saniye buffer bırak
+        effective_dialog_duration = target_duration - 4  # 12s video için 8s dialog
+        dialog_words = int(effective_dialog_duration * 1.7)  # ~1.7 kelime/saniye
         broll_words = int(4 * 1.9)  # ~4 seconds B-roll voiceover
 
         prompt = f"""
@@ -1816,17 +1818,17 @@ Ses tipi: {voice_type}
 **DIALOG YAPISI (ZORUNLU):**
 - ERKEK (speaker: "male"): Problem/soru sorar (merakli, endiseli)
 - KADIN (speaker: "female"): Cozum sunar (guvenli, bilgili)
-- 4-6 satir dialog (alternating male/female ile basla)
-- Toplam ~{dialog_words} kelime ({target_duration} saniye)
-- Her satir kisa: 5-12 kelime
+- 3-4 satir dialog (alternating male/female ile basla) - KISA TUT
+- Toplam MAKSIMUM {dialog_words} kelime ({effective_dialog_duration} saniye içinde)
+- Her satir çok kısa: 3-8 kelime (uzun cümleler YASAK)
 - Dogal konusma dili, EMOJI KULLANMA
 
-**TIMING (ÇOK ÖNEMLİ):**
+**TIMING (ÇOK ÖNEMLİ - MUTLAKA UYULMALI):**
 - Video süresi: {target_duration} saniye
-- Dialog {target_duration - 2} saniyede BİTMELİ
-- Son 2 saniye: Doğal kapanış (baş sallama, gülümseme)
-- Son kareye kadar konuşma OLMAMALI
-- Dialog net bir kapanış ile bitmeli (yarım cümle değil)
+- Dialog MUTLAKA {effective_dialog_duration}. saniyede BİTMELİ
+- Son 4 saniye: Doğal kapanış - baş sallama, gülümseme, el hareketi
+- Dialog ASLA {effective_dialog_duration}. saniyeden sonra devam ETMEMELİ
+- Son replik kısa ve net olmalı (örn: "Teşekkürler!", "Anladım.", "Harika!")
 
 **KARAKTER TON:**
 - ERKEK: Merakli, problem odakli, samimi, endiseli
@@ -1942,11 +1944,11 @@ Sadece JSON döndür.
 
             # Validate dialog structure
             dialog_lines = result.get("dialog_lines", [])
-            if len(dialog_lines) < 4:
+            if len(dialog_lines) < 3:
                 self.log(f"Dialog cok kisa: {len(dialog_lines)} satir")
                 return {
                     "success": False,
-                    "error": f"Insufficient dialog lines: {len(dialog_lines)}, minimum 4 required"
+                    "error": f"Insufficient dialog lines: {len(dialog_lines)}, minimum 3 required"
                 }
 
             # Style prefix validation - video_prompt için
