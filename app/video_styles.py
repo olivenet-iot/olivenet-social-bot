@@ -52,7 +52,9 @@ VIDEO_STYLES: Dict[str, dict] = {
             "natural realistic appearance, speaking with reassuring knowledgeable tone, "
             "clear lip movements synchronized with speech"
         ),
-        "scene_setting": "Outdoor setting in rural Turkey - farm, greenhouse, or agricultural field. Natural daylight, warm Mediterranean colors."
+        "scene_setting": "Outdoor setting in rural Turkey - farm, greenhouse, or agricultural field. Natural daylight, warm Mediterranean colors.",
+        "tone_male": "with concerned, questioning tone",
+        "tone_female": "with reassuring, confident tone"
     },
     "anime": {
         "name": "Anime",
@@ -71,7 +73,9 @@ VIDEO_STYLES: Dict[str, dict] = {
             "confident anime pose, expressive face when explaining solutions, "
             "smooth cel-shaded animation style"
         ),
-        "scene_setting": "Vibrant anime-style greenhouse or farm setting, saturated colors, stylized backgrounds with soft gradients, Studio Ghibli inspired atmosphere."
+        "scene_setting": "Vibrant anime-style greenhouse or farm setting, saturated colors, stylized backgrounds with soft gradients, Studio Ghibli inspired atmosphere.",
+        "tone_male": "with anime-style exaggerated surprised expressions",
+        "tone_female": "with anime-style enthusiastic explaining gestures"
     },
     "cartoon_3d": {
         "name": "3D Cartoon",
@@ -90,7 +94,9 @@ VIDEO_STYLES: Dict[str, dict] = {
             "stylized proportions, confident cheerful expressions, "
             "smooth 3D animation, soft subsurface scattering on skin"
         ),
-        "scene_setting": "Pixar-style colorful farm environment, soft lighting, vibrant saturated colors, whimsical atmosphere, rounded organic shapes."
+        "scene_setting": "Pixar-style colorful farm environment, soft lighting, vibrant saturated colors, whimsical atmosphere, rounded organic shapes.",
+        "tone_male": "with Pixar-style comedic worried expressions",
+        "tone_female": "with Pixar-style cheerful helpful demeanor"
     },
     "watercolor": {
         "name": "Suluboya",
@@ -107,7 +113,9 @@ VIDEO_STYLES: Dict[str, dict] = {
             "Watercolor-painted female figure, delicate brush strokes, "
             "soft pastel colors, elegant flowing appearance, artistic rendering"
         ),
-        "scene_setting": "Dreamy watercolor landscape, soft bleeding colors, artistic brush texture, pastoral Turkish countryside with flowing organic shapes."
+        "scene_setting": "Dreamy watercolor landscape, soft bleeding colors, artistic brush texture, pastoral Turkish countryside with flowing organic shapes.",
+        "tone_male": "with gentle worried expression",
+        "tone_female": "with calm reassuring presence"
     },
     "3d_render": {
         "name": "3D Render",
@@ -126,7 +134,9 @@ VIDEO_STYLES: Dict[str, dict] = {
             "professional appearance, subsurface scattering skin, "
             "volumetric lighting, cinema-quality 3D rendering"
         ),
-        "scene_setting": "Photorealistic 3D rendered agricultural environment, volumetric god rays, ray-traced reflections, hyper-detailed textures."
+        "scene_setting": "Photorealistic 3D rendered agricultural environment, volumetric god rays, ray-traced reflections, hyper-detailed textures.",
+        "tone_male": "with realistic concerned expression",
+        "tone_female": "with professional confident demeanor"
     },
     "pixel_art": {
         "name": "Pixel Art",
@@ -145,7 +155,9 @@ VIDEO_STYLES: Dict[str, dict] = {
             "retro gaming aesthetic, charming simple design, "
             "expressive within pixel limitations"
         ),
-        "scene_setting": "Retro 16-bit pixel art farm scene, limited color palette, crisp pixels, nostalgic video game backgrounds, SNES-era aesthetic."
+        "scene_setting": "Retro 16-bit pixel art farm scene, limited color palette, crisp pixels, nostalgic video game backgrounds, SNES-era aesthetic.",
+        "tone_male": "with retro game character worried pose",
+        "tone_female": "with retro game character victory pose"
     },
     "comic_book": {
         "name": "Çizgi Roman",
@@ -164,7 +176,9 @@ VIDEO_STYLES: Dict[str, dict] = {
             "vibrant pop art coloring, confident superhero-like pose, "
             "dynamic comic panel aesthetic"
         ),
-        "scene_setting": "Bold comic book panels, halftone dot backgrounds, vibrant pop art colors, dynamic action lines, speech bubble aesthetic."
+        "scene_setting": "Bold comic book panels, halftone dot backgrounds, vibrant pop art colors, dynamic action lines, speech bubble aesthetic.",
+        "tone_male": "with dramatic comic-style worried expression",
+        "tone_female": "with superhero-like confident stance"
     },
     "claymation": {
         "name": "Claymation",
@@ -183,7 +197,9 @@ VIDEO_STYLES: Dict[str, dict] = {
             "handcrafted charm, warm soft features, "
             "Aardman animation inspired, endearing stop-motion style"
         ),
-        "scene_setting": "Handcrafted claymation set, miniature farm models, warm studio lighting, visible clay textures, charming stop-motion aesthetic."
+        "scene_setting": "Handcrafted claymation set, miniature farm models, warm studio lighting, visible clay textures, charming stop-motion aesthetic.",
+        "tone_male": "with charming stop-motion worried wiggle",
+        "tone_female": "with endearing clay-animated helpful gestures"
     },
     "minimalist": {
         "name": "Minimalist",
@@ -202,7 +218,9 @@ VIDEO_STYLES: Dict[str, dict] = {
             "bold solid colors, clean modern look, "
             "negative space utilization, abstract elegant design"
         ),
-        "scene_setting": "Clean minimalist environment, flat design backgrounds, bold solid colors, ample negative space, modern graphic aesthetic."
+        "scene_setting": "Clean minimalist environment, flat design backgrounds, bold solid colors, ample negative space, modern graphic aesthetic.",
+        "tone_male": "with subtle geometric expression shift",
+        "tone_female": "with clean confident posture"
     },
     "neon_cyberpunk": {
         "name": "Neon Cyberpunk",
@@ -221,7 +239,9 @@ VIDEO_STYLES: Dict[str, dict] = {
             "futuristic smart clothing, holographic displays, "
             "confident high-tech appearance, rain reflections"
         ),
-        "scene_setting": "Futuristic cyberpunk greenhouse, neon lights, holographic displays, rain effects, dark moody atmosphere with vibrant accent colors."
+        "scene_setting": "Futuristic cyberpunk greenhouse, neon lights, holographic displays, rain effects, dark moody atmosphere with vibrant accent colors.",
+        "tone_male": "with noir-style troubled expression",
+        "tone_female": "with tech-noir confident stance"
     }
 }
 
@@ -260,14 +280,18 @@ def get_character_descriptions(style_id: str) -> Dict[str, str]:
         {
             "male": "Karakter tanımı...",
             "female": "Karakter tanımı...",
-            "scene": "Sahne tanımı..."
+            "scene": "Sahne tanımı...",
+            "tone_male": "Erkek karakter tonu...",
+            "tone_female": "Kadın karakter tonu..."
         }
     """
     config = get_style_config(style_id)
     return {
         "male": config.get("character_male", "Male character"),
         "female": config.get("character_female", "Female character"),
-        "scene": config.get("scene_setting", "Professional setting")
+        "scene": config.get("scene_setting", "Professional setting"),
+        "tone_male": config.get("tone_male", "with concerned, questioning tone"),
+        "tone_female": config.get("tone_female", "with reassuring, confident tone")
     }
 
 

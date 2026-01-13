@@ -1851,12 +1851,12 @@ SAHNE:
 
 KARAKTER 1 - ERKEK:
 {char_desc['male']}
-- Speaking Turkish with concerned, questioning tone
+- Speaking Turkish {char_desc['tone_male']}
 - Clear lip movements synchronized with Turkish speech
 
 KARAKTER 2 - KADIN:
 {char_desc['female']}
-- Speaking Turkish with reassuring, confident tone
+- Speaking Turkish {char_desc['tone_female']}
 - Clear lip movements synchronized with Turkish speech
 
 **VIDEO PROMPT ŞABLONU:**
@@ -1869,12 +1869,12 @@ SCENE: {char_desc['scene']}
 
 CHARACTER 1 - MALE:
 {char_desc['male']}
-Speaking Turkish with concerned questioning tone about the problem.
+Speaking Turkish {char_desc['tone_male']} about the problem.
 Clear lip movements synchronized with Turkish speech.
 
 CHARACTER 2 - FEMALE:
 {char_desc['female']}
-Speaking Turkish with reassuring confident tone, explaining the solution.
+Speaking Turkish {char_desc['tone_female']}, explaining the solution.
 Clear lip movements synchronized with Turkish speech.
 
 DIALOGUE FLOW:
@@ -1891,11 +1891,13 @@ CAMERA: Medium two-shot showing both characters, professional composition.
 ---
 
 **B-ROLL PROMPT:**
-- {style_prefix} görsel (sensörler, sera, fabrika vb.)
-- Konusan kisi OLMAMALI
-- 9:16 format, 10 saniye
-- Ingilizce yaz
-- Stil ile uyumlu atmosfer
+- Stil prefix ile başla: {style_prefix}
+- Sahne ortamı referansı: {char_desc['scene']}
+- IoT sensörleri, ekipmanları veya teknoloji detayları göster
+- Konuşan kişi OLMAMALI (sadece objeler/ortam)
+- 9:16 format, ~10 saniye için uygun
+- Tamamı İngilizce yaz
+- Smooth ending - abrupt kesme olmasın
 
 **B-ROLL VOICEOVER:**
 - ~{broll_words} kelime (~4 saniye)
@@ -1921,20 +1923,15 @@ CAMERA: Medium two-shot showing both characters, professional composition.
         {{"speaker": "male", "text": "Ikinci soru..."}},
         {{"speaker": "female", "text": "Ikinci cozum/kapanış..."}}
     ],
-    "video_prompt": "{style_prefix}vertical video (9:16), {target_duration} seconds. LANGUAGE: TURKISH - All dialogue in Turkish language. SCENE: [Stile uygun sahne]. CHARACTER 1: [Stile uygun erkek karakter], speaking Turkish with worried expression, clear lip movements. CHARACTER 2: [Stile uygun kadın karakter], speaking Turkish confidently, clear lip movements. DIALOGUE: Natural Turkish conversation... AUDIO: Clear Turkish dialogue. CAMERA: Medium two-shot.",
-    "broll_prompt": "{style_prefix}close-up of IoT sensors in [stile uygun ortam], 9:16 vertical, no people",
-    "broll_voiceover": "Olivenet IoT ile [konu] kolaylaşıyor. Takip et, sorularını sor.",
-    "caption": "Instagram caption metni...",
-    "hashtags": ["#Olivenet", "#KKTC", "#IoT", ...]
+    "video_prompt": "BU ALANI DOLDUR: Yukarıdaki VIDEO PROMPT ŞABLONUNU kullan. Stil prefix ({style_prefix}) ile başla, karakter tanımlarını ve sahne tanımını aynen kullan. Tamamı İngilizce.",
+    "broll_prompt": "BU ALANI DOLDUR: Stil prefix ({style_prefix}) ile başla, sahne ortamına uygun IoT sensör/ekipman close-up. İngilizce, 9:16, insan yok.",
+    "broll_voiceover": "Turkce ~8 kelime CTA. Ornek: Olivenet IoT ile seraniz 7/24 guvende. Takip et!",
+    "caption": "Instagram caption (max 80 kelime, hook ile basla)",
+    "hashtags": ["#Olivenet", "#KKTC", "#IoT", "...sektorel taglar..."]
 }}
 ```
 
-ÖNEMLI:
-- Video prompt'un BAŞINA stil prefix'ini ({style_prefix}) ekle
-- Karakter tanımlarını yukarıda verilen stil-bazlı tanımlardan al
-- Sahne tanımını stil ile uyumlu yap
-- B-roll prompt'u da aynı stilde olmalı
-- Konuşma video süresinden 2 saniye ÖNCE bitmeli
+ÖNEMLİ: video_prompt ve broll_prompt alanlarını yukarıdaki ŞABLONLARI ve KARAKTERLERİ kullanarak DOLDUR. Placeholder bırakma!
 
 Sadece JSON döndür.
 """
@@ -1951,6 +1948,20 @@ Sadece JSON döndür.
                     "success": False,
                     "error": f"Insufficient dialog lines: {len(dialog_lines)}, minimum 4 required"
                 }
+
+            # Style prefix validation - video_prompt için
+            video_prompt = result.get("video_prompt", "")
+            if video_prompt and style_prefix:
+                if not video_prompt.lower().startswith(style_prefix[:20].lower()):
+                    self.log(f"[CONV] video_prompt stil prefix ile başlamıyor, ekleniyor...")
+                    result["video_prompt"] = style_prefix + video_prompt
+
+            # Style prefix validation - broll_prompt için
+            broll_prompt = result.get("broll_prompt", "")
+            if broll_prompt and style_prefix:
+                if not broll_prompt.lower().startswith(style_prefix[:20].lower()):
+                    self.log(f"[CONV] broll_prompt stil prefix ile başlamıyor, ekleniyor...")
+                    result["broll_prompt"] = style_prefix + broll_prompt
 
             # Log action
             log_agent_action(
