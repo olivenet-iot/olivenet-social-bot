@@ -129,6 +129,27 @@ class ContentPipeline:
         self.approval_response = response
         self.approval_event.set()
 
+    def _create_avatar_prompt(self, original_prompt: str) -> str:
+        """Video prompt'u lipsync için sessiz avatar prompt'una çevir."""
+        avatar_prompt = original_prompt
+
+        remove_phrases = [
+            "speaking Turkish", "Speaking Turkish",
+            "clear lip movements", "Clear lip movements",
+            "synchronized with speech", "Turkish dialogue",
+            "DIALOGUE FLOW:", "AUDIO:", "talking", "speaking"
+        ]
+
+        for phrase in remove_phrases:
+            avatar_prompt = avatar_prompt.replace(phrase, "")
+
+        avatar_prompt += """
+
+IMPORTANT: Characters should be SILENT (lip-sync added later).
+Show natural gestures and expressions, NO actual speech.
+"""
+        return avatar_prompt
+
     @property
     def current_state(self) -> Dict[str, Any]:
         """Audit logging için current_data'dan state çıkar"""
@@ -2920,10 +2941,11 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
         self,
         topic: str = None,
         manual_topic_mode: bool = False,
-        visual_style: str = "cinematic_4k"
+        visual_style: str = "cinematic_4k",
+        model_id: str = "sora-2"
     ) -> Dict[str, Any]:
         """
-        Conversational Reels pipeline with Sora native speech.
+        Conversational Reels pipeline with multi-model support.
 
         Creates two-character dialog video (male problem, female solution)
         followed by B-roll segment with voiceover.
@@ -2931,33 +2953,34 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
         Pipeline Steps (Simplified):
         1. Topic selection (Planner/manual)
         2. Conversation content generation (Creator)
-        3. Conversation video generation (Sora 12s - native Turkish speech)
-        4. B-roll video generation (Sora 10s)
+        3. Conversation video generation:
+           - Sora 2: Native Turkish speech (12s)
+           - Other models: TTS + Video + Lipsync API
+        4. B-roll video generation (8-12s)
         5. B-roll voiceover generation (ElevenLabs narrator)
         6. B-roll merge (FFmpeg)
         7. Concat conversation + B-roll
         8. Whisper transcription + subtitles
         9. Review + Publish
 
-        Note: Sora natively generates Turkish dialog with lip-sync.
-        No TTS or Lipsync API needed.
-
         Args:
             topic: Topic (None uses Planner suggestion)
             manual_topic_mode: Process topic through Creator if True
             visual_style: Görsel stil (cinematic_4k, anime, vb.)
+            model_id: Video model (sora-2, veo-2, kling-2.5-pro)
 
         Returns:
             Pipeline result dict
         """
-        self.log("[CONV REELS] Pipeline başlatılıyor...")
+        self.log(f"[CONV REELS] Pipeline başlatılıyor (model: {model_id})...")
         self.state = PipelineState.PLANNING
 
         result = {
             "success": False,
             "stages_completed": [],
             "conversational_reels": True,
-            "topic": topic
+            "topic": topic,
+            "model_id": model_id
         }
 
         post_id = None
@@ -3034,25 +3057,104 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             )
             result["post_id"] = post_id
 
-            # ========== STAGE 3: Conversation Video (Sora Native Speech) ==========
-            self.log("[CONV REELS] Aşama 3: Conversation video üretimi (Sora 12s)...")
+            # ========== STAGE 3: Conversation Video Generation ==========
+            self.log(f"[CONV REELS] Aşama 3: Conversation video ({model_id})...")
             self.state = PipelineState.CREATING_VISUAL
 
-            from app.sora_helper import generate_video_sora
+            if model_id == "sora-2":
+                # ===== SORA 2: Native Turkish Speech =====
+                from app.sora_helper import generate_video_sora
 
-            conversation_result = await generate_video_sora(
-                prompt=video_prompt,
-                duration=12,  # Sora max duration
-                size="720x1280"
-            )
+                conversation_result = await generate_video_sora(
+                    prompt=video_prompt,
+                    duration=12,  # Sora max duration
+                    size="720x1280"
+                )
 
-            if not conversation_result.get("success"):
-                raise Exception(f"Conversation video hatası: {conversation_result.get('error')}")
+                if not conversation_result.get("success"):
+                    raise Exception(f"Conversation video hatası: {conversation_result.get('error')}")
 
-            conversation_video_path = conversation_result.get("video_path")
-            self.log(f"[CONV REELS] Conversation video üretildi: {conversation_video_path}")
+                conversation_video_path = conversation_result.get("video_path")
+                result["sora_native_speech"] = True
+                self.log(f"[CONV REELS] Sora native speech video üretildi")
+
+            else:
+                # ===== DİĞER MODELLER: TTS + Video + Lipsync =====
+                self.log(f"[CONV REELS] TTS + Lipsync modu ({model_id})")
+
+                # 3a. Dialog TTS üret
+                from app.elevenlabs_helper import generate_dialog_audio
+                from app.video_styles import should_use_cartoon_voices
+                from app.config import settings
+
+                if should_use_cartoon_voices(visual_style):
+                    male_voice = settings.elevenlabs_voice_id_cartoon_male
+                    female_voice = settings.elevenlabs_voice_id_cartoon_female
+                    self.log(f"[CONV REELS] Cartoon voices kullanılıyor")
+                else:
+                    male_voice = settings.elevenlabs_voice_id
+                    female_voice = settings.elevenlabs_voice_id_female
+                    self.log(f"[CONV REELS] Realistic voices kullanılıyor")
+
+                dialog_tts_result = await generate_dialog_audio(
+                    dialog_lines=dialog_lines,
+                    male_voice_id=male_voice,
+                    female_voice_id=female_voice
+                )
+
+                if not dialog_tts_result.get("success"):
+                    raise Exception(f"Dialog TTS hatası: {dialog_tts_result.get('error')}")
+
+                dialog_audio_path = dialog_tts_result.get("audio_path")
+                dialog_duration = dialog_tts_result.get("total_duration", 12)
+                self.log(f"[CONV REELS] Dialog TTS üretildi: {dialog_duration:.1f}s")
+                result["stages_completed"].append("dialog_tts")
+
+                # 3b. Avatar video üret (sessiz)
+                avatar_prompt = self._create_avatar_prompt(video_prompt)
+
+                from app.sora_helper import generate_video_smart
+                avatar_result = await generate_video_smart(
+                    prompt=avatar_prompt,
+                    topic=topic,
+                    force_model=model_id,
+                    duration=min(int(dialog_duration) + 2, 12),
+                    voice_mode=True
+                )
+
+                if not avatar_result.get("success"):
+                    raise Exception(f"Avatar video hatası: {avatar_result.get('error')}")
+
+                avatar_video_path = avatar_result.get("video_path")
+                self.log("[CONV REELS] Avatar video üretildi")
+                result["stages_completed"].append("avatar_video")
+
+                # 3c. Lipsync uygula
+                from app.cloudinary_helper import upload_video_to_cloudinary, upload_audio_to_cloudinary
+                from app.sync_lipsync_helper import apply_lipsync
+
+                video_upload = await upload_video_to_cloudinary(avatar_video_path)
+                audio_upload = await upload_audio_to_cloudinary(dialog_audio_path)
+
+                if not video_upload.get("success") or not audio_upload.get("success"):
+                    raise Exception("Cloudinary upload hatası")
+
+                self.log(f"[CONV REELS] Cloudinary upload tamamlandı, lipsync başlatılıyor...")
+
+                lipsync_result = await apply_lipsync(
+                    video_url=video_upload["url"],
+                    audio_url=audio_upload["url"]
+                )
+
+                if not lipsync_result.get("success"):
+                    raise Exception(f"Lipsync hatası: {lipsync_result.get('error')}")
+
+                conversation_video_path = lipsync_result.get("video_path")
+                result["lipsync_applied"] = True
+                self.log("[CONV REELS] Lipsync uygulandı")
+                result["stages_completed"].append("lipsync")
+
             result["stages_completed"].append("conversation_video")
-            result["sora_native_speech"] = True
 
             # ========== STAGE 4: B-roll Voiceover (TTS önce) ==========
             self.log("[CONV REELS] Aşama 4: B-roll voiceover...")

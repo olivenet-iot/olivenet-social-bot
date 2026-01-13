@@ -597,14 +597,20 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Otonom pipeline'ı arka planda çalıştır
         asyncio.create_task(pipeline.run_autonomous_content(min_score=7))
 
-    # ===== CONVERSATIONAL REELS - MENÜ (STİL KATEGORİSİ) =====
+    # ===== CONVERSATIONAL REELS - MODEL SEÇİM MENÜSÜ =====
     elif action == "create_conversational":
-        # Stil kategorisi seçim menüsü göster
+        # Model seçim menüsü göster
+        conv_models = {
+            "sora-2": {"name": "Sora 2", "emoji": "🌟", "desc": "Native Turkish speech ⭐"},
+            "veo-2": {"name": "Veo 2", "emoji": "🎥", "desc": "TTS + Lipsync"},
+            "kling-2.5-pro": {"name": "Kling 2.5 Pro", "emoji": "🎬", "desc": "TTS + Lipsync"},
+        }
+
         keyboard = []
-        for cat_id, cat_info in STYLE_CATEGORIES.items():
+        for model_id, info in conv_models.items():
             keyboard.append([InlineKeyboardButton(
-                cat_info["name"],
-                callback_data=f"style_cat:sora-2:{cat_id}:conv"
+                f"{info['emoji']} {info['name']} - {info['desc']}",
+                callback_data=f"conv_model:{model_id}"
             )])
         keyboard.append([InlineKeyboardButton("◀️ Geri", callback_data="main_menu")])
 
@@ -612,11 +618,34 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "🎭 *CONVERSATIONAL REELS*\n\n"
             "İki karakter arasında dialog video:\n"
             "• 👨 ERKEK: Problem/soru sorar\n"
-            "• 👩 KADIN: Çözüm sunar\n"
-            "• 🎬 B-roll segment ile bitirir\n\n"
-            "⏱️ *Toplam süre:* ~15 saniye\n"
-            "📹 *Model:* Sora 2 (sabit)\n\n"
-            "🎨 *Önce görsel stil kategorisi seç:*",
+            "• 👩 KADIN: Çözüm sunar\n\n"
+            "📹 *Model Seç:*\n\n"
+            "⭐ *Sora 2*: Native Turkish speech (en iyi)\n"
+            "🎥 *Diğerleri*: TTS + Lipsync API",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+
+    # ===== CONVERSATIONAL REELS - MODEL SEÇİLDİ =====
+    elif action.startswith("conv_model:"):
+        model_id = action.replace("conv_model:", "")
+        config = get_model_config(model_id)
+
+        keyboard = []
+        for cat_id, cat_info in STYLE_CATEGORIES.items():
+            keyboard.append([InlineKeyboardButton(
+                cat_info["name"],
+                callback_data=f"style_cat:{model_id}:{cat_id}:conv"
+            )])
+        keyboard.append([InlineKeyboardButton("◀️ Geri", callback_data="create_conversational")])
+
+        speech_info = "🗣️ Native Turkish speech" if model_id == "sora-2" else "🗣️ TTS + Lipsync API"
+
+        await query.edit_message_text(
+            f"🎭 *Conversational Reels*\n\n"
+            f"📹 *Model:* {config.get('emoji', '🎬')} {config.get('name', model_id)}\n"
+            f"{speech_info}\n\n"
+            "🎨 *Görsel stil kategorisi seç:*",
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
@@ -803,6 +832,8 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             back_data = f"voice_model:{model}"
         elif video_type == "long":
             back_data = f"long_model:{model}"
+        elif video_type == "conv":
+            back_data = f"conv_model:{model}"
         else:
             back_data = "create_conversational"
 
@@ -902,14 +933,20 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Conversational: Konu girişi bekle
             pending_input["type"] = "conv_topic"
             pending_input["visual_style"] = style_id
+            pending_input["model_id"] = model  # Model bilgisi
             pending_input["user_id"] = query.from_user.id
             pending_input["username"] = query.from_user.username or query.from_user.first_name
 
-            keyboard = [[InlineKeyboardButton("❌ İptal", callback_data="create_conversational")]]
+            model_config = get_model_config(model)
+            model_name = f"{model_config.get('emoji', '🎬')} {model_config.get('name', model)}"
+            speech_mode = "Native Turkish speech" if model == "sora-2" else "TTS + Lipsync API"
+
+            keyboard = [[InlineKeyboardButton("❌ İptal", callback_data=f"conv_model:{model}")]]
             await query.edit_message_text(
                 f"🎭 *Conversational Reels*\n\n"
+                f"📹 Model: {model_name}\n"
                 f"🎨 Stil: {style_name}\n"
-                f"📹 Model: Sora 2 (sabit)\n\n"
+                f"🗣️ Konuşma: {speech_mode}\n\n"
                 "✏️ Şimdi video konusunu yaz:\n"
                 "_Örnek: Serada sıcaklık takibi nasıl yapılır?_",
                 parse_mode="Markdown",
@@ -2335,27 +2372,52 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         topic = text.strip()
         visual_style = pending_input.get("visual_style", "cinematic_4k")
+        model_id = pending_input.get("model_id", "sora-2")
         pending_input.clear()
+
+        model_config = get_model_config(model_id)
+        model_name = f"{model_config.get('emoji', '🎬')} {model_config.get('name', model_id)}"
+
+        if model_id == "sora-2":
+            pipeline_info = "Sora native speech"
+            pipeline_steps = (
+                "1️⃣ Konu işleme\n"
+                "2️⃣ Dialog içeriği\n"
+                "3️⃣ Conversation video (Sora native speech)\n"
+                "4️⃣ B-roll voiceover (TTS)\n"
+                "5️⃣ B-roll video\n"
+                "6️⃣ Video birleştirme\n"
+                "7️⃣ Altyazı ekleme"
+            )
+        else:
+            pipeline_info = "TTS + Video + Lipsync"
+            pipeline_steps = (
+                "1️⃣ Konu işleme\n"
+                "2️⃣ Dialog içeriği\n"
+                "3️⃣ Multi-voice TTS\n"
+                "4️⃣ Avatar video\n"
+                "5️⃣ Lipsync işleme\n"
+                "6️⃣ B-roll voiceover\n"
+                "7️⃣ B-roll video\n"
+                "8️⃣ Video birleştirme\n"
+                "9️⃣ Altyazı ekleme"
+            )
 
         await update.message.reply_text(
             f"🎭 *CONVERSATIONAL REELS* başlatılıyor...\n\n"
-            f"📋 *Konu:* {escape_markdown(topic[:60])}{'...' if len(topic) > 60 else ''}\n\n"
-            "Pipeline aşamaları:\n"
-            "1️⃣ Konu işleme\n"
-            "2️⃣ Dialog içeriği\n"
-            "3️⃣ Multi-voice TTS\n"
-            "4️⃣ Avatar video\n"
-            "5️⃣ Lip-sync\n"
-            "6️⃣ B-roll video\n"
-            "7️⃣ Video birleştirme\n\n"
-            "⏳ Bu işlem 8-12 dakika sürebilir...",
+            f"📋 *Konu:* {escape_markdown(topic[:60])}{'...' if len(topic) > 60 else ''}\n"
+            f"📹 *Model:* {model_name}\n"
+            f"🗣️ *Konuşma:* {pipeline_info}\n\n"
+            f"*Pipeline aşamaları:*\n{pipeline_steps}\n\n"
+            "⏳ Bu işlem 8-15 dakika sürebilir...",
             parse_mode="Markdown"
         )
 
         asyncio.create_task(pipeline.run_conversational_reels(
             topic=topic,
             manual_topic_mode=True,
-            visual_style=visual_style
+            visual_style=visual_style,
+            model_id=model_id
         ))
 
 
