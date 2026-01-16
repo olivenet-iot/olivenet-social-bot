@@ -3279,6 +3279,9 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             # ========== STAGE 5: B-roll Video (TTS süresine göre dinamik) ==========
             self.log(f"[CONV REELS] Aşama 5: B-roll video üretimi (Sora {broll_video_duration}s)...")
 
+            # Import Sora for B-roll (her zaman Sora kullanılır)
+            from app.sora_helper import generate_video_sora
+
             broll_video_result = await generate_video_sora(
                 prompt=broll_prompt,
                 duration=broll_video_duration,  # Dinamik süre
