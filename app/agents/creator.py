@@ -1004,9 +1004,8 @@ Sadece JSON döndür.
                 # Scenes'i segment_count'a kırp
                 result["scenes"] = scenes[:segment_count]
 
-                # Style prefix yoksa seçilen stilden al
-                if not result.get("style_prefix"):
-                    result["style_prefix"] = get_style_prefix(visual_style)
+                # Her zaman kullanıcının seçtiği stili uygula (LLM'in hardcoded değerini override et)
+                result["style_prefix"] = get_style_prefix(visual_style)
 
                 self.log(f"Multi-scene promptlar oluşturuldu")
                 self.log(f"   Segment sayısı: {len(result['scenes'])}")

@@ -59,6 +59,12 @@ class PublisherAgent(BaseAgent):
         post_id = input_data.get("post_id")
         post_text = input_data.get("post_text", "")
         post_text_ig = input_data.get("post_text_ig") or post_text
+
+        # DEBUG: Caption kontrolü
+        self.log(f"[PUBLISHER] Caption alındı: {len(post_text_ig)} karakter")
+        if not post_text_ig:
+            self.log("[PUBLISHER] UYARI: Caption boş geldi!")
+
         image_path = input_data.get("image_path")
         video_path = input_data.get("video_path")
 

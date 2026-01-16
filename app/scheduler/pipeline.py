@@ -2708,6 +2708,12 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             caption = content_result.get("post_text_ig") or content_result.get("post_text", "")
             post_id = content_result.get("post_id")
 
+            # DEBUG: Caption değerini logla
+            self.log(f"[LONG VIDEO] Caption uzunluk: {len(caption)} karakter")
+            if not caption or len(caption.strip()) == 0:
+                self.log("[LONG VIDEO] UYARI: Caption BOŞ!")
+            else:
+                self.log(f"[LONG VIDEO] Caption önizleme: {caption[:100]}...")
             self.log(f"[LONG VIDEO] Caption oluşturuldu (Post ID: {post_id})")
             result["stages_completed"].append("caption_creation")
             result["post_id"] = post_id
@@ -2942,6 +2948,9 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             # ========== AŞAMA 10: Yayın ==========
             self.log("[LONG VIDEO] Aşama 10: Instagram'a yayınlanıyor...")
             self.state = PipelineState.PUBLISHING
+
+            # DEBUG: Publish öncesi caption kontrolü
+            self.log(f"[LONG VIDEO] Publish edilecek caption: {len(caption)} karakter")
 
             publish_result = await self.publisher.execute({
                 "action": "publish_reels",
