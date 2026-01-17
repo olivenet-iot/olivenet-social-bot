@@ -114,6 +114,138 @@ PERSONA_EXAMPLES = [
     "teknik ekip lideri"
 ]
 
+# Save Trigger Tipleri - Psikolojik kaydetme tetikleyicileri
+SAVE_TRIGGER_TYPES = {
+    "urgency": {
+        "templates": [
+            "📌 Bu bilgi 3 ay sonra lazım olacak. ŞİMDİ kaydet!",
+            "🔖 Scroll'da kaybolmasın — KAYDET!",
+            "💾 Kaydetmezsen 10 dakikaya unutursun. Emin misin?",
+            "⏰ Şimdi okuyamıyorsan KAYDET, sonra teşekkür edersin."
+        ],
+        "psychology": "scarcity + future_need",
+        "best_for": ["carousel", "post"],
+        "expected_save_boost": 1.8
+    },
+    "value_proposition": {
+        "templates": [
+            "📌 Bu tablo başka yerde yok. Kaydet.",
+            "🔖 Bunu aramakla bulamazsın — kaydet şimdi.",
+            "💎 Ücretsiz danışmanlık değerinde bilgi. Kaydet!",
+            "📊 Bu veriyi toplamak 2 hafta sürdü. Senin için KAYDET."
+        ],
+        "psychology": "perceived_value",
+        "best_for": ["carousel", "post"],
+        "expected_save_boost": 2.0
+    },
+    "social_proof": {
+        "templates": [
+            "📌 1000+ kişi kaydetti. Sen de kaydet!",
+            "🔖 En çok kaydedilen içeriklerimizden. Kaydet!",
+            "💾 Herkes soruyor, bir kere açıklıyorum. KAYDET."
+        ],
+        "psychology": "social_validation",
+        "best_for": ["reels", "post"],
+        "expected_save_boost": 1.5
+    },
+    "practical_use": {
+        "templates": [
+            "📌 Müdürüne/patronuna göstermek için kaydet.",
+            "🔖 Toplantıda lazım olacak — şimdi kaydet.",
+            "💼 Proje teklifine ekle. Önce KAYDET.",
+            "📁 Referans olarak kaydet, karşılaştırmada kullan."
+        ],
+        "psychology": "practical_value",
+        "best_for": ["carousel", "post", "reels"],
+        "expected_save_boost": 1.7
+    },
+    "fomo": {
+        "templates": [
+            "📌 Rakiplerin bunu çoktan kaydetti. Sen?",
+            "🔖 Bu bilgiyi bilen %3'e katıl. KAYDET.",
+            "⚡ Kaydeden kazanır, geçen kaybeder.",
+            "🎯 Pro'lar kaydeder, amatörler scroll'lar."
+        ],
+        "psychology": "fear_of_missing_out",
+        "best_for": ["reels", "video"],
+        "expected_save_boost": 1.6
+    },
+    "checklist": {
+        "templates": [
+            "✅ Checklist olarak kaydet, adım adım uygula.",
+            "📋 Yapılacaklar listene ekle — KAYDET.",
+            "🗂️ Koleksiyonuna ekle: {topic_short}"
+        ],
+        "psychology": "organization",
+        "best_for": ["carousel"],
+        "expected_save_boost": 2.2
+    },
+    "future_reference": {
+        "templates": [
+            "📌 6 ay sonra 'neredeydi bu?' dememek için KAYDET.",
+            "🔖 İhtiyacın olduğunda bulamazsın. Şimdi kaydet.",
+            "🗃️ Arşivine at, lazım olduğunda hazır olsun."
+        ],
+        "psychology": "future_self",
+        "best_for": ["post", "carousel"],
+        "expected_save_boost": 1.5
+    },
+    "challenge": {
+        "templates": [
+            "📌 Kaydetme cesareti var mı? 😏",
+            "🔖 Kaydedip uygulayanı görelim!",
+            "💪 Kaydet ve 1 hafta içinde uygula. Kabul mü?"
+        ],
+        "psychology": "challenge_response",
+        "best_for": ["reels", "video"],
+        "expected_save_boost": 1.4
+    }
+}
+
+# Content type'a göre en uygun save trigger tipleri
+CONTENT_TYPE_SAVE_MAP = {
+    "reels": ["fomo", "social_proof", "challenge", "practical_use"],
+    "carousel": ["checklist", "value_proposition", "urgency", "future_reference"],
+    "post": ["value_proposition", "practical_use", "urgency", "future_reference"],
+    "video": ["fomo", "challenge", "social_proof"],
+    "flux": ["value_proposition", "practical_use", "urgency"],
+    "infographic": ["checklist", "value_proposition", "future_reference"]
+}
+
+# Topic category'ye göre özelleştirilmiş save trigger'lar
+CATEGORY_SAVE_TRIGGERS = {
+    "tarim": {
+        "practical_templates": [
+            "📌 Sera sezonunda lazım olacak. Kaydet!",
+            "🌱 Hasat öncesi tekrar bak — KAYDET."
+        ]
+    },
+    "enerji": {
+        "practical_templates": [
+            "📌 Fatura geldiğinde hatırlayacaksın. Kaydet!",
+            "⚡ Enerji tasarrufu planına ekle — KAYDET."
+        ]
+    },
+    "fabrika": {
+        "practical_templates": [
+            "📌 Bakım planlamasında kullan. Kaydet!",
+            "🏭 Üretim toplantısına götür — KAYDET."
+        ]
+    },
+    "lorawan": {
+        "practical_templates": [
+            "📌 Deployment'ta referans olarak kaydet.",
+            "📡 Kurulum sırasında lazım — KAYDET."
+        ]
+    },
+    "edge_ai": {
+        "practical_templates": [
+            "📌 Proje geliştirmede referans. Kaydet!",
+            "🤖 POC hazırlarken kullan — KAYDET."
+        ]
+    }
+}
+
 
 class CreatorAgent(BaseAgent):
     """İçerik üretici - post metni ve görsel üretir"""
@@ -243,6 +375,84 @@ class CreatorAgent(BaseAgent):
             "cta_text": cta_text,
             "expected_boost": cta_config["expected_boost"],
             "needs_ai_completion": needs_ai
+        }
+
+    def generate_save_trigger(
+        self,
+        content_type: str,
+        topic: str,
+        topic_category: str,
+        is_educational: bool = False,
+        is_data_heavy: bool = False
+    ) -> dict:
+        """
+        Icerik tipine ve konuya gore guclu save trigger uret.
+
+        Args:
+            content_type: reels, carousel, post, video, flux, infographic
+            topic: Icerik konusu
+            topic_category: tarim, enerji, fabrika, lorawan, edge_ai
+            is_educational: Egitici icerik mi?
+            is_data_heavy: Veri/istatistik agirlikli mi?
+
+        Returns:
+            {
+                "trigger_type": "value_proposition",
+                "trigger_text": "📌 Bu tablo baska yerde yok. Kaydet.",
+                "expected_save_boost": 2.0,
+                "psychology": "perceived_value"
+            }
+        """
+        # Content type'a uygun trigger tiplerini al
+        suitable_types = CONTENT_TYPE_SAVE_MAP.get(content_type, ["urgency", "practical_use"])
+
+        # Icerik ozelliklerine gore onceliklendirme
+        if is_educational:
+            # Egitici icerik icin checklist ve value_proposition one cik
+            suitable_types = ["checklist", "value_proposition", "future_reference"] + suitable_types
+
+        if is_data_heavy:
+            # Veri agirlikli icerik icin value_proposition ve practical_use
+            suitable_types = ["value_proposition", "practical_use"] + suitable_types
+
+        if content_type == "carousel":
+            # Carousel icin checklist cok etkili
+            suitable_types = ["checklist"] + suitable_types
+
+        # Unique list (sirayi koru)
+        seen = set()
+        suitable_types = [x for x in suitable_types if not (x in seen or seen.add(x))]
+
+        # Agirlikli rastgele secim (ilk tipler daha olasi)
+        weights = [3, 2.5, 2, 1.5] + [1] * max(0, len(suitable_types) - 4)
+        weights = weights[:len(suitable_types)]
+
+        selected_type = random.choices(suitable_types, weights=weights, k=1)[0]
+        trigger_config = SAVE_TRIGGER_TYPES.get(selected_type, SAVE_TRIGGER_TYPES["urgency"])
+
+        # Template sec
+        templates = list(trigger_config["templates"])
+
+        # Category-specific template var mi kontrol et
+        category_config = CATEGORY_SAVE_TRIGGERS.get(topic_category)
+        if category_config and random.random() < 0.4:  # %40 ihtimalle category-specific
+            category_templates = category_config.get("practical_templates", [])
+            if category_templates:
+                templates = category_templates + templates
+
+        template = random.choice(templates)
+
+        # Placeholder'lari doldur
+        trigger_text = template
+        if "{topic_short}" in trigger_text:
+            topic_short = topic[:20] + "..." if len(topic) > 20 else topic
+            trigger_text = trigger_text.replace("{topic_short}", topic_short)
+
+        return {
+            "trigger_type": selected_type,
+            "trigger_text": trigger_text,
+            "expected_save_boost": trigger_config["expected_save_boost"],
+            "psychology": trigger_config["psychology"]
         }
 
     async def create_ab_variants(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -550,6 +760,15 @@ Sadece JSON döndür.
         else:
             cta_example = f"Ornek: {comment_cta['cta_text']}"
 
+        # Save trigger olustur
+        save_trigger = self.generate_save_trigger(
+            content_type=visual_type,
+            topic=topic,
+            topic_category=category,
+            is_educational=category in ["lorawan", "edge_ai"],
+            is_data_heavy="istatistik" in topic.lower() or "veri" in topic.lower() or "%" in topic
+        )
+
         # Instagram içeriği (kısa)
         ig_prompt = f"""
 ## GÖREV: Instagram Post Yaz
@@ -574,8 +793,27 @@ Sadece JSON döndür.
 - MARKDOWN KULLANMA: **bold**, *italic*, `code` YASAK (Instagram desteklemiyor)
 - Vurgu için BÜYÜK HARF veya emoji kullan
 
+### SAVE TETIKLEYICI (ZORUNLU!)
+Caption'da MUTLAKA guclu bir kaydetme tetikleyicisi olmali (Comment CTA'dan ONCE).
+
+**Onerilen Trigger Tipi:** {save_trigger['trigger_type'].upper()}
+**Ornek:** {save_trigger['trigger_text']}
+**Psikoloji:** {save_trigger['psychology']}
+
+**SAVE TETIKLEYICI KURALLARI:**
+1. **URGENCY (Aciliyet)** - "📌 Bu bilgi 3 ay sonra lazim olacak. SIMDI kaydet!"
+2. **VALUE (Deger)** - "📌 Bu tablo baska yerde yok. Kaydet."
+3. **FOMO (Kacirma Korkusu)** - "📌 Rakiplerin bunu coktan kaydetti. Sen?"
+4. **PRACTICAL (Pratik Kullanim)** - "📌 Mudurune gostermek icin kaydet."
+5. **CHECKLIST (Liste)** - "✅ Checklist olarak kaydet, adim adim uygula."
+
+**YASAK SAVE IFADELERI:**
+- "Kaydet 📌" (cok kisa, zayif)
+- "Begen ve kaydet" (generic)
+- "Isine yararsa kaydet" (pasif)
+
 ### COMMENT ENGAGEMENT CTA (ZORUNLU!)
-Caption'in MUTLAKA guclu bir comment tetikleyici ile bitmeli (hashtaglardan ONCE).
+Caption'in MUTLAKA guclu bir comment tetikleyici ile bitmeli (hashtaglardan ONCE, Save trigger'dan SONRA).
 
 Onerilen CTA tipi: **{comment_cta['cta_type'].upper()}**
 {cta_example}
@@ -591,10 +829,6 @@ Onerilen CTA tipi: **{comment_cta['cta_type'].upper()}**
 **ZORUNLU:** Caption'in son satiri (hashtaglardan once) MUTLAKA yukaridaki tiplerden biri olmali.
 **YASAK:** Sadece "Yorumlara yaz", "Ne dusunuyorsun?" gibi ZAYIF CTA'lar YASAK.
 
-### SAVE/SHARE TETIKLEYICI
-- Her 3-4 posttan birinde: "📌 Kaydet!" veya "🔖 Yer imi ekle!" ekle
-- Konu uygunsa: "📲 Bu bilgiyi ihtiyacı olan biriyle paylaş" ekle
-
 ### ÖRNEK FORMAT
 🌱 [Dikkat çekici hook]
 
@@ -603,7 +837,9 @@ Onerilen CTA tipi: **{comment_cta['cta_type'].upper()}**
 - Madde 1
 - Madde 2
 
-[Kapanış: Soru veya "📌 Kaydet, lazım olduğunda kullan!"]
+📌 [SAVE TRIGGER - guclu kaydetme tetikleyicisi]
+
+[COMMENT CTA - yorum tetikleyici soru/poll] 👇
 
 #Olivenet #KKTC #IoT #AkıllıTarım ...
 
@@ -686,6 +922,11 @@ Sadece post metnini yaz, başka açıklama ekleme.
             "comment_cta": {
                 "type": comment_cta["cta_type"],
                 "expected_boost": comment_cta["expected_boost"]
+            },
+            "save_trigger": {
+                "type": save_trigger["trigger_type"],
+                "text": save_trigger["trigger_text"],
+                "expected_boost": save_trigger["expected_save_boost"]
             }
         }
 
