@@ -749,3 +749,89 @@ Her içerik planlamasında sor:
 - [ ] Son 3 içerik aynı formatta mı? (Hayır olmalı)
 - [ ] Hook tipi son posttan farklı mı? (Evet olmalı)
 - [ ] Ton dağılımı dengeli mi? (Hep eğitici olmasın)
+
+---
+
+## VIRAL CONTENT FORMATS
+
+Instagram'da viral potansiyeli yuksek 8 icerik formati.
+
+### Format Listesi
+
+| Format | Viral Potansiyel | Icerik Tipi | Kullanim |
+|--------|------------------|-------------|----------|
+| **POV** | 88% | Reels, Video | Problem anlatimi, relatable anlar |
+| **By the Numbers** | 86% | Reels, Carousel | Sok istatistikler |
+| **Hidden Feature** | 85% | Reels, Carousel | Insider bilgi |
+| **Challenge** | 83% | Reels, Video | Demo, case study |
+| **Wrong vs Right** | 82% | Reels, Carousel | Karsilastirma |
+| **Myth vs Reality** | 81% | Carousel, Post | Yanlis inanislar |
+| **Red Flag** | 79% | Carousel, Post | Sektorel uyarilar |
+| **Day in Life** | 77% | Reels, Video | Lifestyle, bir gun |
+
+### Format Detaylari
+
+**POV (Point of View) - 88%**
+- "POV: Gece 3'te don alarmi geldi"
+- "POV: Patron 'sera kac derece?' diye soruyor"
+- Izleyiciyi durumun icine ceken birinci sahis perspektifi
+
+**By the Numbers - 86%**
+- "8,949 - Tek bir Reels'in reach'i"
+- "%73 - Bu rakam ortalama verimlilik artisi"
+- Sok edici rakamlarla hikaye anlat
+
+**Hidden Feature - 85%**
+- "ThingsBoard'da kimsenin bilmedigi 5 ozellik"
+- "Sadece uzmanlarin bildigi IoT sirlari"
+- Insider bilgiler, gizli ozellikler
+
+**Challenge - 83%**
+- "24 saat boyunca enerji takibi yaptim"
+- "1 hafta challenge: verimlilik artisi"
+- Belirli surede bir seyi yapma formati
+
+**Wrong vs Right - 82%**
+- "X YAPMA: Gunde 3 kez seraya git / YAP: Sensor sana haber versin"
+- Split screen ile hatali ve dogru yaklasimi karsilastir
+
+**Myth vs Reality - 81%**
+- "EFSANE: IoT sadece buyuk seralar icin / GERCEK: 1 donum sera bile 3 ayda amorti eder"
+- Yaygin yanlis inanislari curut
+
+**Red Flag - 79%**
+- "Red flag: '7/24 destek' diyor ama telefon acmiyor"
+- "Eger teknik destek 48 saatten fazla suruyorsa"
+- Sektordeki kirmizi bayraklar ve uyarilar
+
+**Day in Life - 77%**
+- "IoT ile sera sahibinin bir gunu"
+- "07:00 - Dashboard kontrolu / 12:00 - Alarm yonetimi / 18:00 - Rapor inceleme"
+- Gunluk rutini goster
+
+### Kategori-Format Eslesmeleri
+
+| Kategori | Onerilen Formatlar |
+|----------|-------------------|
+| Tarim | POV, Challenge, Day in Life, Wrong vs Right |
+| Enerji | By the Numbers, Myth vs Reality, Red Flag, POV |
+| Fabrika | POV, By the Numbers, Challenge, Wrong vs Right |
+| LoRaWAN | Hidden Feature, Myth vs Reality, Wrong vs Right |
+| Edge AI | Hidden Feature, By the Numbers, Challenge |
+| Kestirimci | POV, By the Numbers, Myth vs Reality |
+
+### Icerik Tipi-Format Eslesmeleri
+
+| Icerik Tipi | Uygun Formatlar |
+|-------------|-----------------|
+| Reels | POV, Challenge, By the Numbers, Wrong vs Right, Day in Life |
+| Carousel | Hidden Feature, Red Flag, Myth vs Reality, Wrong vs Right |
+| Post | Myth vs Reality, Red Flag, By the Numbers |
+| Video | POV, Challenge, Day in Life |
+
+### Format Secim Kurallari
+
+1. **Viral potansiyele gore agirlikli secim**: Yuksek potansiyelli formatlar daha sik secilir
+2. **Kategori uyumu**: Her kategorinin guclu oldugu formatlar oncelikli
+3. **Icerik tipi uyumu**: Format, icerik tipine uygun olmali
+4. **prefer_format**: Ozel bir format istegi varsa direkt kullanilir

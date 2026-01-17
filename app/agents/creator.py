@@ -442,6 +442,133 @@ CONTENT_OPENING_HOOK_MAP = {
     "egitici": ["question_hook", "curiosity_gap", "challenge"]
 }
 
+# ============ VIRAL CONTENT FORMATS ============
+
+VIRAL_CONTENT_FORMATS = {
+    "pov": {
+        "name": "POV (Point of View)",
+        "description": "İzleyiciyi durumun içine çeken birinci şahıs perspektifi",
+        "templates": [
+            "POV: Gece 3'te {problem} alarmı geldi",
+            "POV: Patron '{question}' diye soruyor",
+            "POV: {event} oldu ve sen hala {old_method} kullanıyorsun"
+        ],
+        "visual_style": "POV camera angle, first person perspective",
+        "audio_style": "Relatable sounds, phone notifications, dramatic music",
+        "best_for": ["problem_solution", "comparison", "lifestyle"],
+        "content_types": ["reels", "video"],
+        "viral_potential": 0.88
+    },
+    "wrong_vs_right": {
+        "name": "Yanlış vs Doğru",
+        "description": "Split screen ile hatalı ve doğru yaklaşımı karşılaştır",
+        "templates": [
+            "❌ Yanlış: {wrong_approach}\n✅ Doğru: {right_approach}",
+            "YAPMA: {dont}\nYAP: {do}"
+        ],
+        "visual_style": "Split screen, side-by-side comparison",
+        "audio_style": "Contrast sounds, fail vs success",
+        "best_for": ["tutorial", "comparison", "tips"],
+        "content_types": ["reels", "carousel"],
+        "viral_potential": 0.82
+    },
+    "hidden_feature": {
+        "name": "Gizli Özellik Serisi",
+        "description": "Kimsenin bilmediği insider bilgiler",
+        "templates": [
+            "{platform}'da kimsenin bilmediği {count} özellik",
+            "Sadece uzmanların bildiği {topic} sırları"
+        ],
+        "visual_style": "Reveal animations, blur to clear",
+        "audio_style": "Mystery/discovery sounds",
+        "best_for": ["tutorial", "tips", "education"],
+        "content_types": ["reels", "carousel"],
+        "viral_potential": 0.85
+    },
+    "red_flag": {
+        "name": "Red Flag Serisi",
+        "description": "Sektördeki kırmızı bayraklar ve uyarılar",
+        "templates": [
+            "🚩 Red flag: {warning}",
+            "Eğer {condition} ise 🚩"
+        ],
+        "visual_style": "Red flag emoji prominent, warning colors",
+        "audio_style": "Alert sounds, warning tones",
+        "best_for": ["tips", "education", "awareness"],
+        "content_types": ["reels", "carousel", "post"],
+        "viral_potential": 0.79
+    },
+    "challenge": {
+        "name": "Challenge Formatı",
+        "description": "Belirli sürede bir şeyi yapma challenge'ı",
+        "templates": [
+            "{duration} boyunca {task} yaptım",
+            "{duration} challenge: {goal}"
+        ],
+        "visual_style": "Timelapse, progress shots, before/after",
+        "audio_style": "Upbeat music, countdown sounds",
+        "best_for": ["demo", "case_study", "lifestyle"],
+        "content_types": ["reels", "video"],
+        "viral_potential": 0.83
+    },
+    "by_the_numbers": {
+        "name": "Rakamlarla Serisi",
+        "description": "Şok edici rakamlarla hikaye anlat",
+        "templates": [
+            "{big_number}\n↓\n{explanation}",
+            "{percentage}%\nBu rakam {meaning}"
+        ],
+        "visual_style": "Big bold numbers, animated counters",
+        "audio_style": "Impactful sounds on number reveals",
+        "best_for": ["case_study", "statistics", "awareness"],
+        "content_types": ["reels", "carousel"],
+        "viral_potential": 0.86
+    },
+    "myth_vs_reality": {
+        "name": "Efsane vs Gerçek",
+        "description": "Yaygın yanlış inanışları çürüt",
+        "templates": [
+            "EFSANE: {myth}\nGERÇEK: {reality}",
+            "'{myth}' - YANLIŞ ❌\n{reality} - DOĞRU ✅"
+        ],
+        "visual_style": "Myth crossed out, reality highlighted",
+        "audio_style": "Wrong buzzer, success sound",
+        "best_for": ["education", "awareness", "tips"],
+        "content_types": ["reels", "carousel", "post"],
+        "viral_potential": 0.81
+    },
+    "day_in_life": {
+        "name": "Bir Gün Serisi",
+        "description": "IoT ile bir günün nasıl geçtiğini göster",
+        "templates": [
+            "IoT ile sera sahibinin bir günü",
+            "07:00 - {morning}\n12:00 - {noon}\n18:00 - {evening}"
+        ],
+        "visual_style": "Time stamps, daily routine shots",
+        "audio_style": "Ambient sounds, upbeat transitions",
+        "best_for": ["lifestyle", "case_study", "awareness"],
+        "content_types": ["reels", "video"],
+        "viral_potential": 0.77
+    }
+}
+
+CATEGORY_VIRAL_FORMAT_MAP = {
+    "tarim": ["pov", "challenge", "day_in_life", "wrong_vs_right"],
+    "enerji": ["by_the_numbers", "myth_vs_reality", "red_flag", "pov"],
+    "fabrika": ["pov", "by_the_numbers", "challenge", "wrong_vs_right"],
+    "lorawan": ["hidden_feature", "myth_vs_reality", "wrong_vs_right"],
+    "edge_ai": ["hidden_feature", "by_the_numbers", "challenge"],
+    "kestirimci": ["pov", "by_the_numbers", "myth_vs_reality"],
+    "genel": ["myth_vs_reality", "red_flag", "by_the_numbers"]
+}
+
+CONTENT_TYPE_VIRAL_FORMAT_MAP = {
+    "reels": ["pov", "challenge", "by_the_numbers", "wrong_vs_right", "day_in_life"],
+    "carousel": ["hidden_feature", "red_flag", "myth_vs_reality", "wrong_vs_right"],
+    "post": ["myth_vs_reality", "red_flag", "by_the_numbers"],
+    "video": ["pov", "challenge", "day_in_life"]
+}
+
 
 class CreatorAgent(BaseAgent):
     """İçerik üretici - post metni ve görsel üretir"""
@@ -762,6 +889,88 @@ class CreatorAgent(BaseAgent):
             "timing_structure": timing,
             "video_duration": video_duration
         }
+
+    def select_viral_format(
+        self,
+        topic: str,
+        topic_category: str,
+        content_type: str,
+        prefer_format: str = None
+    ) -> dict:
+        """Konu ve içerik tipine göre en uygun viral formatı seç."""
+
+        # Prefer format varsa direkt kullan
+        if prefer_format and prefer_format in VIRAL_CONTENT_FORMATS:
+            format_config = VIRAL_CONTENT_FORMATS[prefer_format]
+            if content_type in format_config["content_types"]:
+                return self._build_format_response(prefer_format, format_config, topic_category)
+
+        # Category ve content type'a göre uygun formatları al
+        category_formats = CATEGORY_VIRAL_FORMAT_MAP.get(topic_category, CATEGORY_VIRAL_FORMAT_MAP["genel"])
+        content_formats = CONTENT_TYPE_VIRAL_FORMAT_MAP.get(content_type, ["myth_vs_reality"])
+
+        # Kesişim
+        suitable_formats = [f for f in category_formats if f in content_formats]
+        if not suitable_formats:
+            suitable_formats = content_formats
+
+        # Viral potential'a göre ağırlıklı seçim
+        weights = [VIRAL_CONTENT_FORMATS[f]["viral_potential"] for f in suitable_formats if f in VIRAL_CONTENT_FORMATS]
+        if not weights:
+            weights = [1.0] * len(suitable_formats)
+        selected_format = random.choices(suitable_formats, weights=weights, k=1)[0]
+
+        return self._build_format_response(selected_format, VIRAL_CONTENT_FORMATS[selected_format], topic_category)
+
+    def _build_format_response(self, format_key: str, format_config: dict, topic_category: str) -> dict:
+        """Format response objesi oluştur ve template'i doldur"""
+        template = random.choice(format_config["templates"])
+        filled_template = self._fill_viral_template(template, topic_category)
+
+        return {
+            "format_key": format_key,
+            "format_name": format_config["name"],
+            "template": template,
+            "filled_template": filled_template,
+            "visual_style": format_config["visual_style"],
+            "audio_style": format_config["audio_style"],
+            "viral_potential": format_config["viral_potential"]
+        }
+
+    def _fill_viral_template(self, template: str, category: str) -> str:
+        """Template placeholder'larını doldur"""
+        fills = {
+            "{problem}": {"tarim": "don", "enerji": "aşırı tüketim", "fabrika": "makine arızası"}.get(category, "sistem"),
+            "{question}": {"tarim": "sera kaç derece?", "enerji": "neden bu kadar yüksek fatura?"}.get(category, "ne oluyor?"),
+            "{event}": {"tarim": "don uyarısı", "enerji": "pik saat başladı"}.get(category, "alarm geldi"),
+            "{old_method}": {"tarim": "termometre", "enerji": "aylık fatura"}.get(category, "Excel"),
+            "{wrong_approach}": {"tarim": "Günde 3 kez seraya git", "enerji": "Ay sonunda faturaya bak"}.get(category, "Manuel takip"),
+            "{right_approach}": {"tarim": "Sensör sana haber versin", "enerji": "Gerçek zamanlı takip"}.get(category, "IoT ile otomasyon"),
+            "{dont}": {"tarim": "3 kez seraya git", "enerji": "Faturayı bekle"}.get(category, "Manuel takip"),
+            "{do}": {"tarim": "Sensör kullan", "enerji": "Gerçek zamanlı izle"}.get(category, "Otomatik takip"),
+            "{platform}": "ThingsBoard",
+            "{topic}": category,
+            "{count}": str(random.choice([3, 5, 7])),
+            "{warning}": {"tarim": "'7/24 destek' diyor ama telefon açmıyor", "enerji": "'Tasarruf garantisi' sözleşmede yok"}.get(category, "Söyledikleri ile yaptıkları uyuşmuyor"),
+            "{condition}": "teknik destek 48 saatten fazla sürüyorsa",
+            "{duration}": random.choice(["24 saat", "1 hafta", "30 gün"]),
+            "{task}": f"{category} takibi",
+            "{goal}": "verimlilik artışı",
+            "{big_number}": random.choice(["8,949", "%73", "₺50,000"]),
+            "{explanation}": "Tek bir Reels'in reach'i",
+            "{percentage}": str(random.choice([40, 73, 85])),
+            "{meaning}": "ortalama verimlilik artışı",
+            "{myth}": {"tarim": "IoT sadece büyük seralar için", "enerji": "Enerji takibi pahalı"}.get(category, "IoT pahalı ve karmaşık"),
+            "{reality}": {"tarim": "1 dönüm sera bile 3 ayda amorti eder", "enerji": "Ayda ₺200 ile başlanabilir"}.get(category, "Basit ve uygun fiyatlı"),
+            "{morning}": "Dashboard kontrolü",
+            "{noon}": "Alarm yönetimi",
+            "{evening}": "Rapor inceleme"
+        }
+
+        result = template
+        for placeholder, value in fills.items():
+            result = result.replace(placeholder, str(value))
+        return result
 
     async def create_ab_variants(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -1433,6 +1642,14 @@ Sadece JSON döndür.
             hook_type=None
         )
 
+        # Viral format seç
+        viral_format = self.select_viral_format(
+            topic=topic,
+            topic_category=category,
+            content_type="reels",
+            prefer_format=input_data.get("viral_format")
+        )
+
         # Watch time instruction olustur
         watch_time_instruction = f"""
 ### 🎬 WATCH TIME OPTİMİZASYONU (KRİTİK!)
@@ -1531,6 +1748,23 @@ Bu video TTS voiceover ile birleştirilecek. Her shot, aşağıdaki speech içer
 - Örnek: "Sensörler..." denirken → sensör close-up göster
 """
 
+        # Viral format instruction
+        viral_format_instruction = f"""
+### 🎯 VİRAL İÇERİK FORMATI
+
+Bu Reels için önerilen viral format: **{viral_format['format_name']}**
+
+**Template:** {viral_format['filled_template']}
+
+**Görsel Yönergesi:** {viral_format['visual_style']}
+
+**Ses Yönergesi:** {viral_format['audio_style']}
+
+**Viral Potansiyel:** {viral_format['viral_potential'] * 100:.0f}%
+
+Bu format için video yapısını buna göre oluştur!
+"""
+
         prompt = f"""
 ## GÖREV: Instagram Reels için Profesyonel Video Prompt Oluştur
 
@@ -1554,6 +1788,7 @@ Tüm video prompt'larının BAŞINA şu stil prefix'ini ekle: "{style_prefix}"
 {reels_guide[:1500]}
 {sync_guide}
 {watch_time_instruction}
+{viral_format_instruction}
 ---
 
 ## ÇIKTI FORMATI (JSON)
@@ -1703,6 +1938,12 @@ Sadece JSON döndür, başka açıklama ekleme.
                 "retention_power": watch_time["opening_hook"]["retention_power"],
                 "pattern_interrupts_count": len(watch_time["pattern_interrupts"]),
                 "has_loop_ending": True
+            },
+            "viral_format": {
+                "format_key": viral_format["format_key"],
+                "format_name": viral_format["format_name"],
+                "viral_potential": viral_format["viral_potential"],
+                "template_used": viral_format["filled_template"]
             }
         }
 
