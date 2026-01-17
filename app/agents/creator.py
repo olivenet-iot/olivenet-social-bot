@@ -246,6 +246,202 @@ CATEGORY_SAVE_TRIGGERS = {
     }
 }
 
+# ============ WATCH TIME OPTIMIZATION ============
+
+# İlk 1.5 saniye hook tipleri - Scroll durdurucu açılışlar
+OPENING_HOOK_TYPES = {
+    "shock_stat": {
+        "templates": [
+            "Fabrikaların %73'ü bunu bilmiyor...",
+            "Her gün {X} TL kaybediyorsun ve haberin yok.",
+            "Bu sensör 847 fabrikayı kurtardı.",
+            "{X} seradan sadece 1'i bunu yapıyor."
+        ],
+        "visual": "Büyük rakam + şok yüz ifadesi",
+        "audio": "Dramatic sound effect",
+        "retention_power": 0.85
+    },
+    "question_hook": {
+        "templates": [
+            "Seranız gece kaç derece?",
+            "Motor arızasını KAÇ GÜN önceden tahmin edebilirsiniz?",
+            "Enerji faturanızın %40'ı nereye gidiyor?",
+            "Bu sesi duydunuz mu? [makine sesi]"
+        ],
+        "visual": "Soru text overlay + meraklı bakış",
+        "audio": "Suspense sound",
+        "retention_power": 0.80
+    },
+    "contradiction": {
+        "templates": [
+            "IoT pahalı değil. PARASIZ olan pahalı.",
+            "Manuel kontrol = kontrol kaybı.",
+            "Teknoloji değil, TEKNOLOJİSİZLİK riskli.",
+            "Veri toplamıyorsan, veri kaybediyorsun."
+        ],
+        "visual": "Çarpıcı text + kırmızı X / yeşil ✓",
+        "audio": "Record scratch / plot twist sound",
+        "retention_power": 0.82
+    },
+    "pov_hook": {
+        "templates": [
+            "POV: Gece 3'te don alarmı geldi",
+            "POV: Patron 'neden durdu hat?' diye soruyor",
+            "POV: Fatura geldi, rakamı görünce...",
+            "POV: Rakibin otomasyona geçti, sen hala Excel'desin"
+        ],
+        "visual": "POV camera angle / first person",
+        "audio": "Relatable sound / phone notification",
+        "retention_power": 0.88
+    },
+    "challenge": {
+        "templates": [
+            "3 saniyede bil: Bu sensör ne ölçüyor?",
+            "Doğru cevabı bulan %5'lik dilimde mi?",
+            "Bunu izle ve yanlışı bul.",
+            "Kaç hata var? Say bakalım."
+        ],
+        "visual": "Quiz format / countdown timer",
+        "audio": "Game show sound",
+        "retention_power": 0.78
+    },
+    "curiosity_gap": {
+        "templates": [
+            "Bu grafik her şeyi değiştirdi...",
+            "Bunu öğrenince şok olacaksınız.",
+            "Kimse bundan bahsetmiyor ama...",
+            "3. maddeyi kimse beklemiyordu."
+        ],
+        "visual": "Blurred/hidden content reveal",
+        "audio": "Mystery/suspense",
+        "retention_power": 0.83
+    },
+    "before_after": {
+        "templates": [
+            "ÖNCE: Günde 3 kez seraya git. SONRA: ⬇️",
+            "Sol: Manuel takip. Sağ: IoT takip.",
+            "2023 vs 2024: Aynı sera, farklı sonuç.",
+            "Dün: Arıza. Bugün: Tahmin."
+        ],
+        "visual": "Split screen / swipe transition",
+        "audio": "Transformation sound",
+        "retention_power": 0.86
+    },
+    "direct_address": {
+        "templates": [
+            "DUR! Scroll'lamadan önce bunu bil.",
+            "Sana bir soru: {topic_question}",
+            "Bu video senin için değilse scroll'la. Ama...",
+            "30 saniye ver, 30.000 TL kazan."
+        ],
+        "visual": "Eye contact / pointing gesture",
+        "audio": "Attention grab sound",
+        "retention_power": 0.79
+    }
+}
+
+# Mid-roll retention hook'lar (video ortasında izleyiciyi tutmak için)
+RETENTION_HOOKS = {
+    "wait_for_it": [
+        "Ama asıl önemli olan şu...",
+        "Bekle, en kritik kısım geliyor.",
+        "Ve işte burada işler değişiyor...",
+        "Şimdi dikkatli izle..."
+    ],
+    "listicle_tease": [
+        "3. madde çoğu kişiyi şaşırtıyor.",
+        "Son ipucu en değerlisi.",
+        "Ama en önemlisi...",
+        "Ve bonus olarak..."
+    ],
+    "result_tease": [
+        "Sonuç mu? İzlemeye devam et.",
+        "Ne oldu biliyor musun?",
+        "Rakamları görünce...",
+        "Ve sonuç:"
+    ],
+    "engagement_prompt": [
+        "Buraya kadar geldiysen like'ı hak etti.",
+        "Bu mantıklı geliyorsa kaydet.",
+        "Devam etmeden: Katılıyor musun?",
+        "Sence de öyle değil mi?"
+    ]
+}
+
+# Loop video end frames (videonun sonunu başa bağlamak için)
+LOOP_ENDINGS = {
+    "question_loop": [
+        "...peki ya senin {topic}?",
+        "Sen ne düşünüyorsun?",
+        "Tekrar izle, bir şey kaçırdın."
+    ],
+    "visual_loop": [
+        "[Son frame: Başlangıç sahnesinin aynası]",
+        "[Zoom out -> Zoom in loop]",
+        "[Circular motion end = start]"
+    ],
+    "audio_loop": [
+        "[Son ses: Başlangıç sesinin devamı gibi]",
+        "[Beat drop -> Beat başlangıcı]",
+        "[Suspense -> Resolution -> Suspense]"
+    ]
+}
+
+# Video segment timing (saniye bazlı yapı)
+VIDEO_TIMING_STRUCTURE = {
+    "6_second": {
+        "hook": "0-1.5s",
+        "content": "1.5-5s",
+        "cta": "5-6s",
+        "pattern_interrupts": 1
+    },
+    "15_second": {
+        "hook": "0-2s",
+        "content_1": "2-7s",
+        "retention_hook": "7-8s",
+        "content_2": "8-13s",
+        "cta_loop": "13-15s",
+        "pattern_interrupts": 3
+    },
+    "30_second": {
+        "hook": "0-2s",
+        "content_1": "2-10s",
+        "retention_hook_1": "10-11s",
+        "content_2": "11-20s",
+        "retention_hook_2": "20-21s",
+        "content_3": "21-27s",
+        "cta_loop": "27-30s",
+        "pattern_interrupts": 5
+    }
+}
+
+# Pattern interrupt tipleri
+PATTERN_INTERRUPTS = [
+    "Zoom in/out ani geçiş",
+    "Text overlay pop-up",
+    "Renk filtresi değişimi",
+    "Kamera açısı değişimi",
+    "B-roll kesme",
+    "Ses efekti/müzik değişimi",
+    "Split screen",
+    "Slow motion moment",
+    "Freeze frame + text",
+    "Swipe transition"
+]
+
+# Hook type'a göre en uygun opening hook
+CONTENT_OPENING_HOOK_MAP = {
+    "demo": ["before_after", "pov_hook", "shock_stat"],
+    "tutorial": ["question_hook", "challenge", "direct_address"],
+    "problem_solution": ["pov_hook", "contradiction", "shock_stat"],
+    "comparison": ["before_after", "challenge", "question_hook"],
+    "tips": ["curiosity_gap", "shock_stat", "direct_address"],
+    "news": ["shock_stat", "curiosity_gap", "direct_address"],
+    "case_study": ["shock_stat", "before_after", "pov_hook"],
+    "tanitim": ["shock_stat", "before_after", "pov_hook"],
+    "egitici": ["question_hook", "curiosity_gap", "challenge"]
+}
+
 
 class CreatorAgent(BaseAgent):
     """İçerik üretici - post metni ve görsel üretir"""
@@ -453,6 +649,118 @@ class CreatorAgent(BaseAgent):
             "trigger_text": trigger_text,
             "expected_save_boost": trigger_config["expected_save_boost"],
             "psychology": trigger_config["psychology"]
+        }
+
+    def generate_watch_time_structure(
+        self,
+        video_duration: int,
+        content_style: str,
+        topic: str,
+        hook_type: str = None
+    ) -> dict:
+        """
+        Video icin watch time optimize edilmis yapi uret.
+
+        Args:
+            video_duration: Video suresi (saniye) - 6, 15, veya 30
+            content_style: demo, tutorial, problem_solution, comparison, tips, news, case_study, tanitim, egitici
+            topic: Video konusu
+            hook_type: Mevcut hook tipi (varsa)
+
+        Returns:
+            {
+                "opening_hook": {...},
+                "retention_hooks": [...],
+                "loop_ending": {...},
+                "pattern_interrupts": [...],
+                "timing_structure": {...}
+            }
+        """
+        # Duration'a gore timing structure sec
+        if video_duration <= 6:
+            timing_key = "6_second"
+        elif video_duration <= 15:
+            timing_key = "15_second"
+        else:
+            timing_key = "30_second"
+
+        timing = VIDEO_TIMING_STRUCTURE[timing_key]
+
+        # Content style'a gore uygun opening hook'lari al
+        suitable_openings = CONTENT_OPENING_HOOK_MAP.get(
+            content_style,
+            ["shock_stat", "question_hook", "curiosity_gap"]
+        )
+
+        # Hook type'a gore ek onceliklendirme
+        if hook_type == "statistic":
+            suitable_openings = ["shock_stat"] + [h for h in suitable_openings if h != "shock_stat"]
+        elif hook_type == "question":
+            suitable_openings = ["question_hook", "challenge"] + [h for h in suitable_openings if h not in ["question_hook", "challenge"]]
+        elif hook_type == "problem":
+            suitable_openings = ["pov_hook", "contradiction"] + [h for h in suitable_openings if h not in ["pov_hook", "contradiction"]]
+        elif hook_type == "before_after":
+            suitable_openings = ["before_after"] + [h for h in suitable_openings if h != "before_after"]
+
+        # Unique list
+        seen = set()
+        suitable_openings = [x for x in suitable_openings if not (x in seen or seen.add(x))]
+
+        # Opening hook sec
+        selected_opening = suitable_openings[0] if suitable_openings else "shock_stat"
+        opening_config = OPENING_HOOK_TYPES.get(selected_opening, OPENING_HOOK_TYPES["shock_stat"])
+
+        # Template sec ve topic'e gore customize et
+        opening_template = random.choice(opening_config["templates"])
+
+        # Placeholder'lari doldur
+        if "{X}" in opening_template:
+            # Rastgele ama inandirici rakam
+            numbers = ["73", "847", "40", "3.2 milyon", "12.000"]
+            opening_template = opening_template.replace("{X}", random.choice(numbers))
+        if "{topic_question}" in opening_template:
+            opening_template = opening_template.replace("{topic_question}", f"{topic[:30]}?")
+
+        # Retention hook'lari sec (video uzunluguna gore)
+        num_retention_hooks = timing.get("pattern_interrupts", 1)
+        retention_categories = list(RETENTION_HOOKS.keys())
+        selected_retentions = []
+
+        for i in range(min(num_retention_hooks, 3)):
+            category = retention_categories[i % len(retention_categories)]
+            hook_text = random.choice(RETENTION_HOOKS[category])
+            selected_retentions.append({
+                "type": category,
+                "text": hook_text,
+                "timing": f"{5 + i * 8}s" if video_duration > 15 else f"{3 + i * 3}s"
+            })
+
+        # Loop ending sec
+        loop_type = random.choice(["question_loop", "visual_loop", "audio_loop"])
+        loop_template = random.choice(LOOP_ENDINGS[loop_type])
+        if "{topic}" in loop_template:
+            loop_template = loop_template.replace("{topic}", topic[:20])
+
+        # Pattern interrupts sec
+        num_interrupts = timing.get("pattern_interrupts", 1)
+        selected_interrupts = random.sample(PATTERN_INTERRUPTS, min(num_interrupts, len(PATTERN_INTERRUPTS)))
+
+        return {
+            "opening_hook": {
+                "type": selected_opening,
+                "text": opening_template,
+                "visual_direction": opening_config["visual"],
+                "audio_direction": opening_config["audio"],
+                "retention_power": opening_config["retention_power"]
+            },
+            "retention_hooks": selected_retentions,
+            "loop_ending": {
+                "type": loop_type,
+                "text": loop_template
+            },
+            "pattern_interrupts": selected_interrupts,
+            "timing_structure": timing,
+            "video_duration": video_duration
         }
 
     async def create_ab_variants(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -1117,6 +1425,89 @@ Sadece JSON döndür.
         reels_guide = self.load_context("reels-prompts.md")
         company_profile = self.load_context("company-profile.md")
 
+        # Watch time structure uret
+        watch_time = self.generate_watch_time_structure(
+            video_duration=15,  # Default 15 saniye
+            content_style=category,
+            topic=topic,
+            hook_type=None
+        )
+
+        # Watch time instruction olustur
+        watch_time_instruction = f"""
+### 🎬 WATCH TIME OPTİMİZASYONU (KRİTİK!)
+
+Instagram algoritması için watch time EN ÖNEMLİ metriktir. Aşağıdaki yapıyı MUTLAKA uygula:
+
+---
+
+#### 1. AÇILIŞ HOOK (İlk 1.5 saniye) - SCROLL DURDURUCU
+
+**Seçilen Hook Tipi:** {watch_time['opening_hook']['type']}
+**Örnek Metin:** "{watch_time['opening_hook']['text']}"
+**Görsel Yönerge:** {watch_time['opening_hook']['visual_direction']}
+**Ses Yönerge:** {watch_time['opening_hook']['audio_direction']}
+
+**HOOK KURALLARI:**
+- İlk 1.5 saniyede izleyiciyi YAKALA
+- Merak uyandır, cevabı video içinde ver
+- Yüze zoom veya şok edici görsel ile başla
+- Sessizlik YASAK - ilk frame'den ses olmalı
+
+---
+
+#### 2. RETENTION HOOK'LAR (Video Ortası)
+
+Video boyunca izleyiciyi tutmak için şu hook'ları kullan:
+
+{chr(10).join([f"- **{r['timing']}:** {r['text']}" for r in watch_time['retention_hooks']])}
+
+**RETENTION KURALLARI:**
+- Her 5-7 saniyede bir "mini hook" ver
+- "En önemlisi...", "Ama bekle..." gibi geçişler kullan
+- İzleyiciye "biraz daha izle" sebebi ver
+
+---
+
+#### 3. PATTERN INTERRUPT'LAR (Görsel Değişiklikler)
+
+Her 2-3 saniyede bir görsel değişiklik YAP:
+
+{chr(10).join([f"- {interrupt}" for interrupt in watch_time['pattern_interrupts']])}
+
+**INTERRUPT KURALLARI:**
+- Monotonluk watch time DÜŞMANDIR
+- Aynı frame 3 saniyeden fazla durmamalı
+- Zoom, cut, text overlay, B-roll ile çeşitlendir
+
+---
+
+#### 4. LOOP ENDING (Son 1-2 saniye)
+
+**Loop Tipi:** {watch_time['loop_ending']['type']}
+**Bitiş:** {watch_time['loop_ending']['text']}
+
+**LOOP KURALLARI:**
+- Videonun sonu başa bağlanmalı
+- İzleyici fark etmeden 2. kez izlemeli
+- Son frame → İlk frame geçişi smooth olmalı
+
+---
+
+#### 5. TIMING YAPISI ({watch_time['video_duration']} saniye)
+
+{chr(10).join([f"- {k}: {v}" for k, v in watch_time['timing_structure'].items() if k != 'pattern_interrupts'])}
+
+---
+
+**ÖZET CHECKLIST:**
+✅ İlk 1.5s: Hook (merak/şok/soru)
+✅ Her 3s: Pattern interrupt (zoom/cut/text)
+✅ Ortalarda: Retention hook ("en önemlisi...")
+✅ Son 2s: CTA + Loop setup
+✅ Audio: Baştan sona ses var (müzik/voiceover/efekt)
+"""
+
         # Speech-Video senkronizasyon rehberi (voice_mode için)
         sync_guide = ""
         if voice_mode and speech_structure:
@@ -1162,6 +1553,7 @@ Tüm video prompt'larının BAŞINA şu stil prefix'ini ekle: "{style_prefix}"
 ### Profesyonel Prompting Rehberi
 {reels_guide[:1500]}
 {sync_guide}
+{watch_time_instruction}
 ---
 
 ## ÇIKTI FORMATI (JSON)
@@ -1305,7 +1697,13 @@ Sadece JSON döndür, başka açıklama ekleme.
 
         return {
             "success": True,
-            **result
+            **result,
+            "watch_time_optimization": {
+                "opening_hook_type": watch_time["opening_hook"]["type"],
+                "retention_power": watch_time["opening_hook"]["retention_power"],
+                "pattern_interrupts_count": len(watch_time["pattern_interrupts"]),
+                "has_loop_ending": True
+            }
         }
 
     async def create_multi_scene_prompts(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
