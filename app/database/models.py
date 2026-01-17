@@ -380,7 +380,12 @@ def init_database():
         "ALTER TABLE posts ADD COLUMN video_segment_count INTEGER DEFAULT 1",
         "ALTER TABLE posts ADD COLUMN total_video_duration REAL DEFAULT 0",
         "ALTER TABLE posts ADD COLUMN segment_prompts TEXT",
-        "ALTER TABLE posts ADD COLUMN video_model TEXT"
+        "ALTER TABLE posts ADD COLUMN video_model TEXT",
+        # Viral Score v2 Metrikleri
+        "ALTER TABLE posts ADD COLUMN ig_watch_time_pct REAL DEFAULT 0",
+        "ALTER TABLE posts ADD COLUMN ig_replays INTEGER DEFAULT 0",
+        "ALTER TABLE posts ADD COLUMN ig_comment_rate REAL DEFAULT 0",
+        "ALTER TABLE posts ADD COLUMN viral_score_v2 REAL DEFAULT 0"
     ]
 
     for stmt in alter_statements:

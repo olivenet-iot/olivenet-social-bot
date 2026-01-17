@@ -10,6 +10,29 @@ from difflib import SequenceMatcher
 from .models import get_connection
 
 
+# ============ VIRAL SCORE v2 CONFIGURATION ============
+
+VIRAL_SCORE_WEIGHTS = {
+    "save_rate": 2.0,
+    "share_rate": 3.0,
+    "comment_rate": 2.0,
+    "engagement_rate": 1.0,
+    "non_follower_pct": 0.01,
+    "watch_time_pct": 0.015,
+    "replay_bonus": 0.5,
+    "content_multipliers": {
+        "reels": 1.2, "video": 1.15, "carousel": 1.1, "post": 1.0
+    },
+    "hook_performance_bonus": {
+        "top_performer": 0.2, "above_average": 0.1, "average": 0.0, "below_average": -0.1
+    }
+}
+
+VIRAL_SCORE_THRESHOLDS = {
+    "viral": 25.0, "high_performer": 15.0, "good": 8.0, "average": 4.0, "low": 0.0
+}
+
+
 def get_kktc_now() -> datetime:
     """
     KKTC saatini al (UTC+3)
@@ -498,6 +521,103 @@ def get_posts_with_analytics(days: int = 30) -> List[Dict]:
 
 # ============ HOOK PERFORMANCE ============
 
+def calculate_viral_score_v2(
+    reach: int,
+    saves: int,
+    shares: int,
+    comments: int,
+    likes: int,
+    engagement_rate: float,
+    non_follower_pct: float,
+    watch_time_pct: float = 0,
+    replays: int = 0,
+    content_type: str = "post",
+    hook_type: str = None
+) -> dict:
+    """
+    Viral Score v2 hesapla - Comment rate ve watch time dahil.
+
+    Formula:
+    base_score = save_rate×2 + share_rate×3 + comment_rate×2 + engagement_rate +
+                 non_follower_pct×0.01 + watch_time_pct×0.015 + replay_bonus
+    final_score = base_score × content_multiplier × (1 + hook_bonus)
+    """
+    w = VIRAL_SCORE_WEIGHTS
+
+    # Rate hesaplamaları
+    save_rate = (saves / reach * 100) if reach > 0 else 0
+    share_rate = (shares / reach * 100) if reach > 0 else 0
+    comment_rate = (comments / reach * 100) if reach > 0 else 0
+
+    # Replay bonus (replays / plays oranına göre)
+    replay_bonus = min(replays / (reach / 10), 5) * w["replay_bonus"] if reach > 0 else 0
+
+    # Base score hesapla
+    base_score = (
+        save_rate * w["save_rate"] +
+        share_rate * w["share_rate"] +
+        comment_rate * w["comment_rate"] +
+        engagement_rate * w["engagement_rate"] +
+        non_follower_pct * w["non_follower_pct"] +
+        watch_time_pct * w["watch_time_pct"] +
+        replay_bonus
+    )
+
+    # Content type multiplier
+    content_mult = w["content_multipliers"].get(content_type, 1.0)
+
+    # Hook performance bonus (gelecekte DB'den çekilecek)
+    hook_bonus = 0
+    if hook_type:
+        # Default olarak average kabul et
+        hook_bonus = w["hook_performance_bonus"].get("average", 0)
+
+    # Final score
+    viral_score = base_score * content_mult * (1 + hook_bonus)
+
+    # Tier belirleme
+    tier = "low"
+    for tier_name, threshold in sorted(VIRAL_SCORE_THRESHOLDS.items(), key=lambda x: x[1], reverse=True):
+        if viral_score >= threshold:
+            tier = tier_name
+            break
+
+    # Recommendations
+    recommendations = []
+    if save_rate < 2:
+        recommendations.append("Save trigger ekle - değerli içerik vurgusu yap")
+    if share_rate < 1:
+        recommendations.append("Paylaşım hook'u ekle - 'arkadaşını etiketle' CTA")
+    if comment_rate < 1:
+        recommendations.append("Yorum CTA'sı güçlendir - soru veya poll ekle")
+    if watch_time_pct < 50 and content_type in ["reels", "video"]:
+        recommendations.append("Watch time düşük - hook'u güçlendir, pattern interrupt ekle")
+    if non_follower_pct < 20:
+        recommendations.append("Discovery düşük - hashtag ve hook stratejisini değiştir")
+
+    return {
+        "viral_score_v2": round(viral_score, 2),
+        "tier": tier,
+        "breakdown": {
+            "save_contribution": round(save_rate * w["save_rate"], 2),
+            "share_contribution": round(share_rate * w["share_rate"], 2),
+            "comment_contribution": round(comment_rate * w["comment_rate"], 2),
+            "engagement_contribution": round(engagement_rate * w["engagement_rate"], 2),
+            "non_follower_contribution": round(non_follower_pct * w["non_follower_pct"], 2),
+            "watch_time_contribution": round(watch_time_pct * w["watch_time_pct"], 2),
+            "replay_bonus": round(replay_bonus, 2),
+            "content_multiplier": content_mult,
+            "base_score": round(base_score, 2)
+        },
+        "rates": {
+            "save_rate": round(save_rate, 2),
+            "share_rate": round(share_rate, 2),
+            "comment_rate": round(comment_rate, 2)
+        },
+        "recommendations": recommendations
+    }
+
+
 def update_hook_performance(
     hook_type: str,
     topic_category: str,
@@ -506,12 +626,18 @@ def update_hook_performance(
     engagement: int,
     saves: int = 0,
     shares: int = 0,
+    comments: int = 0,
+    likes: int = 0,
     engagement_rate: float = 0,
     save_rate: float = 0,
     share_rate: float = 0,
-    non_follower_pct: float = 0
+    comment_rate: float = 0,
+    non_follower_pct: float = 0,
+    watch_time_pct: float = 0,
+    replays: int = 0,
+    content_type: str = "post"
 ):
-    """Hook performance metriklerini güncelle veya oluştur"""
+    """Hook performance metriklerini güncelle veya oluştur - Viral Score v2"""
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -524,6 +650,22 @@ def update_hook_performance(
 
     row = cursor.fetchone()
 
+    # Viral Score v2 hesapla
+    viral_result = calculate_viral_score_v2(
+        reach=reach,
+        saves=saves,
+        shares=shares,
+        comments=comments,
+        likes=likes,
+        engagement_rate=engagement_rate,
+        non_follower_pct=non_follower_pct,
+        watch_time_pct=watch_time_pct,
+        replays=replays,
+        content_type=content_type,
+        hook_type=hook_type
+    )
+    viral_score = viral_result["viral_score_v2"]
+
     if row:
         # Güncelle
         new_count = row['usage_count'] + 1
@@ -531,15 +673,6 @@ def update_hook_performance(
         new_engagement = row['total_engagement'] + engagement
         new_saves = row['total_saves'] + saves
         new_shares = row['total_shares'] + shares
-
-        # Ortalama hesapla
-        new_avg_engagement = engagement_rate  # Son değeri al veya weighted average yap
-        new_avg_save = save_rate
-        new_avg_share = share_rate
-        new_avg_non_follower = non_follower_pct
-
-        # Viral score hesapla
-        viral_score = new_avg_save * 2 + new_avg_share * 3 + new_avg_engagement + new_avg_non_follower * 0.015
 
         cursor.execute('''
             UPDATE hook_performance SET
@@ -557,13 +690,11 @@ def update_hook_performance(
             WHERE id = ?
         ''', (
             new_count, new_reach, new_engagement, new_saves, new_shares,
-            new_avg_engagement, new_avg_save, new_avg_share, new_avg_non_follower,
+            engagement_rate, save_rate, share_rate, non_follower_pct,
             viral_score, row['id']
         ))
     else:
         # Yeni kayıt oluştur
-        viral_score = save_rate * 2 + share_rate * 3 + engagement_rate + non_follower_pct * 0.015
-
         cursor.execute('''
             INSERT INTO hook_performance (
                 hook_type, topic_category, platform,
@@ -580,6 +711,8 @@ def update_hook_performance(
 
     conn.commit()
     conn.close()
+
+    return viral_result
 
 
 def get_best_performing_hooks(limit: int = 5) -> List[Dict]:
@@ -600,6 +733,133 @@ def get_best_performing_hooks(limit: int = 5) -> List[Dict]:
     rows = cursor.fetchall()
     conn.close()
     return [dict(row) for row in rows]
+
+
+def get_viral_score_leaderboard(days: int = 30, limit: int = 10) -> List[Dict]:
+    """En yüksek viral score'a sahip postları getir"""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    since = get_kktc_now() - timedelta(days=days)
+
+    cursor.execute('''
+        SELECT
+            p.id,
+            p.topic,
+            p.hook_type,
+            p.visual_type,
+            p.topic_category,
+            p.published_at,
+            p.ig_reach,
+            p.ig_saves,
+            p.ig_shares,
+            p.ig_comments,
+            p.ig_likes,
+            p.ig_engagement_rate,
+            p.ig_watch_time_pct,
+            p.ig_replays,
+            COALESCE(p.viral_score_v2, 0) as viral_score_v2,
+            CASE
+                WHEN COALESCE(p.viral_score_v2, 0) >= 25 THEN 'viral'
+                WHEN COALESCE(p.viral_score_v2, 0) >= 15 THEN 'high_performer'
+                WHEN COALESCE(p.viral_score_v2, 0) >= 8 THEN 'good'
+                WHEN COALESCE(p.viral_score_v2, 0) >= 4 THEN 'average'
+                ELSE 'low'
+            END as tier
+        FROM posts p
+        WHERE p.status = 'published'
+          AND p.published_at > ?
+          AND p.ig_reach > 0
+        ORDER BY viral_score_v2 DESC
+        LIMIT ?
+    ''', (since, limit))
+
+    rows = cursor.fetchall()
+    columns = [desc[0] for desc in cursor.description]
+    conn.close()
+
+    results = []
+    for row in rows:
+        post_data = dict(zip(columns, row))
+
+        # Viral Score v2 hesapla (eğer kayıtlı değilse)
+        if not post_data.get("viral_score_v2") and post_data.get("ig_reach", 0) > 0:
+            viral_result = calculate_viral_score_v2(
+                reach=post_data.get("ig_reach", 0),
+                saves=post_data.get("ig_saves", 0),
+                shares=post_data.get("ig_shares", 0),
+                comments=post_data.get("ig_comments", 0),
+                likes=post_data.get("ig_likes", 0),
+                engagement_rate=post_data.get("ig_engagement_rate", 0),
+                non_follower_pct=0,
+                watch_time_pct=post_data.get("ig_watch_time_pct", 0),
+                replays=post_data.get("ig_replays", 0),
+                content_type=post_data.get("visual_type", "post"),
+                hook_type=post_data.get("hook_type")
+            )
+            post_data["viral_score_v2"] = viral_result["viral_score_v2"]
+            post_data["tier"] = viral_result["tier"]
+            post_data["breakdown"] = viral_result["breakdown"]
+            post_data["recommendations"] = viral_result["recommendations"]
+
+        results.append(post_data)
+
+    return results
+
+
+def update_post_viral_score(post_id: int) -> dict:
+    """Post için viral score v2 hesapla ve kaydet"""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        SELECT ig_reach, ig_saves, ig_shares, ig_comments, ig_likes,
+               ig_engagement_rate, ig_watch_time_pct, ig_replays,
+               ig_reach_non_followers, ig_reach, visual_type, hook_type
+        FROM posts WHERE id = ?
+    ''', (post_id,))
+
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return {}
+
+    # Non-follower yüzdesi hesapla
+    non_follower_pct = 0
+    if row['ig_reach'] and row['ig_reach'] > 0:
+        non_followers = row['ig_reach_non_followers'] or 0
+        non_follower_pct = (non_followers / row['ig_reach']) * 100
+
+    viral_result = calculate_viral_score_v2(
+        reach=row['ig_reach'] or 0,
+        saves=row['ig_saves'] or 0,
+        shares=row['ig_shares'] or 0,
+        comments=row['ig_comments'] or 0,
+        likes=row['ig_likes'] or 0,
+        engagement_rate=row['ig_engagement_rate'] or 0,
+        non_follower_pct=non_follower_pct,
+        watch_time_pct=row['ig_watch_time_pct'] or 0,
+        replays=row['ig_replays'] or 0,
+        content_type=row['visual_type'] or "post",
+        hook_type=row['hook_type']
+    )
+
+    # Kaydet
+    cursor.execute('''
+        UPDATE posts SET
+            viral_score_v2 = ?,
+            ig_comment_rate = ?
+        WHERE id = ?
+    ''', (
+        viral_result["viral_score_v2"],
+        viral_result["rates"]["comment_rate"],
+        post_id
+    ))
+
+    conn.commit()
+    conn.close()
+
+    return viral_result
 
 
 def get_hook_performance_by_type(hook_type: str) -> Dict:
