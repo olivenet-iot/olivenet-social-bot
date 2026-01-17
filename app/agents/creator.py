@@ -15,6 +15,105 @@ from app.database import (
 )
 from app.config import settings
 from app.video_styles import get_style_config, get_style_prefix, get_character_descriptions, get_voice_type
+import random
+
+# Comment Engagement CTA Tipleri - Psikolojik tetikleyiciler
+COMMENT_CTA_TYPES = {
+    "poll": {
+        "templates": [
+            "🅰️ {option_a} mı, 🅱️ {option_b} mi? Yorumlara yaz 👇",
+            "{option_a} vs {option_b} — Sen hangisini tercih edersin? 👇",
+            "A) {option_a}\nB) {option_b}\nHangisi? Tek harf yaz 👇"
+        ],
+        "trigger": "choice",
+        "expected_boost": 2.5
+    },
+    "fill_blank": {
+        "templates": [
+            "Bizim sektörde en büyük sorun ____. Tamamla 👇",
+            "IoT olmadan ____ yapamam. Sen ne yazardın? 👇",
+            "Bir sensör alacak olsam ____ alırdım. Cevabın? 👇"
+        ],
+        "trigger": "completion",
+        "expected_boost": 2.0
+    },
+    "number_game": {
+        "templates": [
+            "1-10 arası: {topic} bilgin kaç puan? Yaz bakalım 👇",
+            "0-100 arası tahmin et: {question}? 👇",
+            "Kaç yıldır bu sektördesin? Sayıyla yaz 👇"
+        ],
+        "trigger": "number",
+        "expected_boost": 1.8
+    },
+    "tag_someone": {
+        "templates": [
+            "{persona} birini etiketle, teşekkür edecek 👇",
+            "Bunu görmesi gereken birini etiketle 👇",
+            "{persona} arkadaşını etiketle, birlikte öğrenin 👇"
+        ],
+        "trigger": "tag",
+        "expected_boost": 3.0
+    },
+    "hot_take": {
+        "templates": [
+            "Tartışmalı fikir: {claim}. Katılıyor musun? 👇",
+            "Cesur iddia: {claim}. Karşı çıkan var mı? 👇",
+            "{claim} — Doğru mu yanlış mı? Fikrini yaz 👇"
+        ],
+        "trigger": "opinion",
+        "expected_boost": 2.2
+    },
+    "experience": {
+        "templates": [
+            "Sen de yaşadın mı? Yorumlarda anlat 👇",
+            "Benzer bir deneyimin var mı? Merak ediyorum 👇",
+            "Sende de böyle oldu mu? Paylaş 👇"
+        ],
+        "trigger": "story",
+        "expected_boost": 1.5
+    },
+    "prediction": {
+        "templates": [
+            "2025'te {topic} nasıl olacak? Tahminini yaz 👇",
+            "Bu trend devam eder mi? Ne düşünüyorsun? 👇",
+            "5 yıl sonra {topic}... Tahminin ne? 👇"
+        ],
+        "trigger": "future",
+        "expected_boost": 1.7
+    },
+    "confession": {
+        "templates": [
+            "İtiraf: Biz de başta {mistake} yaptık. Sen? 👇",
+            "Herkes yapar: {common_mistake}. Sende de oldu mu? 👇",
+            "Utanılacak bir şey değil: {topic}. Paylaş 👇"
+        ],
+        "trigger": "vulnerability",
+        "expected_boost": 2.0
+    }
+}
+
+# Content type'a göre en uygun CTA tipleri
+CONTENT_TYPE_CTA_MAP = {
+    "reels": ["poll", "number_game", "hot_take", "experience"],
+    "carousel": ["fill_blank", "tag_someone", "prediction"],
+    "post": ["poll", "fill_blank", "hot_take", "confession"],
+    "video": ["poll", "experience", "number_game"],
+    "flux": ["poll", "fill_blank", "hot_take", "confession"],
+    "infographic": ["fill_blank", "tag_someone", "prediction"]
+}
+
+# Persona mapping (tag_someone için)
+PERSONA_EXAMPLES = [
+    "sera sahibi",
+    "fabrika müdürü",
+    "enerji yöneticisi",
+    "IoT meraklısı",
+    "tarım teknolojisi ile ilgilenen",
+    "elektrik faturasından şikayetçi",
+    "teknik ekip lideri"
+]
+
 
 class CreatorAgent(BaseAgent):
     """İçerik üretici - post metni ve görsel üretir"""
@@ -61,6 +160,90 @@ class CreatorAgent(BaseAgent):
         """
         # HTML render = text OK, AI generation = avoid text
         return visual_type.lower() not in ["infographic", "html", "carousel"]
+
+    def generate_comment_cta(
+        self,
+        content_type: str,
+        topic: str,
+        topic_category: str,
+        hook_type: str = None
+    ) -> dict:
+        """
+        Icerik tipine ve konuya gore guclu comment CTA uret.
+
+        Args:
+            content_type: Visual/content type (reels, carousel, post, flux, etc.)
+            topic: Post konusu
+            topic_category: Konu kategorisi (tarim, enerji, fabrika, lorawan, edge_ai)
+            hook_type: Kullanilan hook tipi (optional)
+
+        Returns:
+            {
+                "cta_type": "poll",
+                "cta_text": "🅰️ Sera mi, 🅱️ Fabrika mi? Yorumlara yaz 👇",
+                "expected_boost": 2.5,
+                "needs_ai_completion": False
+            }
+        """
+        # Content type'a uygun CTA tiplerini al
+        suitable_types = CONTENT_TYPE_CTA_MAP.get(content_type, ["poll", "fill_blank"])
+
+        # Hook type'a gore onceliklendirme
+        if hook_type == "question":
+            suitable_types = ["poll", "hot_take"] + [t for t in suitable_types if t not in ["poll", "hot_take"]]
+        elif hook_type == "statistic":
+            suitable_types = ["number_game", "prediction"] + [t for t in suitable_types if t not in ["number_game", "prediction"]]
+        elif hook_type == "problem":
+            suitable_types = ["experience", "confession"] + [t for t in suitable_types if t not in ["experience", "confession"]]
+
+        # Rastgele ama agirlikli secim (ilk tipler daha olasi)
+        weights = [3, 2, 1.5, 1] + [0.5] * max(0, len(suitable_types) - 4)
+        weights = weights[:len(suitable_types)]
+
+        selected_type = random.choices(suitable_types, weights=weights, k=1)[0]
+        cta_config = COMMENT_CTA_TYPES.get(selected_type, COMMENT_CTA_TYPES["poll"])
+
+        # Template sec ve doldur
+        template = random.choice(cta_config["templates"])
+
+        # Placeholder'lari doldur
+        cta_text = template
+
+        # {topic} varsa degistir
+        cta_text = cta_text.replace("{topic}", topic[:30] if len(topic) > 30 else topic)
+
+        # {persona} varsa degistir
+        if "{persona}" in cta_text:
+            # Topic category'ye gore persona sec
+            persona_map = {
+                "tarim": "sera sahibi",
+                "enerji": "enerji yöneticisi",
+                "fabrika": "fabrika müdürü",
+                "lorawan": "IoT meraklısı",
+                "edge_ai": "teknik ekip lideri"
+            }
+            persona = persona_map.get(topic_category, random.choice(PERSONA_EXAMPLES))
+            cta_text = cta_text.replace("{persona}", persona)
+
+        # Poll icin option_a/option_b (AI'a birak flag)
+        needs_ai = False
+        if "{option_a}" in cta_text or "{option_b}" in cta_text:
+            cta_text = f"[AI_GENERATE_POLL_OPTIONS: {topic}]"
+            needs_ai = True
+
+        # Diger placeholder'lar icin flag
+        for placeholder in ["{claim}", "{question}", "{mistake}", "{common_mistake}"]:
+            if placeholder in cta_text:
+                cta_text = f"[AI_GENERATE: {selected_type} for {topic}]"
+                needs_ai = True
+                break
+
+        return {
+            "cta_type": selected_type,
+            "cta_text": cta_text,
+            "expected_boost": cta_config["expected_boost"],
+            "needs_ai_completion": needs_ai
+        }
 
     async def create_ab_variants(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -333,7 +516,6 @@ Sadece JSON döndür.
 
     async def create_post_multiplatform(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Her platform için özel içerik üret (Instagram kısa, Facebook uzun)"""
-        import random
         self.log("Çoklu platform içeriği oluşturuluyor...")
 
         topic = input_data.get("topic", "")
@@ -353,9 +535,20 @@ Sadece JSON döndür.
         if underperforming:
             hook_hint += f"\nKAÇINILMASI GEREKEN: {', '.join(underperforming[:3])}"
 
-        # CTA kararı (her 3 posttan 1'inde)
-        use_cta = random.randint(1, 3) == 1
-        cta_instruction = "Soft CTA ekle: 'DM at' veya 'Bio linki'" if use_cta else "CTA KOYMA - sadece düşündürücü bir soru ile bitir"
+        # Comment Engagement CTA olustur
+        top_hook_type = top_hooks[0][0] if top_hooks else None
+        comment_cta = self.generate_comment_cta(
+            content_type=visual_type,
+            topic=topic,
+            topic_category=category,
+            hook_type=top_hook_type
+        )
+
+        # CTA instruction olustur
+        if comment_cta["needs_ai_completion"]:
+            cta_example = f"Bu CTA tipi icin icerige uygun bir versiyon uret: {comment_cta['cta_type']}"
+        else:
+            cta_example = f"Ornek: {comment_cta['cta_text']}"
 
         # Instagram içeriği (kısa)
         ig_prompt = f"""
@@ -377,15 +570,30 @@ Sadece JSON döndür.
 - MAX 80 KELİME (kesinlikle aşma!)
 - Hook ile başla (yukarıdaki öncelikli tiplerden birini kullan)
 - 2-3 cümle ana mesaj (kısa ve öz)
-- {cta_instruction}
 - 8-12 hashtag (ZORUNLU: #Olivenet #KKTC #IoT + 5-9 sektörel/genel)
 - MARKDOWN KULLANMA: **bold**, *italic*, `code` YASAK (Instagram desteklemiyor)
 - Vurgu için BÜYÜK HARF veya emoji kullan
 
-### ENGAGEMENT OPTİMİZASYONU
+### COMMENT ENGAGEMENT CTA (ZORUNLU!)
+Caption'in MUTLAKA guclu bir comment tetikleyici ile bitmeli (hashtaglardan ONCE).
+
+Onerilen CTA tipi: **{comment_cta['cta_type'].upper()}**
+{cta_example}
+
+**CTA TIPLERI VE KURALLARI:**
+1. **POLL (A/B Secim)** - "🅰️ Manuel mi, 🅱️ Otomatik mi? Yorumlara yaz 👇"
+2. **FILL_BLANK (Bosluk Doldur)** - "IoT olmadan ____ yapamam. Tamamla 👇"
+3. **NUMBER_GAME (Sayi/Puan)** - "1-10 arasi IoT bilgin kac? 👇"
+4. **TAG_SOMEONE (Etiketleme)** - "Sera sahibi birini etiketle 👇"
+5. **HOT_TAKE (Tartismali Fikir)** - "Manuel sulama tarihe karismali. Katiliyor musun? 👇"
+6. **EXPERIENCE (Deneyim)** - "Sen de yasadin mi? Anlat 👇"
+
+**ZORUNLU:** Caption'in son satiri (hashtaglardan once) MUTLAKA yukaridaki tiplerden biri olmali.
+**YASAK:** Sadece "Yorumlara yaz", "Ne dusunuyorsun?" gibi ZAYIF CTA'lar YASAK.
+
+### SAVE/SHARE TETIKLEYICI
 - Her 3-4 posttan birinde: "📌 Kaydet!" veya "🔖 Yer imi ekle!" ekle
 - Konu uygunsa: "📲 Bu bilgiyi ihtiyacı olan biriyle paylaş" ekle
-- Caption sonunda soru sor (yorum tetikler)
 
 ### ÖRNEK FORMAT
 🌱 [Dikkat çekici hook]
@@ -474,7 +682,11 @@ Sadece post metnini yaz, başka açıklama ekleme.
             "post_text_fb": fb_text,
             "topic": topic,
             "word_count": fb_words,
-            "ig_word_count": ig_words
+            "ig_word_count": ig_words,
+            "comment_cta": {
+                "type": comment_cta["cta_type"],
+                "expected_boost": comment_cta["expected_boost"]
+            }
         }
 
     async def create_visual_prompt(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
