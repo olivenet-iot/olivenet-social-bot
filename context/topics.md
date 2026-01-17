@@ -531,6 +531,19 @@ Carousel formatı için optimize edilmiş, adım adım veya karşılaştırmalı
 
 ### Reels: "Antalya sera projesi", "Türkiye tarım IoT", "Damla sulama otomasyon demo"
 
+### Türkiye Endüstriyel IoT
+- İstanbul/Kocaeli fabrikalarında enerji izleme
+- OSB'lerde kestirimci bakım sistemleri
+- Türkiye'de üretim hattı dijitalleşmesi
+- Tekstil fabrikalarında nem ve sıcaklık kontrolü
+- Gıda işleme tesislerinde HACCP uyumlu izleme
+
+### Türkiye Enerji Sektörü
+- Güneş enerjisi santrallerinde performans izleme
+- Rüzgar tribünlerinde kestirimci bakım
+- Endüstriyel tesislerde reaktif güç kompanzasyonu
+- Fabrika enerji yönetim sistemleri
+
 ---
 
 ## 📶 IoT PROTOKOLLERİ - İLERİ SEVİYE

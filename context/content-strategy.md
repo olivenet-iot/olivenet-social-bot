@@ -335,7 +335,7 @@ Slide 6: CTA ve iletişim
 
 ### ZORUNLU Hashtagler (her postta)
 - #Olivenet
-- #KKTC
+- #KKTC veya #Türkiye (lokasyona göre)
 - #IoT
 
 ### Sektörel Havuz (5-9 adet seç)
@@ -343,6 +343,8 @@ Slide 6: CTA ve iletişim
 - **Enerji:** #EnerjiYönetimi #EnerjiVerimliliği #EnerjiTasarrufu
 - **IoT/Endüstri:** #EndüstriyelIoT #LoRaWAN #Sensör #Otomasyon #Endüstri40
 - **Genel:** #DijitalDönüşüm #Teknoloji #Verimlilik #Sürdürülebilirlik #AkıllıSulama
+- **Türkiye Tarım:** #AntalyaSera #TürkTarımı #DamlaSulama #SeracılıkTürkiye #TarımTeknolojileri
+- **Türkiye Endüstri:** #TürkiyeEndüstri #FabrikaOtomasyonu #Endüstri40Türkiye #ÜretimVerimliliği
 
 ---
 
@@ -387,6 +389,10 @@ Broad: #Technology #Innovation #DigitalTransformation #Sustainability
 - #GreenTech
 - #IndustryInsights
 - #DigitalInnovation
+- #TürkiyeTeknoloji
+- #AkıllıTarımTürkiye
+- #EndüstriyelDönüşüm
+- #YeşilTeknoloji
 
 ---
 
@@ -520,31 +526,38 @@ Kaydet, sonra oku 🔖
 
 ### Hook Çeşitliliği (Rotate Et!)
 
-**10 VIRAL HOOK TEMPLATE - Her postta farklı bir tane kullan!**
+**12 VIRAL HOOK TEMPLATE - Her postta farklı bir tane kullan!**
+
+⚠️ **AGRESİF HOOK KURALLARI:**
+- İlk 1.5 saniyede dikkat çek (scroll durdurucu)
+- Tartışmalı/provokatif ifadeler kullan
+- Duygusal tetikleyiciler: korku, merak, öfke, şaşkınlık
+- "Bunu yapmıyorsan geride kalıyorsun" mesajı ver
+- Cesur iddialar at, rakamlarla destekle
 
 #### 1. ŞOK İSTATİSTİK HOOK
 **Format:** [Yüzde/Rakam] + [Şaşırtıcı sonuç]
 **Örnekler:**
-- "%35 su tasarrufu mümkün!"
-- "%70 fabrika enerji israf ediyor!"
-- "3 yılda kendini amorti eden yatırım"
-- "Günde 500 litre su tasarrufu sağlıyoruz"
+- "Suyunuzun %40'ı boşa akıyor. Haberin var mı?"
+- "%70 fabrika enerji ÇÖPE atıyor!"
+- "Her gün 500€ kaybediyorsunuz. Nasıl mı?"
+- "3 ayda 50.000₺ tasarruf. İnanmıyorsan hesapla."
 
 #### 2. SORU HOOK (Curiosity Gap)
 **Format:** [Merak uyandıran soru] + ?
 **Örnekler:**
-- "Seranızda ne kadar su israf ediyorsunuz?"
-- "Su faturanız neden bu kadar yüksek biliyor musunuz?"
-- "Makineniz arıza vermeden önce uyarı verse?"
-- "KKTC'de suyunuz ne zaman bitecek?"
+- "Hâlâ manuel sulama mı yapıyorsun? Ciddi misin?"
+- "Rakiplerin çoktan geçti, sen hâlâ Excel mi kullanıyorsun?"
+- "Fabrikanda neler oluyor bilmiyorsun, değil mi?"
+- "Su faturan neden her ay artıyor biliyor musun?"
 
 #### 3. CESUR İDDİA HOOK
 **Format:** [Tartışmalı/güçlü statement]
 **Örnekler:**
-- "Manuel sulama tarih oluyor."
-- "Sensörsüz sera yönetimi imkansız."
-- "Enerji izlemesiz fabrika 2025'te yok."
-- "Akıllı olmayan tarım, tarım değil."
+- "Sensörsüz sera yönetimi 2025'te imkansız."
+- "Manuel takip yapan fabrika 3 yıl içinde kapanır."
+- "IoT kullanmayan çiftçi yarışı kaybetti bile."
+- "Veri olmadan karar vermek kumar oynamaktır."
 
 #### 4. PROBLEM-AGİTATION HOOK
 **Format:** [Problem] + [Acı noktası]
@@ -565,10 +578,10 @@ Kaydet, sonra oku 🔖
 #### 6. KORKU/FOMO HOOK
 **Format:** [Korku unsuru] + [Aciliyet]
 **Örnekler:**
-- "Suyunuz bitiyor mu? KKTC'de acil önlem şart."
-- "Rakipleriniz çoktan geçti, siz hala manuel mi?"
-- "Bu yaz su kesintileri artacak. Hazır mısınız?"
-- "Plansız duruş maliyeti: Günde 5000€"
+- "Rakiplerin şu an %30 daha az ödüyor. Sen?"
+- "Bu yaz su kesintisi gelecek. Hazır mısın?"
+- "Makinenin YARIN bozulacağını bilsen ne yapardın?"
+- "Herkes IoT'ye geçti, sen hâlâ 'düşünüyorum' mu diyorsun?"
 
 #### 7. BEFORE/AFTER HOOK
 **Format:** [Öncesi] → [Sonrası]
@@ -601,6 +614,22 @@ Kaydet, sonra oku 🔖
 - "Ada'nın enerji sorununa teknoloji cevabı"
 - "Kıbrıs seralarında devrim"
 - "Yerli IoT, yerli destek, yerli çözüm"
+
+#### 11. PROVOKASYON HOOK
+**Format:** [Tartışmalı iddia] + [Meydan okuma]
+**Örnekler:**
+- "Manuel sulama yapan sera sahibi değil, su israfçısı!"
+- "2025'te hâlâ sensörsüz fabrika mı? Şaka mısın?"
+- "Enerji faturasından şikayet edip önlem almamak..."
+- "IoT'yi pahalı bulanlar, israfın maliyetini hesaplasın!"
+
+#### 12. TÜRK/YEREL DOKUNUŞ HOOK
+**Format:** [Türkiye/KKTC bağlamı] + [Somut fayda]
+**Örnekler:**
+- "Antalya seracıları %40 tasarruf ediyor. Ya sen?"
+- "KKTC'de su bitti derken, biz damla damla sayıyoruz."
+- "Türkiye'nin en büyük seralarında bu sistem var."
+- "Kıbrıs güneşi bedava, enerji neden pahalı?"
 
 ---
 
