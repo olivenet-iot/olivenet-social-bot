@@ -457,20 +457,44 @@ VIRAL_CONTENT_FORMATS = {
         "audio_style": "Relatable sounds, phone notifications, dramatic music",
         "best_for": ["problem_solution", "comparison", "lifestyle"],
         "content_types": ["reels", "video"],
-        "viral_potential": 0.88
+        "viral_potential": 0.88,
+        "camera_movement": "handheld_pov",
+        "shot_type": "first_person_subjective",
+        "transition_style": "quick_cut_reaction",
+        "recommended_models": ["sora-2", "kling_pro", "hailuo_pro"],
+        "model_notes": {
+            "sora": "First-person POV, handheld camera shake, phone screen reveal, dramatic lighting shift",
+            "veo": "[00:00-00:02] POV perspective, phone notification. [00:02-00:04] Reaction reveal. [00:04-00:06] Solution shown",
+            "kling": "POV handheld shot, first person view, phone notification, dramatic reveal, cinematic",
+            "hailuo": "Handheld POV tracking, first person perspective, dynamic shake, emotional reaction",
+            "wan": "[0-3s] First person POV phone check. [3-6s] Reveal reaction shot. [6-10s] Problem context"
+        },
+        "ai_limitations": "Avoid showing hands holding phone - focus on screen/environment reaction"
     },
     "wrong_vs_right": {
         "name": "Yanlış vs Doğru",
-        "description": "Split screen ile hatalı ve doğru yaklaşımı karşılaştır",
+        "description": "Before/after transition ile hatalı ve doğru yaklaşımı karşılaştır",
         "templates": [
             "❌ Yanlış: {wrong_approach}\n✅ Doğru: {right_approach}",
             "YAPMA: {dont}\nYAP: {do}"
         ],
-        "visual_style": "Split screen, side-by-side comparison",
+        "visual_style": "Before-after transition, mood shift comparison",
         "audio_style": "Contrast sounds, fail vs success",
         "best_for": ["tutorial", "comparison", "tips"],
         "content_types": ["reels", "carousel"],
-        "viral_potential": 0.82
+        "viral_potential": 0.82,
+        "camera_movement": "static_then_dolly",
+        "shot_type": "before_after_transition",
+        "transition_style": "wipe_or_cut",
+        "recommended_models": ["veo3", "sora-2"],
+        "model_notes": {
+            "sora": "Two-part video: First half shows wrong way with red/frustrated tint, hard cut to right way with green/satisfied tint",
+            "veo": "[00:00-00:03] Wrong approach scene, frustrated mood, red tint. [00:03-00:06] Same scene correct approach, satisfied, green tint",
+            "kling": "Before-after comparison, frustrated to satisfied transition, color shift from red to green, mood change",
+            "hailuo": "Quick cut comparison, wrong approach then right approach, dramatic mood transition, color grading shift",
+            "wan": "[0-5s] Wrong approach demo, red warning vibe, frustrated. [5-10s] Right approach, green success, satisfied"
+        },
+        "ai_limitations": "AI cannot do true split-screen - use sequential before/after with color grading instead"
     },
     "hidden_feature": {
         "name": "Gizli Özellik Serisi",
@@ -483,7 +507,19 @@ VIRAL_CONTENT_FORMATS = {
         "audio_style": "Mystery/discovery sounds",
         "best_for": ["tutorial", "tips", "education"],
         "content_types": ["reels", "carousel"],
-        "viral_potential": 0.85
+        "viral_potential": 0.85,
+        "camera_movement": "slow_push_in",
+        "shot_type": "reveal_close_up",
+        "transition_style": "blur_to_sharp",
+        "recommended_models": ["veo3", "sora-2", "kling_pro"],
+        "model_notes": {
+            "sora": "Mystery reveal: blurred/obscured background slowly sharpens to show hidden detail, dramatic lighting builds",
+            "veo": "[00:00-00:02] Obscured/blurred view, mystery. [00:02-00:04] Camera pushes in, focus reveals. [00:04-00:06] Clear detail shot, discovery",
+            "kling": "Slow zoom reveal, blur to sharp focus, mystery lighting, discovery moment, dramatic reveal",
+            "hailuo": "Push in reveal shot, defocus to focus transition, mysterious atmosphere to clear discovery",
+            "wan": "[0-4s] Wide blurred shot, mystery mood. [4-8s] Slow dolly in, focus sharpening. [8-12s] Sharp close-up reveal, discovery"
+        },
+        "ai_limitations": "Works well with most models - avoid text overlays, use visual mystery instead"
     },
     "red_flag": {
         "name": "Red Flag Serisi",
@@ -492,11 +528,23 @@ VIRAL_CONTENT_FORMATS = {
             "🚩 Red flag: {warning}",
             "Eğer {condition} ise 🚩"
         ],
-        "visual_style": "Red flag emoji prominent, warning colors",
+        "visual_style": "Warning atmosphere, red color grading",
         "audio_style": "Alert sounds, warning tones",
         "best_for": ["tips", "education", "awareness"],
         "content_types": ["reels", "carousel", "post"],
-        "viral_potential": 0.79
+        "viral_potential": 0.79,
+        "camera_movement": "slow_dramatic_push",
+        "shot_type": "warning_reveal",
+        "transition_style": "ominous_slow",
+        "recommended_models": ["sora-2", "veo3", "kling_pro"],
+        "model_notes": {
+            "sora": "Warning atmosphere: red-tinted lighting gradually builds, slow ominous push to concerning detail, dramatic tension",
+            "veo": "[00:00-00:02] Normal scene, calm. [00:02-00:04] Red tint grows, warning mood builds. [00:04-00:06] Problem revealed, dramatic",
+            "kling": "Slow push to problem area, red warning lighting gradually increasing, ominous reveal, dramatic tension",
+            "hailuo": "Dramatic slow push, red color grading intensifies, warning atmosphere builds, tension reveal",
+            "wan": "[0-5s] Normal appearance, calm. [5-10s] Warning signs emerge, red tint. [10-15s] Red flag problem revealed"
+        },
+        "ai_limitations": "Use red color grading and ominous mood lighting - avoid red flag emoji/symbol rendering"
     },
     "challenge": {
         "name": "Challenge Formatı",
@@ -509,7 +557,19 @@ VIRAL_CONTENT_FORMATS = {
         "audio_style": "Upbeat music, countdown sounds",
         "best_for": ["demo", "case_study", "lifestyle"],
         "content_types": ["reels", "video"],
-        "viral_potential": 0.83
+        "viral_potential": 0.83,
+        "camera_movement": "timelapse_or_tracking",
+        "shot_type": "progress_montage",
+        "transition_style": "time_jump_cuts",
+        "recommended_models": ["wan_26", "sora-2"],
+        "model_notes": {
+            "sora": "Timelapse-style progress montage: morning light setup, midday work intensity, evening golden hour results celebration",
+            "veo": "[00:00-00:03] Challenge start, determined mood. [00:03-00:05] Mid-progress montage, effort. [00:05-00:08] Final result reveal, celebration",
+            "kling": "Fast-paced montage, time passing through lighting changes, progress shots, energetic dynamic movement",
+            "hailuo": "Dynamic tracking montage, time jump cuts with energy, progress building, celebration finish",
+            "wan": "[0-5s] Challenge begins, setup. [5-10s] Progress montage, effort. [10-15s] Result celebration, success"
+        },
+        "ai_limitations": "Best with longer duration models (Wan 15s) - single shot models need time compression visual cues"
     },
     "by_the_numbers": {
         "name": "Rakamlarla Serisi",
@@ -518,11 +578,23 @@ VIRAL_CONTENT_FORMATS = {
             "{big_number}\n↓\n{explanation}",
             "{percentage}%\nBu rakam {meaning}"
         ],
-        "visual_style": "Big bold numbers, animated counters",
+        "visual_style": "Visual scale demonstration, quantity reveal",
         "audio_style": "Impactful sounds on number reveals",
         "best_for": ["case_study", "statistics", "awareness"],
         "content_types": ["reels", "carousel"],
-        "viral_potential": 0.86
+        "viral_potential": 0.86,
+        "camera_movement": "dramatic_zoom",
+        "shot_type": "impact_reveal",
+        "transition_style": "slam_zoom",
+        "recommended_models": ["sora-2", "veo3"],
+        "model_notes": {
+            "sora": "Visual QUANTITY representation: show MANY sensors/devices/items to imply large number, dramatic zoom to scale",
+            "veo": "[00:00-00:02] Wide shot showing massive scale/quantity. [00:02-00:04] Dramatic zoom to detail. [00:04-00:06] Impact close-up",
+            "kling": "Dramatic zoom to visual quantity display, scale reveal through many items, impact lighting, impressive scope",
+            "hailuo": "Slam zoom to subject showing scale, visual quantity demonstration through many objects, impactful reveal",
+            "wan": "[0-5s] Establish massive scale, many items. [5-10s] Zoom reveals quantity. [10-15s] Impact close-up, impressive"
+        },
+        "ai_limitations": "AI CANNOT render numbers/text - show VISUAL QUANTITY instead (many items, scale comparison, before/after size)"
     },
     "myth_vs_reality": {
         "name": "Efsane vs Gerçek",
@@ -531,11 +603,23 @@ VIRAL_CONTENT_FORMATS = {
             "EFSANE: {myth}\nGERÇEK: {reality}",
             "'{myth}' - YANLIŞ ❌\n{reality} - DOĞRU ✅"
         ],
-        "visual_style": "Myth crossed out, reality highlighted",
+        "visual_style": "Contrast transition, expectation vs reality",
         "audio_style": "Wrong buzzer, success sound",
         "best_for": ["education", "awareness", "tips"],
         "content_types": ["reels", "carousel", "post"],
-        "viral_potential": 0.81
+        "viral_potential": 0.81,
+        "camera_movement": "static_comparison",
+        "shot_type": "contrast_reveal",
+        "transition_style": "cross_dissolve",
+        "recommended_models": ["veo3", "sora-2"],
+        "model_notes": {
+            "sora": "Visual contrast: expectation scene (complex, expensive-looking, intimidating) dissolves to reality (simple, accessible, friendly)",
+            "veo": "[00:00-00:03] Myth visualization - intimidating, complex. [00:03-00:06] Dissolve transition to reality - approachable, simple",
+            "kling": "Expectation to reality visual transition, mood shift from intimidating to friendly, contrast reveal, dissolve",
+            "hailuo": "Cross dissolve from myth scene (complex) to reality scene (simple), dramatic tone shift, revelation",
+            "wan": "[0-5s] Myth visualization, intimidating. [5-10s] Dissolve transition. [10-15s] Reality reveal, approachable"
+        },
+        "ai_limitations": "Use visual metaphors for myth/reality contrast - avoid X marks, checkmarks, or text rendering"
     },
     "day_in_life": {
         "name": "Bir Gün Serisi",
@@ -544,11 +628,23 @@ VIRAL_CONTENT_FORMATS = {
             "IoT ile sera sahibinin bir günü",
             "07:00 - {morning}\n12:00 - {noon}\n18:00 - {evening}"
         ],
-        "visual_style": "Time stamps, daily routine shots",
+        "visual_style": "Day progression through lighting, routine montage",
         "audio_style": "Ambient sounds, upbeat transitions",
         "best_for": ["lifestyle", "case_study", "awareness"],
         "content_types": ["reels", "video"],
-        "viral_potential": 0.77
+        "viral_potential": 0.77,
+        "camera_movement": "varied_documentary",
+        "shot_type": "routine_montage",
+        "transition_style": "time_of_day_shift",
+        "recommended_models": ["wan_26"],
+        "model_notes": {
+            "sora": "Day progression through lighting: dawn pink light morning routine, bright midday work, golden hour evening review",
+            "veo": "[00:00-00:03] Morning scene, dawn light, start of day. [00:03-00:05] Midday activity, bright. [00:05-00:08] Evening wind-down, golden hour",
+            "kling": "Day montage, lighting shifts dramatically from dawn pink to midday bright to dusk golden, routine activities flow",
+            "hailuo": "Time-of-day progression through lighting changes, daily routine flow, dawn to dusk visual journey",
+            "wan": "[0-5s] 07:00 Morning start, dawn light. [5-10s] 12:00 Midday work, bright sun. [10-15s] 18:00 Evening review, golden hour"
+        },
+        "ai_limitations": "Wan 15s is IDEAL for this format - captures full day progression through multi-shot, others need lighting cues"
     }
 }
 
@@ -934,7 +1030,14 @@ class CreatorAgent(BaseAgent):
             "filled_template": filled_template,
             "visual_style": format_config["visual_style"],
             "audio_style": format_config["audio_style"],
-            "viral_potential": format_config["viral_potential"]
+            "viral_potential": format_config["viral_potential"],
+            # Cinematography fields
+            "camera_movement": format_config.get("camera_movement", "dynamic"),
+            "shot_type": format_config.get("shot_type", "mixed"),
+            "transition_style": format_config.get("transition_style", "cut"),
+            "recommended_models": format_config.get("recommended_models", []),
+            "model_notes": format_config.get("model_notes", {}),
+            "ai_limitations": format_config.get("ai_limitations", "")
         }
 
     def _fill_viral_template(self, template: str, category: str) -> str:
@@ -1749,6 +1852,10 @@ Bu video TTS voiceover ile birleştirilecek. Her shot, aşağıdaki speech içer
 """
 
         # Viral format instruction
+        # Model-specific notes al
+        model_notes = viral_format.get("model_notes", {})
+        ai_limitations = viral_format.get("ai_limitations", "")
+
         viral_format_instruction = f"""
 ### 🎯 VİRAL İÇERİK FORMATI
 
@@ -1756,13 +1863,29 @@ Bu Reels için önerilen viral format: **{viral_format['format_name']}**
 
 **Template:** {viral_format['filled_template']}
 
-**Görsel Yönergesi:** {viral_format['visual_style']}
+**Kamera Hareketi:** {viral_format.get('camera_movement', 'dynamic')}
+**Shot Tipi:** {viral_format.get('shot_type', 'mixed')}
+**Geçiş Stili:** {viral_format.get('transition_style', 'cut')}
 
 **Ses Yönergesi:** {viral_format['audio_style']}
 
 **Viral Potansiyel:** {viral_format['viral_potential'] * 100:.0f}%
 
-Bu format için video yapısını buna göre oluştur!
+### MODEL-SPESİFİK TALİMATLAR:
+
+**SORA prompt için:** {model_notes.get('sora', 'Use cinematic approach with detailed scene description')}
+
+**VEO prompt için:** {model_notes.get('veo', 'Use timestamp [00:00-00:02] format with audio cues')}
+
+**KLING prompt için:** {model_notes.get('kling', 'Keep under 200 chars, comma-separated, simple structure')}
+
+**HAILUO prompt için:** {model_notes.get('hailuo', 'Focus on camera motion verbs and dynamic action')}
+
+**WAN prompt için:** {model_notes.get('wan', 'Use multi-shot [0-5s] timing brackets, max 600 chars')}
+
+⚠️ **AI LİMİTASYONLARI:** {ai_limitations if ai_limitations else 'Standard limitations - no text/number rendering, avoid complex physics'}
+
+Her model için bu format'a uygun AYRI ve OPTİMİZE prompt yaz!
 """
 
         prompt = f"""
