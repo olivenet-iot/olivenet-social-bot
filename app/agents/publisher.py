@@ -6,6 +6,7 @@ Publisher Agent - Yayıncı
 import json
 import os
 import re
+import asyncio
 from datetime import datetime
 from typing import Dict, Any
 from .base_agent import BaseAgent
@@ -92,6 +93,32 @@ class PublisherAgent(BaseAgent):
                         published_at=datetime.now(),
                         instagram_post_id=ig_result.get("id")
                     )
+
+                    # ========== STORY BOOST ==========
+                    try:
+                        from app.story_boost_helper import trigger_story_boost
+
+                        # Post type belirle
+                        visual_type = input_data.get("visual_type", "post")
+                        if visual_type in ("reels", "video"):
+                            story_post_type = "reels"
+                        elif visual_type == "carousel":
+                            story_post_type = "carousel"
+                        else:
+                            story_post_type = "post"
+
+                        # Story boost'u background task olarak başlat
+                        asyncio.create_task(trigger_story_boost(
+                            post_id=post_id,
+                            instagram_post_id=ig_result.get("id"),
+                            post_type=story_post_type,
+                            image_url=input_data.get("cdn_image_url"),
+                            video_url=ig_result.get("cdn_url"),
+                            caption_preview=(post_text_ig or "")[:50]
+                        ))
+                        self.log("📢 Story boost triggered")
+                    except Exception as e:
+                        self.log(f"Story boost error: {e}")
             else:
                 result["error"] = ig_result.get("error", "Unknown error")
                 self.log(f"❌ Instagram hatası: {result['error']}")

@@ -2074,6 +2074,25 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             print(f"Audit log hatası: {e}")
         await query.edit_message_text("❌ İptal edildi.")
 
+    # ===== STORY BOOST CALLBACKS =====
+    elif action.startswith("story_done:"):
+        boost_id = int(action.split(":")[1])
+        from app.database.crud import update_story_boost
+        update_story_boost(boost_id, "published", "manual")
+        await query.edit_message_text(
+            f"✅ Story boost #{boost_id} tamamlandı.",
+            parse_mode="Markdown"
+        )
+
+    elif action.startswith("story_skip:"):
+        boost_id = int(action.split(":")[1])
+        from app.database.crud import update_story_boost
+        update_story_boost(boost_id, "skipped")
+        await query.edit_message_text(
+            f"⏭️ Story boost #{boost_id} atlandı.",
+            parse_mode="Markdown"
+        )
+
 
 async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Metin inputlarını işle - Authorization kontrolü ile"""

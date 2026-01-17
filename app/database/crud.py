@@ -1961,3 +1961,104 @@ def get_prompt_style_stats(days: int = 30) -> Dict[str, Any]:
         'avg_engagement_by_style': avg_engagement_by_style,
         'period_days': days
     }
+
+
+# ============ STORY BOOSTS ============
+
+def log_story_boost(
+    post_id: int,
+    instagram_post_id: str,
+    post_type: str,
+    sequence_type: str
+) -> int:
+    """Story boost kaydı oluştur"""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        INSERT INTO story_boosts (post_id, instagram_post_id, post_type, sequence_type, scheduled_at)
+        VALUES (?, ?, ?, ?, ?)
+    ''', (post_id, instagram_post_id, post_type, sequence_type, datetime.now().isoformat()))
+
+    boost_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+
+    return boost_id
+
+
+def update_story_boost(
+    boost_id: int,
+    status: str,
+    method: str = None,
+    story_id: str = None,
+    error: str = None
+):
+    """Story boost durumunu güncelle"""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    updates = ["status = ?", "executed_at = ?"]
+    values = [status, datetime.now().isoformat()]
+
+    if method:
+        updates.append("publish_method = ?")
+        values.append(method)
+    if story_id:
+        updates.append("story_id = ?")
+        values.append(story_id)
+    if error:
+        updates.append("error_message = ?")
+        values.append(error[:500])
+    if method == "telegram":
+        updates.append("telegram_sent = ?")
+        values.append(True)
+
+    values.append(boost_id)
+    cursor.execute(f"UPDATE story_boosts SET {', '.join(updates)} WHERE id = ?", values)
+
+    conn.commit()
+    conn.close()
+
+
+def get_story_boosts_for_post(post_id: int) -> List[Dict]:
+    """Post için tüm story boost kayıtlarını getir"""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        SELECT * FROM story_boosts
+        WHERE post_id = ?
+        ORDER BY sequence_type
+    ''', (post_id,))
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    return [dict(row) for row in rows]
+
+
+def get_story_boost_stats(days: int = 7) -> Dict[str, Any]:
+    """Story boost istatistikleri"""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    since = datetime.now() - timedelta(days=days)
+
+    cursor.execute('''
+        SELECT status, COUNT(*) as cnt
+        FROM story_boosts
+        WHERE created_at > ?
+        GROUP BY status
+    ''', (since,))
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    stats = {"total": 0, "published": 0, "manual_sent": 0, "failed": 0, "skipped": 0}
+    for row in rows:
+        stats["total"] += row["cnt"]
+        if row["status"] in stats:
+            stats[row["status"]] = row["cnt"]
+
+    return stats

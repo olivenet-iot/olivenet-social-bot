@@ -172,6 +172,11 @@ class Settings(BaseSettings):
     subtitle_max_chars: int = Field(default=35, description="Max characters per subtitle line")
     subtitle_max_lines: int = Field(default=2, description="Max lines per subtitle")
 
+    # Story Boost Settings (Auto-promote posts via Stories)
+    story_boost_enabled: bool = Field(default=True, description="Enable automatic Story boost after publish")
+    story_boost_reminder_delay: int = Field(default=15, description="Minutes to wait for reminder story")
+    story_boost_telegram_fallback: bool = Field(default=True, description="Send Telegram notification if API fails")
+
     # Paths - All derived from BASE_DIR
     base_dir: Path = Field(default=BASE_DIR)
 

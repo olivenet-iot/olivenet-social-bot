@@ -334,6 +334,28 @@ def init_database():
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_ad_ad_id ON ad_campaigns(ad_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_ad_synced ON ad_campaigns(synced_at)')
 
+    # Story Boosts tablosu - Story promosyon takibi
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS story_boosts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            post_id INTEGER NOT NULL,
+            instagram_post_id TEXT NOT NULL,
+            post_type TEXT,
+            sequence_type TEXT NOT NULL,
+            scheduled_at TIMESTAMP,
+            executed_at TIMESTAMP,
+            status TEXT DEFAULT 'scheduled',
+            publish_method TEXT,
+            story_id TEXT,
+            error_message TEXT,
+            telegram_sent BOOLEAN DEFAULT FALSE,
+            FOREIGN KEY (post_id) REFERENCES posts(id)
+        )
+    ''')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_story_boosts_post ON story_boosts(post_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_story_boosts_status ON story_boosts(status)')
+
     conn.commit()
 
     # Analytics kolonlarını posts tablosuna ekle (migration)
