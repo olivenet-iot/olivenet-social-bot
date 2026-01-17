@@ -4,6 +4,7 @@ Full Autonomous Mode - Plana göre saatlerde paylaşım
 """
 
 import asyncio
+import os
 from datetime import datetime, timedelta
 from typing import Dict, Any, Callable, List
 import json
@@ -11,6 +12,11 @@ import json
 def get_kktc_now():
     """KKTC saatini al (UTC+3)"""
     return datetime.utcnow() + timedelta(hours=3)
+
+
+def is_autonomous_mode() -> bool:
+    """Check if autonomous mode is enabled via environment variable"""
+    return os.getenv("AUTONOMOUS_MODE", "false").lower() == "true"
 
 
 class ScheduledTask:
@@ -154,17 +160,19 @@ class ContentScheduler:
                 print(f"[SCHEDULER] Running task: {task.name}")
                 await task.run()
         
-        # Her 5 dakikada bir content calendar kontrol et
-        now = get_kktc_now()
-        if not self.last_calendar_check or (now - self.last_calendar_check).total_seconds() >= 300:
-            await self.check_calendar_and_publish()
-            self.last_calendar_check = now
+        # Content calendar check - sadece autonomous mode aktifse çalışır
+        if is_autonomous_mode():
+            now = get_kktc_now()
+            if not self.last_calendar_check or (now - self.last_calendar_check).total_seconds() >= 300:
+                await self.check_calendar_and_publish()
+                self.last_calendar_check = now
     
     async def start(self, check_interval: int = 60):
         """Scheduler'ı başlat"""
         now = get_kktc_now()
+        mode = "FULL-AUTONOMOUS" if is_autonomous_mode() else "MANUAL (Telegram only)"
         print(f"[SCHEDULER] Starting... (check every {check_interval}s)")
-        print(f"[SCHEDULER] Mode: FULL-AUTONOMOUS")
+        print(f"[SCHEDULER] Mode: {mode}")
         print(f"[SCHEDULER] KKTC Time (UTC+3): {now.strftime('%Y-%m-%d %H:%M:%S')}")
         self.running = True
         
@@ -181,7 +189,7 @@ class ContentScheduler:
         """Durum bilgisi"""
         return {
             "running": self.running,
-            "mode": "FULL-AUTONOMOUS",
+            "mode": "FULL-AUTONOMOUS" if is_autonomous_mode() else "MANUAL",
             "kktc_time": get_kktc_now().strftime("%Y-%m-%d %H:%M:%S"),
             "tasks": [
                 {
