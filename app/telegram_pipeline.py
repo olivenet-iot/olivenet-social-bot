@@ -1475,6 +1475,17 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
                 plan_text += f"• *{day}* {time} {icon}\n  _{topic}_\n"
 
+                # Engagement bilgileri (varsa)
+                viral_format = entry.get('viral_format')
+                hook_type = entry.get('hook_type')
+                if viral_format or hook_type:
+                    engagement_info = []
+                    if viral_format:
+                        engagement_info.append(f"🎯{viral_format}")
+                    if hook_type:
+                        engagement_info.append(f"🪝{hook_type}")
+                    plan_text += f"  `{' '.join(engagement_info)}`\n"
+
             keyboard = [
                 [InlineKeyboardButton("🔄 Yeni Plan Oluştur", callback_data="create_new_plan")],
                 [InlineKeyboardButton("🏠 Ana Menü", callback_data="main_menu")]

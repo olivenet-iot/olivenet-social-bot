@@ -11,7 +11,13 @@ from app.database import (
     get_published_posts, get_analytics_summary,
     create_calendar_entry, get_week_calendar,
     log_agent_action, get_best_performing_hooks,
-    get_ab_test_learnings, get_connection
+    get_ab_test_learnings, get_connection,
+    get_underperforming_hooks
+)
+from app.agents.creator import (
+    VIRAL_CONTENT_FORMATS,
+    COMMENT_CTA_TYPES,
+    SAVE_TRIGGER_TYPES
 )
 
 class OrchestratorAgent(BaseAgent):
@@ -63,8 +69,8 @@ class OrchestratorAgent(BaseAgent):
             return {"error": f"Unknown action: {action}"}
 
     async def plan_week(self) -> Dict[str, Any]:
-        """Haftalık içerik planı oluştur (12 içerik: 7 Reels + 2 Carousel + 3 Post)"""
-        self.log("Haftalık plan oluşturuluyor (12 içerik, %58 Reels)...")
+        """Haftalık içerik planı oluştur - Engagement stratejileriyle (12 içerik: 7 Reels + 2 Carousel + 3 Post)"""
+        self.log("Haftalık plan oluşturuluyor (engagement stratejileri dahil)...")
 
         # Mevcut stratejiyi al
         strategy = get_current_strategy()
@@ -72,6 +78,10 @@ class OrchestratorAgent(BaseAgent):
         # Geçmiş performans verilerini al
         analytics = get_analytics_summary(days=30) or {}
         published_posts = get_published_posts(days=30) or []
+
+        # Hook performance verilerini al
+        best_hooks = get_best_performing_hooks(limit=5)
+        underperforming_hooks = get_underperforming_hooks(threshold_viral=5.0)
 
         # Context dosyalarını yükle
         company_profile = self.load_context("company-profile.md")
@@ -81,8 +91,17 @@ class OrchestratorAgent(BaseAgent):
         # Schedule template'ini JSON'a çevir
         schedule_json = json.dumps(self.WEEKLY_SCHEDULE, ensure_ascii=False, indent=2)
 
+        # Engagement strateji listeleri
+        viral_formats = list(VIRAL_CONTENT_FORMATS.keys())
+        hook_types = ["statistic", "question", "bold_claim", "problem", "value",
+                      "fear", "before_after", "list", "comparison", "local"]
+        comment_cta_types = list(COMMENT_CTA_TYPES.keys())
+        save_trigger_types = list(SAVE_TRIGGER_TYPES.keys())
+        visual_styles = ["cinematic_4k", "anime", "cartoon_3d", "watercolor",
+                         "3d_render", "minimalist", "neon_cyberpunk"]
+
         prompt = f"""
-## GÖREV: Haftalık İçerik Planı Oluştur
+## GÖREV: Haftalık İçerik Planı Oluştur (Engagement Stratejileriyle)
 
 ### Şirket Profili
 {company_profile[:2000]}
@@ -97,24 +116,59 @@ class OrchestratorAgent(BaseAgent):
 - Haftalık içerik: 12 (7 Reels + 2 Carousel + 3 Post = %58 Reels ağırlıklı)
 - En iyi günler: {strategy.get('best_days', [])}
 - En iyi saatler: {strategy.get('best_hours', [])}
-- İçerik mix: {strategy.get('content_mix', {})}
 
 ### Son 30 Gün Performans
 - Toplam post: {analytics.get('total_posts') or 0}
 - Ortalama engagement: {(analytics.get('avg_engagement_rate') or 0):.2f}%
+
+### Hook Performans Verileri
+- En iyi hook'lar: {[h.get('hook_type') for h in best_hooks]}
+- Düşük performanslı hook'lar (KULLANMA): {underperforming_hooks}
 
 ### Son Paylaşılan Konular (tekrar önlemek için)
 {json.dumps([p.get('topic') for p in published_posts[:10]], ensure_ascii=False)}
 
 ---
 
-Schedule template'indeki her slot için konu öner.
-Her content type için uygun konular seç:
-- **reels**: Kısa, dinamik, hook'lu (demo, teknik, problem-çözüm)
-- **carousel**: Eğitici, adım adım, karşılaştırmalı
-- **post**: Detaylı, bilgilendirici
+## ENGAGEMENT STRATEJİ SEÇENEKLERİ
 
-ÇIKTI FORMATI (JSON):
+### Viral Formatlar (Reels için)
+{json.dumps(viral_formats, ensure_ascii=False)}
+- pov: İlk kişi bakış açısı, dramatik tepki
+- myth_busting: Yanlış bilgi düzeltme
+- comparison_battle: A vs B karşılaştırma
+- hidden_feature: Gizli özellik keşfi
+- challenge: Meydan okuma, süreç gösterimi
+- by_the_numbers: Rakamlarla etki
+- red_flag: Uyarı, dikkat çekici
+- day_in_life: Günlük yaşam kesiti
+
+### Hook Tipleri
+{json.dumps(hook_types, ensure_ascii=False)}
+- statistic: Şaşırtıcı rakamla başla
+- question: Merak uyandıran soru
+- problem: Acı nokta ile başla
+- before_after: Öncesi-sonrası
+
+### Comment CTA Tipleri
+{json.dumps(comment_cta_types, ensure_ascii=False)}
+- poll: Anket sorusu (A mı B mi?)
+- experience: Deneyim paylaşımı
+- quiz: Tahmin oyunu
+- tag_someone: Arkadaş etiketleme
+
+### Save Trigger Tipleri
+{json.dumps(save_trigger_types, ensure_ascii=False)}
+- urgency: Aciliyet (kaybolacak bilgi)
+- practical_use: Pratik değer (checklist)
+- future_reference: Referans (lazım olur)
+
+### Visual Stiller
+{json.dumps(visual_styles, ensure_ascii=False)}
+
+---
+
+## ÇIKTI FORMATI (JSON)
 ```json
 {{
   "week_plan": [
@@ -127,7 +181,12 @@ Her content type için uygun konular seç:
       "topic_category": "egitici",
       "topic": "Konu başlığı",
       "visual_type": "flux",
-      "reasoning": "Neden bu konu?"
+      "visual_style": "cinematic_4k",
+      "hook_type": "statistic",
+      "comment_cta_type": "poll",
+      "save_trigger_type": "practical_use",
+      "viral_format": null,
+      "strategy_reasoning": "Neden bu kombinasyon? Hook performansına göre..."
     }},
     {{
       "day": "monday",
@@ -138,10 +197,20 @@ Her content type için uygun konular seç:
       "topic_category": "tanitim",
       "topic": "Reels konusu",
       "visual_type": "video",
-      "reasoning": "Neden bu konu?"
+      "visual_style": "cinematic_4k",
+      "hook_type": "question",
+      "comment_cta_type": "experience",
+      "save_trigger_type": "future_reference",
+      "viral_format": "pov",
+      "strategy_reasoning": "POV format yüksek engagement, question hook iyi performans gösteriyor"
     }}
   ],
-  "strategy_notes": "Genel notlar",
+  "strategy_notes": "Haftalık strateji notları",
+  "engagement_variety": {{
+    "hook_types_used": ["statistic", "question", "problem"],
+    "viral_formats_used": ["pov", "comparison_battle"],
+    "cta_variety": true
+  }},
   "content_distribution": {{
     "reels": 7,
     "carousel": 2,
@@ -149,6 +218,14 @@ Her content type için uygun konular seç:
   }}
 }}
 ```
+
+## ÖNEMLİ KURALLAR:
+1. **Hook Çeşitliliği**: Aynı hook tipini arka arkaya KULLANMA! Haftalık en az 5 farklı hook tipi kullan.
+2. **Düşük Performanslı Hook'lardan Kaçın**: {underperforming_hooks} listesindeki hook'ları kullanma.
+3. **Viral Format Çeşitliliği**: Reels'ler için en az 3 farklı viral format kullan.
+4. **CTA Dengesi**: Her postta CTA olmasın, 3'te 1 soft CTA yeterli.
+5. **Visual Style**: Monotonluktan kaçın, farklı stiller dene.
+6. **Reels Önceliği**: viral_format sadece content_type="reels" için geçerli.
 
 Tam 12 entry olmalı. Sadece JSON döndür.
 """
@@ -178,23 +255,36 @@ Tam 12 entry olmalı. Sadece JSON döndür.
                     scheduled_time=entry.get("time", "10:00"),
                     topic_category=entry.get("topic_category", "egitici"),
                     topic_suggestion=entry.get("topic", ""),
-                    visual_type_suggestion=visual_type
+                    visual_type_suggestion=visual_type,
+                    # Engagement strategy fields
+                    content_type=content_type,
+                    viral_format=entry.get("viral_format"),
+                    hook_type=entry.get("hook_type"),
+                    comment_cta_type=entry.get("comment_cta_type"),
+                    save_trigger_type=entry.get("save_trigger_type"),
+                    visual_style=entry.get("visual_style", "cinematic_4k"),
+                    strategy_reasoning=entry.get("strategy_reasoning")
                 )
+
+            # Engagement variety log
+            plan_count = len(result.get('week_plan', []))
+            reels_count = sum(1 for e in result.get('week_plan', []) if e.get('content_type') == 'reels')
+            hooks_used = set(e.get('hook_type') for e in result.get('week_plan', []) if e.get('hook_type'))
+            formats_used = set(e.get('viral_format') for e in result.get('week_plan', []) if e.get('viral_format'))
+
+            self.log(f"Haftalık plan: {plan_count} içerik ({reels_count} Reels)")
+            self.log(f"Hook çeşitliliği: {len(hooks_used)} tip - {hooks_used}")
+            self.log(f"Viral format çeşitliliği: {len(formats_used)} tip - {formats_used}")
 
             # Log
             log_agent_action(
                 agent_name=self.name,
                 action="plan_week",
-                input_data={"strategy": strategy},
+                input_data={"strategy": strategy, "best_hooks": [h.get('hook_type') for h in best_hooks]},
                 output_data=result,
                 success=True
             )
 
-            plan_count = len(result.get('week_plan', []))
-            reels_count = sum(1 for e in result.get('week_plan', []) if e.get('content_type') == 'reels')
-            carousel_count = sum(1 for e in result.get('week_plan', []) if e.get('content_type') == 'carousel')
-
-            self.log(f"Haftalık plan: {plan_count} içerik ({reels_count} Reels, {carousel_count} Carousel)")
             return result
 
         except json.JSONDecodeError:

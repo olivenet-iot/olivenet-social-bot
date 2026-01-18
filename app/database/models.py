@@ -96,6 +96,15 @@ def init_database():
             topic_suggestion TEXT,
             visual_type_suggestion TEXT,
 
+            -- Engagement Strateji Alanları
+            content_type TEXT DEFAULT 'post',  -- post, reels, carousel
+            viral_format TEXT,  -- pov, myth_busting, comparison_battle, hidden_feature, challenge, by_the_numbers, red_flag, day_in_life
+            hook_type TEXT,  -- statistic, question, bold_claim, problem, value, fear, before_after, list, comparison, local
+            comment_cta_type TEXT,  -- poll, experience, prediction, quiz, tag_friend, secret
+            save_trigger_type TEXT,  -- urgency, practical, reference, future, exclusive
+            visual_style TEXT DEFAULT 'cinematic_4k',  -- cinematic_4k, anime, cartoon_3d, etc.
+            strategy_reasoning TEXT,  -- Neden bu kombinasyon seçildi
+
             -- Durum
             status TEXT DEFAULT 'planned',  -- planned, content_created, published
             post_id INTEGER,
@@ -425,6 +434,23 @@ def init_database():
     for stmt in strategy_migrations:
         try:
             cursor.execute(stmt)
+        except sqlite3.OperationalError:
+            pass  # Kolon zaten var
+
+    # Content Calendar v2 - Engagement strategy fields
+    calendar_migrations = [
+        ("content_type", "TEXT DEFAULT 'post'"),
+        ("viral_format", "TEXT"),
+        ("hook_type", "TEXT"),
+        ("comment_cta_type", "TEXT"),
+        ("save_trigger_type", "TEXT"),
+        ("visual_style", "TEXT DEFAULT 'cinematic_4k'"),
+        ("strategy_reasoning", "TEXT")
+    ]
+
+    for col_name, col_def in calendar_migrations:
+        try:
+            cursor.execute(f"ALTER TABLE content_calendar ADD COLUMN {col_name} {col_def}")
         except sqlite3.OperationalError:
             pass  # Kolon zaten var
 

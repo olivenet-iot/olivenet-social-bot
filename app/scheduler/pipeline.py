@@ -964,7 +964,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             return result
 
     async def run_autonomous_content_with_plan(self, plan: dict) -> Dict[str, Any]:
-        """Plana göre otonom içerik üret ve paylaş"""
+        """Plana göre otonom içerik üret ve paylaş - Engagement stratejileriyle"""
         topic = plan.get('topic_suggestion', 'Genel IoT konusu')
         self.log(f"Planlı içerik üretiliyor: {topic[:50]}...")
 
@@ -978,11 +978,25 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             category = plan.get('topic_category', 'egitici')
             visual_type = plan.get('visual_type_suggestion', 'flux')
 
+            # Engagement strategy fields from calendar
+            viral_format = plan.get('viral_format')
+            hook_type = plan.get('hook_type')
+            comment_cta_type = plan.get('comment_cta_type')
+            save_trigger_type = plan.get('save_trigger_type')
+            visual_style = plan.get('visual_style', 'cinematic_4k')
+
             # ========== CONTENT TYPE ROUTING ==========
             # Reels/video içerik için özel pipeline kullan
             if visual_type in ["reels", "video"]:
                 self.log(f"[ROUTING] Reels pipeline'a yönlendiriliyor: {topic[:50]}...")
-                return await self.run_reels_content(topic=topic)
+                if viral_format or hook_type:
+                    self.log(f"[ENGAGEMENT] Format: {viral_format}, Hook: {hook_type}")
+                return await self.run_reels_content(
+                    topic=topic,
+                    visual_style=visual_style,
+                    viral_format=viral_format,
+                    hook_type=hook_type
+                )
 
             # Carousel içerik için özel pipeline kullan
             if visual_type == "carousel":
@@ -1116,7 +1130,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             result["error"] = str(e)
             return result
 
-    async def run_reels_content(self, topic: str = None, force_model: str = None, manual_topic_mode: bool = False, visual_style: str = "cinematic_4k") -> Dict[str, Any]:
+    async def run_reels_content(self, topic: str = None, force_model: str = None, manual_topic_mode: bool = False, visual_style: str = "cinematic_4k", viral_format: str = None, hook_type: str = None) -> Dict[str, Any]:
         """
         Instagram Reels içeriği üret ve yayınla
         Sora 2 Pro → Sora 2 → Veo 3 fallback zinciri ile
@@ -1126,12 +1140,15 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             force_model: Model zorla ("sora-2", "sora-2-pro", "veo3")
             manual_topic_mode: Manuel konu modu (planner atlanır)
             visual_style: Görsel stil (cinematic_4k, anime, vb.)
+            viral_format: Planlanmış viral format (pov, myth_busting, etc.)
+            hook_type: Planlanmış hook tipi (statistic, question, etc.)
 
         Returns:
             Pipeline sonucu
         """
         mode_text = "Manuel Konu" if manual_topic_mode else "Otomatik"
-        self.log(f"REELS MOD ({mode_text}): Pipeline başlatılıyor...")
+        engagement_info = f" [Format: {viral_format}, Hook: {hook_type}]" if viral_format or hook_type else ""
+        self.log(f"REELS MOD ({mode_text}): Pipeline başlatılıyor...{engagement_info}")
         self.state = PipelineState.PLANNING
 
         result = {
@@ -1201,7 +1218,9 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 "category": topic_data.get("category", "tanitim"),
                 "post_text": content_result.get("post_text_ig", ""),
                 "post_id": content_result.get("post_id"),
-                "visual_style": visual_style
+                "visual_style": visual_style,
+                "viral_format": viral_format,
+                "hook_type": hook_type
             })
 
             if not reels_prompt_result.get("success"):

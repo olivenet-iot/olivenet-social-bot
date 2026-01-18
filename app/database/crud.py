@@ -333,17 +333,29 @@ def create_calendar_entry(
     scheduled_time: str,
     topic_category: str,
     topic_suggestion: str,
-    visual_type_suggestion: str
+    visual_type_suggestion: str = "flux",
+    # Engagement strategy fields
+    content_type: str = "post",
+    viral_format: str = None,
+    hook_type: str = None,
+    comment_cta_type: str = None,
+    save_trigger_type: str = None,
+    visual_style: str = "cinematic_4k",
+    strategy_reasoning: str = None
 ) -> int:
-    """Takvim girişi oluştur"""
+    """Takvim girişi oluştur - Engagement stratejileriyle birlikte"""
     conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute('''
         INSERT INTO content_calendar
-        (week_start, day_of_week, scheduled_time, topic_category, topic_suggestion, visual_type_suggestion)
-        VALUES (?, ?, ?, ?, ?, ?)
-    ''', (week_start, day_of_week, scheduled_time, topic_category, topic_suggestion, visual_type_suggestion))
+        (week_start, day_of_week, scheduled_time, topic_category, topic_suggestion,
+         visual_type_suggestion, content_type, viral_format, hook_type,
+         comment_cta_type, save_trigger_type, visual_style, strategy_reasoning)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (week_start, day_of_week, scheduled_time, topic_category, topic_suggestion,
+          visual_type_suggestion, content_type, viral_format, hook_type,
+          comment_cta_type, save_trigger_type, visual_style, strategy_reasoning))
 
     entry_id = cursor.lastrowid
     conn.commit()

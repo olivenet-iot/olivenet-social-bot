@@ -1737,21 +1737,33 @@ Sadece JSON döndür.
         reels_guide = self.load_context("reels-prompts.md")
         company_profile = self.load_context("company-profile.md")
 
+        # Planlanmış hook type varsa kullan
+        planned_hook_type = input_data.get("hook_type")
+
         # Watch time structure uret
         watch_time = self.generate_watch_time_structure(
             video_duration=15,  # Default 15 saniye
             content_style=category,
             topic=topic,
-            hook_type=None
+            hook_type=planned_hook_type  # Planlanmış hook type öncelikli
         )
 
-        # Viral format seç
+        if planned_hook_type:
+            self.log(f"[REELS] Planlanmış hook type kullanılıyor: {planned_hook_type}")
+
+        # Viral format seç - planlanmış format öncelikli
+        planned_viral_format = input_data.get("viral_format")
         viral_format = self.select_viral_format(
             topic=topic,
             topic_category=category,
             content_type="reels",
-            prefer_format=input_data.get("viral_format")
+            prefer_format=planned_viral_format
         )
+
+        if planned_viral_format:
+            self.log(f"[REELS] Planlanmış viral format kullanılıyor: {planned_viral_format}")
+        else:
+            self.log(f"[REELS] Otomatik viral format seçildi: {viral_format.get('format_key', 'unknown')}")
 
         # Watch time instruction olustur
         watch_time_instruction = f"""
