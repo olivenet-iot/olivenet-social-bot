@@ -3108,10 +3108,10 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
 
             native_speech_models = ["sora-2", "sora-2-pro", "veo-3.1"]
             if model_id in native_speech_models:
-                if model_id == "sora-2-pro":
-                    target_duration = min(15, max_duration)  # Sora 2 Pro = 15s
+                if model_id in ["sora-2", "sora-2-pro"]:
+                    target_duration = min(12, max_duration)  # Sora API max 12s
                 else:
-                    target_duration = min(12, max_duration)  # Sora=12, Veo=8
+                    target_duration = min(8, max_duration)  # Veo = 8s
             else:
                 target_duration = 12  # TTS+Lipsync için sabit
 

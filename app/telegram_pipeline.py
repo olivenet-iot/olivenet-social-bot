@@ -601,7 +601,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif action == "create_conversational":
         # Model seçim menüsü göster
         conv_models = {
-            "sora-2-pro": {"name": "Sora 2 Pro", "emoji": "⭐", "desc": "Native speech (15s max) ⭐"},
+            "sora-2-pro": {"name": "Sora 2 Pro", "emoji": "⭐", "desc": "Yüksek kalite (12s) ⭐"},
             "sora-2": {"name": "Sora 2", "emoji": "🌟", "desc": "Native speech (12s max)"},
             "veo-3.1": {"name": "Veo 3.1", "emoji": "🎬", "desc": "Native speech (8s max)"},
             "kling-2.5-pro": {"name": "Kling 2.5 Pro", "emoji": "⚡", "desc": "TTS + Lipsync (10s)"},
