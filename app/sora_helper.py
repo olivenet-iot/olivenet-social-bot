@@ -122,7 +122,7 @@ async def generate_video_sora(
         # 2. Job tamamlanana kadar bekle (polling)
         async with httpx.AsyncClient(timeout=600) as client:
             start_time = datetime.now()
-            max_wait = 300  # 5 dakika
+            max_wait = 600  # 10 dakika (Sora kuyruk yoğunluğu için)
 
             while True:
                 await asyncio.sleep(10)
