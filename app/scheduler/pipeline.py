@@ -3106,9 +3106,12 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             model_config = get_model_config(model_id)
             max_duration = model_config.get("max_duration", 12)
 
-            native_speech_models = ["sora-2", "veo-3.1"]
+            native_speech_models = ["sora-2", "sora-2-pro", "veo-3.1"]
             if model_id in native_speech_models:
-                target_duration = min(12, max_duration)  # Sora=12, Veo=8
+                if model_id == "sora-2-pro":
+                    target_duration = min(15, max_duration)  # Sora 2 Pro = 15s
+                else:
+                    target_duration = min(12, max_duration)  # Sora=12, Veo=8
             else:
                 target_duration = 12  # TTS+Lipsync için sabit
 
@@ -3161,14 +3164,19 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 # ===== NATIVE SPEECH MODELS (Sora 2, Veo 3.1) =====
                 self.log(f"[CONV REELS] Native speech modu ({model_id})")
 
-                if model_id == "sora-2":
+                if model_id in ["sora-2", "sora-2-pro"]:
                     from app.sora_helper import generate_video_sora
+                    from app.video_models import get_model_config
+                    sora_config = get_model_config(model_id)
+                    sora_duration = sora_config.get("default_duration", 12)
+
                     conversation_result = await generate_video_sora(
                         prompt=video_prompt,
-                        duration=12,
-                        size="720x1280"
+                        duration=sora_duration,
+                        size="720x1280",
+                        model=model_id
                     )
-                else:  # veo-3.1
+                elif model_id == "veo-3.1":  # veo-3.1
                     from app.veo_helper import generate_video_veo
                     conversation_result = await generate_video_veo(
                         prompt=video_prompt,

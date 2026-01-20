@@ -26,6 +26,22 @@ VIDEO_MODELS: Dict[str, dict] = {
         "helper_module": "sora_helper",
         "helper_function": "generate_video_sora"
     },
+    "sora-2-pro": {
+        "name": "Sora 2 Pro",
+        "provider": "openai",
+        "emoji": "⭐",
+        "durations": [10, 15, 25],
+        "default_duration": 15,
+        "max_duration": 25,
+        "aspect_ratio": "9:16",
+        "prompt_key": "video_prompt_sora",
+        "description": "15-25s uzun video, native speech",
+        "helper_module": "sora_helper",
+        "helper_function": "generate_video_sora",
+        "has_native_audio": True,
+        "supports_speech": True,
+        "conversational_only": True
+    },
     "veo-2": {
         "name": "Veo 2",
         "provider": "google",

@@ -601,8 +601,9 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif action == "create_conversational":
         # Model seçim menüsü göster
         conv_models = {
+            "sora-2-pro": {"name": "Sora 2 Pro", "emoji": "⭐", "desc": "Native speech (15s max) ⭐"},
             "sora-2": {"name": "Sora 2", "emoji": "🌟", "desc": "Native speech (12s max)"},
-            "veo-3.1": {"name": "Veo 3.1", "emoji": "🎬", "desc": "Native speech (8s max) ⭐"},
+            "veo-3.1": {"name": "Veo 3.1", "emoji": "🎬", "desc": "Native speech (8s max)"},
             "kling-2.5-pro": {"name": "Kling 2.5 Pro", "emoji": "⚡", "desc": "TTS + Lipsync (10s)"},
         }
 
@@ -639,7 +640,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )])
         keyboard.append([InlineKeyboardButton("◀️ Geri", callback_data="create_conversational")])
 
-        native_speech_models = ["sora-2", "veo-3.1"]
+        native_speech_models = ["sora-2", "sora-2-pro", "veo-3.1"]
         speech_info = "🗣️ Native Turkish speech" if model_id in native_speech_models else "🗣️ TTS + Lipsync API"
 
         await query.edit_message_text(

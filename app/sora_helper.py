@@ -70,8 +70,12 @@ async def generate_video_sora(
     if voice_mode:
         prompt = prompt + VOICE_REELS_SUFFIX
 
-    # Duration validation (4, 8, 12 only)
-    valid_durations = [4, 8, 12]
+    # Duration validation - model'e göre
+    if model == "sora-2-pro":
+        valid_durations = [10, 15, 25]
+    else:
+        valid_durations = [4, 8, 12]
+
     if duration not in valid_durations:
         duration = min(valid_durations, key=lambda x: abs(x - duration))
 
