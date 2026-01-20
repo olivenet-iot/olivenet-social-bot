@@ -1333,11 +1333,14 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         segment_count = duration // 10
         keyboard = [
             [
-                InlineKeyboardButton("🎬 Kling 2.6", callback_data=f"long_model:{duration}:kling-2.6-pro"),
+                InlineKeyboardButton("⭐ Sora 2 Pro", callback_data=f"long_model:{duration}:sora-2-pro"),
                 InlineKeyboardButton("🌟 Sora 2", callback_data=f"long_model:{duration}:sora-2")
             ],
             [
-                InlineKeyboardButton("🎯 Veo 2", callback_data=f"long_model:{duration}:veo-2"),
+                InlineKeyboardButton("🎬 Kling 2.6", callback_data=f"long_model:{duration}:kling-2.6-pro"),
+                InlineKeyboardButton("🎯 Veo 2", callback_data=f"long_model:{duration}:veo-2")
+            ],
+            [
                 InlineKeyboardButton("🌊 Wan 2.1", callback_data=f"long_model:{duration}:wan-2.1")
             ],
             [InlineKeyboardButton("◀️ Geri", callback_data="create_long_video")]
@@ -1345,8 +1348,9 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(
             f"🎥 *UZUN VIDEO* - {duration}s ({segment_count} segment)\n\n"
             "🎬 *Model seçin:*\n\n"
+            "• *⭐ Sora 2 Pro:* Premium kalite (~$0.60/segment) ⭐\n"
+            "• *Sora 2:* Yüksek kalite (~$0.50/segment)\n"
             "• *Kling 2.6:* Dengeli kalite/fiyat (~$0.30/segment)\n"
-            "• *Sora 2:* En yüksek kalite (~$0.50/segment)\n"
             "• *Veo 2:* Hızlı üretim (~$0.20/segment)\n"
             "• *Wan 2.1:* Uzun segment desteği (~$0.15/segment)",
             reply_markup=InlineKeyboardMarkup(keyboard),
