@@ -25,7 +25,7 @@ from app.database import (
     get_recent_prompts, get_top_performing_prompts, get_prompt_style_stats
 )
 from app.config import settings
-from app.video_models import VIDEO_MODELS, get_model_config, get_model_durations
+from app.video_models import VIDEO_MODELS, get_model_config, get_model_durations, get_max_duration
 from app.video_styles import VIDEO_STYLES, STYLE_CATEGORIES, get_style_config, get_styles_by_category
 
 # Global değişkenler
@@ -906,24 +906,27 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
 
         elif video_type == "long":
-            # Uzun video: model parametresinde duration:model formatı var
-            long_parts = model.split("_dur_")
+            # Uzun video: model parametresinde segment_seg_model formatı var
+            long_parts = model.split("_seg_")
             if len(long_parts) == 2:
-                duration = int(long_parts[0])
+                segment_count = int(long_parts[0])
                 model_id = long_parts[1]
             else:
-                duration = 30
+                segment_count = 2
                 model_id = model
 
             config = get_model_config(model_id)
+            max_duration = get_max_duration(model_id)
+            total_duration = segment_count * max_duration
+
             keyboard = [
-                [InlineKeyboardButton("🎲 Otomatik Konu", callback_data=f"long_topic:{duration}:{model_id}:{style_id}:auto")],
-                [InlineKeyboardButton("✏️ Manuel Konu", callback_data=f"long_topic:{duration}:{model_id}:{style_id}:manual")],
-                [InlineKeyboardButton("◀️ Geri", callback_data=f"long_model:{duration}:{model_id}")]
+                [InlineKeyboardButton("🎲 Otomatik Konu", callback_data=f"long_topic:{segment_count}:{model_id}:{style_id}:auto")],
+                [InlineKeyboardButton("✏️ Manuel Konu", callback_data=f"long_topic:{segment_count}:{model_id}:{style_id}:manual")],
+                [InlineKeyboardButton("◀️ Geri", callback_data=f"long_model:{segment_count}:{model_id}")]
             ]
             await query.edit_message_text(
                 f"🎥 *Uzun Video*\n\n"
-                f"⏱️ Süre: {duration}s\n"
+                f"🎬 Segment: {segment_count}x{max_duration}s = {total_duration}s\n"
                 f"📹 Model: {config.get('name', model_id)}\n"
                 f"🎨 Stil: {style_name}\n\n"
                 "📝 Konu seçimi:",
@@ -1312,41 +1315,44 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif action == "create_long_video":
         keyboard = [
             [
-                InlineKeyboardButton("⏱️ 20 saniye", callback_data="long_duration:20"),
-                InlineKeyboardButton("⏱️ 30 saniye", callback_data="long_duration:30")
+                InlineKeyboardButton("2️⃣ 2 Segment", callback_data="long_segments:2"),
+                InlineKeyboardButton("3️⃣ 3 Segment", callback_data="long_segments:3")
             ],
             [InlineKeyboardButton("◀️ Ana Menü", callback_data="main_menu")]
         ]
         await query.edit_message_text(
             "🎥 *UZUN VIDEO*\n\n"
             "Multi-segment video pipeline.\n"
-            "2-3 segment paralel üretilip birleştirilir.\n\n"
-            "💰 *Maliyet:* ~$0.60-$1.50\n"
-            "⏳ *Süre:* ~4-5 dakika\n\n"
-            "⏱️ *Süre seçin:*",
+            "Segmentler paralel üretilip birleştirilir.\n\n"
+            "📊 *Segment süreleri modele göre değişir:*\n"
+            "• Sora 2/Pro: 12s/segment\n"
+            "• Kling 2.6: 10s/segment\n"
+            "• Veo 2: 8s/segment\n"
+            "• Wan 2.1: 15s/segment\n\n"
+            "🎬 *Segment sayısı seçin:*",
             reply_markup=InlineKeyboardMarkup(keyboard),
             parse_mode="Markdown"
         )
 
-    elif action.startswith("long_duration:"):
-        duration = int(action.split(":")[1])
-        segment_count = duration // 10
+    elif action.startswith("long_segments:"):
+        segment_count = int(action.split(":")[1])
+        # Model butonlarında süre bilgisi göster
         keyboard = [
             [
-                InlineKeyboardButton("⭐ Sora 2 Pro", callback_data=f"long_model:{duration}:sora-2-pro"),
-                InlineKeyboardButton("🌟 Sora 2", callback_data=f"long_model:{duration}:sora-2")
+                InlineKeyboardButton(f"⭐ Sora 2 Pro ({segment_count}x12s={segment_count*12}s)", callback_data=f"long_model:{segment_count}:sora-2-pro"),
+                InlineKeyboardButton(f"🌟 Sora 2 ({segment_count}x12s={segment_count*12}s)", callback_data=f"long_model:{segment_count}:sora-2")
             ],
             [
-                InlineKeyboardButton("🎬 Kling 2.6", callback_data=f"long_model:{duration}:kling-2.6-pro"),
-                InlineKeyboardButton("🎯 Veo 2", callback_data=f"long_model:{duration}:veo-2")
+                InlineKeyboardButton(f"🎬 Kling 2.6 ({segment_count}x10s={segment_count*10}s)", callback_data=f"long_model:{segment_count}:kling-2.6-pro"),
+                InlineKeyboardButton(f"🎯 Veo 2 ({segment_count}x8s={segment_count*8}s)", callback_data=f"long_model:{segment_count}:veo-2")
             ],
             [
-                InlineKeyboardButton("🌊 Wan 2.1", callback_data=f"long_model:{duration}:wan-2.1")
+                InlineKeyboardButton(f"🌊 Wan 2.1 ({segment_count}x15s={segment_count*15}s)", callback_data=f"long_model:{segment_count}:wan-2.1")
             ],
             [InlineKeyboardButton("◀️ Geri", callback_data="create_long_video")]
         ]
         await query.edit_message_text(
-            f"🎥 *UZUN VIDEO* - {duration}s ({segment_count} segment)\n\n"
+            f"🎥 *UZUN VIDEO* - {segment_count} Segment\n\n"
             "🎬 *Model seçin:*\n\n"
             "• *⭐ Sora 2 Pro:* Premium kalite (~$0.60/segment) ⭐\n"
             "• *Sora 2:* Yüksek kalite (~$0.50/segment)\n"
@@ -1359,25 +1365,27 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif action.startswith("long_model:"):
         parts = action.split(":")
-        duration = int(parts[1])
+        segment_count = int(parts[1])
         model_id = parts[2]
         model_config = get_model_config(model_id)
         model_name = model_config.get("name", model_id)
+        max_duration = get_max_duration(model_id)
+        total_duration = segment_count * max_duration
 
         # Stil kategorisi seçim menüsü göster
         keyboard = []
         for cat_id, cat_info in STYLE_CATEGORIES.items():
-            # Model parametresinde duration_dur_model formatı kullan
+            # Model parametresinde segment_seg_model formatı kullan
             keyboard.append([InlineKeyboardButton(
                 cat_info["name"],
-                callback_data=f"style_cat:{duration}_dur_{model_id}:{cat_id}:long"
+                callback_data=f"style_cat:{segment_count}_seg_{model_id}:{cat_id}:long"
             )])
-        keyboard.append([InlineKeyboardButton("◀️ Geri", callback_data=f"long_duration:{duration}")])
+        keyboard.append([InlineKeyboardButton("◀️ Geri", callback_data=f"long_segments:{segment_count}")])
 
         await query.edit_message_text(
             f"🎥 *Uzun Video*\n\n"
-            f"⏱️ Süre: {duration}s\n"
-            f"🎬 Model: {model_name}\n\n"
+            f"🎬 Segment: {segment_count}x{max_duration}s = {total_duration}s\n"
+            f"📹 Model: {model_name}\n\n"
             "🎨 *Görsel stil kategorisi seç:*",
             reply_markup=InlineKeyboardMarkup(keyboard),
             parse_mode="Markdown"
@@ -1385,28 +1393,29 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif action.startswith("long_topic:"):
         parts = action.split(":")
-        duration = int(parts[1])
+        segment_count = int(parts[1])
         model_id = parts[2]
 
         # Format kontrolü
         if len(parts) >= 5:
-            # Yeni format: long_topic:{duration}:{model_id}:{style_id}:{auto|manual}
+            # Yeni format: long_topic:{segment_count}:{model_id}:{style_id}:{auto|manual}
             style_id = parts[3]
             topic_mode = parts[4]
         else:
-            # Eski format: long_topic:{duration}:{model_id}:{auto|manual}
+            # Eski format: long_topic:{segment_count}:{model_id}:{auto|manual}
             style_id = "cinematic_4k"
             topic_mode = parts[3]
 
-        segment_count = duration // 10
+        max_duration = get_max_duration(model_id)
+        total_duration = segment_count * max_duration
         style_config = get_style_config(style_id)
         style_name = f"{style_config['emoji']} {style_config['name']}"
 
         if topic_mode == "auto":
             await query.edit_message_text(
                 f"🎥 *UZUN VIDEO* başlatılıyor...\n\n"
-                f"⏱️ *Süre:* {duration}s ({segment_count} segment)\n"
-                f"🎬 *Model:* {model_id}\n"
+                f"🎬 *Segment:* {segment_count}x{max_duration}s = {total_duration}s\n"
+                f"📹 *Model:* {model_id}\n"
                 f"🎨 *Stil:* {style_name}\n"
                 f"📝 *Konu:* Otomatik\n\n"
                 "Pipeline aşamaları:\n"
@@ -1423,13 +1432,13 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 parse_mode="Markdown"
             )
             asyncio.create_task(pipeline.run_long_video_pipeline(
-                total_duration=duration,
+                segment_count=segment_count,
                 model_id=model_id,
                 visual_style=style_id
             ))
         else:
             pending_input["type"] = "long_video_manual"
-            pending_input["duration"] = duration
+            pending_input["segment_count"] = segment_count
             pending_input["model_id"] = model_id
             pending_input["visual_style"] = style_id
             pending_input["user_id"] = query.from_user.id
@@ -2359,20 +2368,21 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
-        duration = pending_input.get("duration", 30)
+        segment_count = pending_input.get("segment_count", 2)
         model_id = pending_input.get("model_id", "kling-2.6-pro")
         visual_style = pending_input.get("visual_style", "cinematic_4k")
-        segment_count = duration // 10
         pending_input.clear()
 
         model_config = get_model_config(model_id)
         model_name = model_config.get("name", model_id)
+        max_duration = get_max_duration(model_id)
+        total_duration = segment_count * max_duration
 
         await update.message.reply_text(
             f"🎥 *UZUN VIDEO* başlatılıyor...\n\n"
             f"📝 *Konu:* {escape_markdown(topic[:60])}{'...' if len(topic) > 60 else ''}\n"
-            f"⏱️ *Süre:* {duration}s ({segment_count} segment)\n"
-            f"🎬 *Model:* {model_name}\n\n"
+            f"🎬 *Segment:* {segment_count}x{max_duration}s = {total_duration}s\n"
+            f"📹 *Model:* {model_name}\n\n"
             "Pipeline aşamaları:\n"
             "1️⃣ Konu işleme\n"
             "2️⃣ Caption üretimi\n"
@@ -2389,7 +2399,7 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         asyncio.create_task(pipeline.run_long_video_pipeline(
             topic=topic,
-            total_duration=duration,
+            segment_count=segment_count,
             model_id=model_id,
             manual_topic_mode=True,
             visual_style=visual_style

@@ -2601,8 +2601,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
     async def run_long_video_pipeline(
         self,
         topic: str = None,
-        total_duration: int = 30,
-        segment_duration: int = 10,
+        segment_count: int = 2,
         model_id: str = "kling-2.6-pro",
         transition_type: str = "crossfade",
         transition_duration: float = 0.5,
@@ -2612,13 +2611,13 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
         """
         Multi-segment uzun video pipeline.
 
-        Birden fazla video segmenti üretip birleştirerek 20-60 saniyelik
-        uzun videolar oluşturur.
+        Birden fazla video segmenti üretip birleştirerek uzun videolar oluşturur.
+        Segment süresi modele göre dinamik belirlenir.
 
         Pipeline Akışı:
         1. Konu seçimi (Planner/Creator)
         2. Caption üretimi (Creator)
-        3. Speech script üretimi (30s için)
+        3. Speech script üretimi
         4. TTS ses üretimi (ElevenLabs)
         5. Multi-scene prompt üretimi (Creator)
         6. Paralel video üretimi (N segment)
@@ -2629,8 +2628,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
 
         Args:
             topic: Konu (None ise Planner'dan alınır)
-            total_duration: Toplam video süresi (20-60 saniye)
-            segment_duration: Her segment süresi (10 saniye default)
+            segment_count: Segment sayısı (2-6 arası, default 2)
             model_id: Video model ID (kling-2.6-pro, sora-2, veo-2, wan-2.1)
             transition_type: Geçiş tipi (crossfade, cut)
             transition_duration: Crossfade süresi (0.5s default)
@@ -2648,17 +2646,15 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
         from app.elevenlabs_helper import ElevenLabsHelper
         from app.database.crud import create_post, update_post
 
-        # Model'in max süresine göre segment duration'ı dinamik ayarla
-        model_max_duration = get_max_duration(model_id)
-        actual_segment_duration = min(segment_duration, model_max_duration)
+        # Model'in max süresine göre segment süresi belirlenir
+        actual_segment_duration = get_max_duration(model_id)
 
-        # Segment sayısını hesapla (yeni segment süresine göre)
-        segment_count = max(2, min(6, total_duration // actual_segment_duration))
+        # Segment sayısını doğrula (2-6 arası)
+        segment_count = max(2, min(6, segment_count))
         actual_total_duration = segment_count * actual_segment_duration
 
         self.log(f"🎬 UZUN VIDEO: Pipeline başlatılıyor...")
-        self.log(f"   Model max süre: {model_max_duration}s → Segment: {actual_segment_duration}s")
-        self.log(f"   Toplam süre: {actual_total_duration}s ({segment_count} segment x {actual_segment_duration}s)")
+        self.log(f"   Segment: {segment_count}x{actual_segment_duration}s = {actual_total_duration}s")
         self.log(f"   Model: {model_id}")
         self.log(f"   Geçiş: {transition_type} ({transition_duration}s)")
         self.state = PipelineState.PLANNING
