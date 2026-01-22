@@ -89,7 +89,7 @@ async def trim_audio_with_fadeout(
         return audio_path
 
 
-def shorten_script(script: str, target_duration: float, words_per_second: float = 2.5) -> str:
+def shorten_script(script: str, target_duration: float, words_per_second: float = 1.8) -> str:
     """
     Script'i hedef süreye göre kısalt.
 
@@ -98,7 +98,7 @@ def shorten_script(script: str, target_duration: float, words_per_second: float 
     Args:
         script: Orijinal script
         target_duration: Hedef süre (saniye)
-        words_per_second: Ortalama konuşma hızı
+        words_per_second: Ortalama konuşma hızı (1.8 wps - ElevenLabs Türkçe TTS ölçümü)
 
     Returns:
         Kısaltılmış script

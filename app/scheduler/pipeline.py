@@ -2736,8 +2736,8 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             # ========== AŞAMA 3: Speech Script Üretimi ==========
             self.log(f"[LONG VIDEO] Aşama 3: Voiceover scripti üretiliyor ({actual_total_duration}s)...")
 
-            # Kelime hedefi: ~1.9 kelime/saniye (ElevenLabs gerçek ölçümü)
-            target_words = int(actual_total_duration * 1.9)
+            # Kelime hedefi: ~1.8 kelime/saniye (ElevenLabs Türkçe TTS gerçek ölçümü)
+            target_words = int(actual_total_duration * 1.8)
 
             speech_result = await self.creator.execute({
                 "action": "create_speech_script",
@@ -2784,6 +2784,14 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             self.log(f"[LONG VIDEO] Ses üretildi: {audio_duration:.1f}s")
             result["stages_completed"].append("tts_generation")
             result["audio_duration"] = audio_duration
+
+            # Post-TTS süre validasyonu
+            min_acceptable_duration = actual_total_duration * 0.85  # %15 tolerans
+            if audio_duration < min_acceptable_duration:
+                duration_deficit = actual_total_duration - audio_duration
+                deficit_percent = (duration_deficit / actual_total_duration) * 100
+                self.log(f"⚠️ [LONG VIDEO] Audio süre uyumsuzluğu: {audio_duration:.1f}s / {actual_total_duration}s (-%{deficit_percent:.0f})")
+                self.log(f"⚠️ [LONG VIDEO] Video sonunda ~{duration_deficit:.1f}s sessizlik olacak!")
 
             # ========== AŞAMA 5: Multi-Scene Prompt Üretimi ==========
             self.log(f"[LONG VIDEO] Aşama 5: {segment_count} sahne promptu üretiliyor...")

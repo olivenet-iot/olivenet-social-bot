@@ -2365,8 +2365,8 @@ Sonuç ve CTA. Takip et, kaydet veya düşündürücü soru.
         # Pipeline'dan gelen target_words'u kullan (varsa)
         target_words = input_data.get("target_words")
         if not target_words:
-            # Fallback: süre bazlı hesapla (~1.9 kelime/saniye - ElevenLabs gerçek ölçümü)
-            target_words = int(target_duration * 1.9)
+            # Fallback: süre bazlı hesapla (~1.8 kelime/saniye - ElevenLabs Türkçe TTS gerçek ölçümü)
+            target_words = int(target_duration * 1.8)
 
         # Long video için segment bilgisi (opsiyonel)
         segment_count = input_data.get("segment_count")
@@ -2475,18 +2475,27 @@ Sadece JSON döndür.
         try:
             result = json.loads(self._clean_json_response(response))
 
-            # Kelime sayısı kontrolü
+            # Kelime sayısı kontrolü (min/max)
             script = result.get("speech_script", "")
             actual_words = len(script.split())
 
-            if actual_words > target_words * 1.3:  # %30 tolerans
+            # Minimum kontrol: %85 altıysa uzat
+            if actual_words < target_words * 0.85:
+                self.log(f"⚠️ Script çok kısa ({actual_words} kelime, hedef: {target_words}), uzatılıyor...")
+                script = await self._extend_speech_script(script, target_words, topic)
+                result["speech_script"] = script
+                result["word_count"] = len(script.split())
+                actual_words = result["word_count"]
+
+            # Maksimum kontrol: %115 üstündeyse kısalt
+            if actual_words > target_words * 1.15:
                 self.log(f"⚠️ Script çok uzun ({actual_words} kelime), kısaltılıyor...")
                 script = await self._shorten_speech_script(script, target_words)
                 result["speech_script"] = script
                 result["word_count"] = len(script.split())
 
-            # Süre tahmini güncelle
-            result["estimated_duration"] = len(script.split()) / 2.5
+            # Süre tahmini güncelle (1.8 wps - ElevenLabs Türkçe TTS gerçek ölçümü)
+            result["estimated_duration"] = len(script.split()) / 1.8
 
             # Post'u güncelle
             if post_id:
@@ -2547,6 +2556,44 @@ SCRIPT:
 {script}
 
 Sadece kısaltılmış scripti döndür, başka bir şey ekleme.
+"""
+
+        response = await self.call_claude(prompt, timeout=30)
+        return response.strip()
+
+    async def _extend_speech_script(self, script: str, target_words: int, topic: str) -> str:
+        """
+        Voiceover scriptini uzat (kısa kaldığında).
+
+        Args:
+            script: Uzatılacak script
+            target_words: Hedef kelime sayısı
+            topic: Konu (bağlam için)
+
+        Returns:
+            Uzatılmış script
+        """
+        current_words = len(script.split())
+        words_to_add = target_words - current_words
+
+        prompt = f"""
+Aşağıdaki voiceover scripti çok kısa. {target_words} kelimeye uzat.
+
+MEVCUT SCRIPT ({current_words} kelime):
+{script}
+
+KONU: {topic}
+
+KURALLAR:
+- Hook'u (ilk cümleyi) AYNEN koru
+- CTA'yı (son cümleyi) AYNEN koru
+- Ortaya {words_to_add} kelime daha ekle
+- Konuyla ilgili 1-2 ek bilgi veya örnek ekle
+- Doğal konuşma dili kullan
+- Kısa cümleler (max 10-12 kelime)
+- Emoji kullanma
+
+Sadece uzatılmış scripti döndür, başka bir şey ekleme.
 """
 
         response = await self.call_claude(prompt, timeout=30)
