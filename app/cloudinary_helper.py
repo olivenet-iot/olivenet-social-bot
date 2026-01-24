@@ -140,6 +140,67 @@ async def delete_from_cloudinary(public_id: str) -> Dict[str, Any]:
         return {"success": False, "error": str(e)}
 
 
+async def upload_image_to_cloudinary(image_path: str, folder: str = "olivenet-images") -> Dict[str, Any]:
+    """
+    Görseli Cloudinary'ye yükle.
+    Instagram carousel için public URL gerekli.
+
+    Args:
+        image_path: Yerel görsel dosyası yolu (PNG, JPG)
+        folder: Cloudinary klasörü
+
+    Returns:
+        {"success": True, "url": "https://...", "public_id": "..."}
+    """
+
+    if not configure_cloudinary():
+        return {"success": False, "error": "Cloudinary not configured"}
+
+    if not os.path.exists(image_path):
+        print(f"[CLOUDINARY] Görsel dosya bulunamadı: {image_path}")
+        return {"success": False, "error": f"File not found: {image_path}"}
+
+    file_size = os.path.getsize(image_path) / 1024 / 1024
+    print(f"[CLOUDINARY] Görsel yükleniyor: {image_path}")
+    print(f"[CLOUDINARY] Boyut: {file_size:.2f} MB")
+
+    try:
+        import cloudinary.uploader
+
+        loop = asyncio.get_event_loop()
+
+        def do_upload():
+            return cloudinary.uploader.upload(
+                image_path,
+                resource_type="image",
+                folder=folder,
+                overwrite=True,
+                format="jpg",  # Instagram için JPEG'e dönüştür
+                quality="auto:best"
+            )
+
+        result = await loop.run_in_executor(None, do_upload)
+
+        secure_url = result.get("secure_url")
+        public_id = result.get("public_id")
+
+        print(f"[CLOUDINARY] Görsel yükleme başarılı!")
+        print(f"[CLOUDINARY] URL: {secure_url}")
+
+        return {
+            "success": True,
+            "url": secure_url,
+            "public_id": public_id,
+            "width": result.get("width"),
+            "height": result.get("height"),
+            "format": result.get("format", "jpg")
+        }
+
+    except Exception as e:
+        print(f"[CLOUDINARY] Görsel yükleme hatası: {str(e)}")
+        return {"success": False, "error": str(e)}
+
+
 async def upload_audio_to_cloudinary(audio_path: str, folder: str = "olivenet-audio") -> Dict[str, Any]:
     """
     Audio dosyasini Cloudinary'ye yukle.

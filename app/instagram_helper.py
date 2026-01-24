@@ -1255,7 +1255,8 @@ async def post_carousel_to_instagram(
 
 async def upload_image_to_cdn(local_path: str) -> Optional[str]:
     """
-    Lokal görseli CDN'e yükle ve public URL döndür
+    Lokal görseli CDN'e yükle ve public URL döndür.
+    Cloudinary tercih edilir (daha güvenilir), imgBB fallback.
 
     Args:
         local_path: Lokal dosya yolu
@@ -1263,9 +1264,29 @@ async def upload_image_to_cdn(local_path: str) -> Optional[str]:
     Returns:
         Public URL veya None
     """
+    if not os.path.exists(local_path):
+        print(f"[INSTAGRAM] Dosya bulunamadı: {local_path}")
+        return None
+
+    # Önce Cloudinary dene (daha güvenilir Instagram entegrasyonu)
+    try:
+        from app.cloudinary_helper import upload_image_to_cloudinary, CLOUDINARY_CLOUD_NAME
+
+        if CLOUDINARY_CLOUD_NAME:
+            result = await upload_image_to_cloudinary(local_path)
+            if result.get("success"):
+                url = result["url"]
+                print(f"[INSTAGRAM] Görsel yüklendi (Cloudinary): {url}")
+                return url
+            else:
+                print(f"[INSTAGRAM] Cloudinary hatası: {result.get('error')}, imgBB'ye fallback...")
+    except Exception as e:
+        print(f"[INSTAGRAM] Cloudinary import hatası: {e}, imgBB'ye fallback...")
+
+    # imgBB fallback
     imgbb_key = os.getenv("IMGBB_API_KEY")
 
-    if imgbb_key and os.path.exists(local_path):
+    if imgbb_key:
         try:
             import base64
 
@@ -1284,7 +1305,7 @@ async def upload_image_to_cdn(local_path: str) -> Optional[str]:
 
                     if result.get("success"):
                         url = result["data"]["url"]
-                        print(f"[INSTAGRAM] Görsel yüklendi: {url}")
+                        print(f"[INSTAGRAM] Görsel yüklendi (imgBB): {url}")
                         return url
                     else:
                         print(f"[INSTAGRAM] Imgbb error: {result}")
