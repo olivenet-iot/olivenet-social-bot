@@ -2365,8 +2365,8 @@ Sonuç ve CTA. Takip et, kaydet veya düşündürücü soru.
         # Pipeline'dan gelen target_words'u kullan (varsa)
         target_words = input_data.get("target_words")
         if not target_words:
-            # Fallback: süre bazlı hesapla (~1.8 kelime/saniye - ElevenLabs Türkçe TTS gerçek ölçümü)
-            target_words = int(target_duration * 1.8)
+            # Fallback: süre bazlı hesapla (~2.0 kelime/saniye - daha uzun TTS için artırıldı)
+            target_words = int(target_duration * 2.0)
 
         # Long video için segment bilgisi (opsiyonel)
         segment_count = input_data.get("segment_count")
@@ -2479,8 +2479,8 @@ Sadece JSON döndür.
             script = result.get("speech_script", "")
             actual_words = len(script.split())
 
-            # Minimum kontrol: %85 altıysa uzat
-            if actual_words < target_words * 0.85:
+            # Minimum kontrol: %95 altıysa uzat
+            if actual_words < target_words * 0.95:
                 self.log(f"⚠️ Script çok kısa ({actual_words} kelime, hedef: {target_words}), uzatılıyor...")
                 script = await self._extend_speech_script(script, target_words, topic)
                 result["speech_script"] = script
@@ -2494,8 +2494,8 @@ Sadece JSON döndür.
                 result["speech_script"] = script
                 result["word_count"] = len(script.split())
 
-            # Süre tahmini güncelle (1.8 wps - ElevenLabs Türkçe TTS gerçek ölçümü)
-            result["estimated_duration"] = len(script.split()) / 1.8
+            # Süre tahmini güncelle (2.0 wps - daha uzun TTS için artırıldı)
+            result["estimated_duration"] = len(script.split()) / 2.0
 
             # Post'u güncelle
             if post_id:

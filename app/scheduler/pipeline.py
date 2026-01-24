@@ -2736,8 +2736,8 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             # ========== AŞAMA 3: Speech Script Üretimi ==========
             self.log(f"[LONG VIDEO] Aşama 3: Voiceover scripti üretiliyor ({actual_total_duration}s)...")
 
-            # Kelime hedefi: ~1.8 kelime/saniye (ElevenLabs Türkçe TTS gerçek ölçümü)
-            target_words = int(actual_total_duration * 1.8)
+            # Kelime hedefi: ~2.0 kelime/saniye (daha uzun TTS için artırıldı)
+            target_words = int(actual_total_duration * 2.0)
 
             speech_result = await self.creator.execute({
                 "action": "create_speech_script",
@@ -2790,8 +2790,44 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             if audio_duration < min_acceptable_duration:
                 duration_deficit = actual_total_duration - audio_duration
                 deficit_percent = (duration_deficit / actual_total_duration) * 100
-                self.log(f"⚠️ [LONG VIDEO] Audio süre uyumsuzluğu: {audio_duration:.1f}s / {actual_total_duration}s (-%{deficit_percent:.0f})")
-                self.log(f"⚠️ [LONG VIDEO] Video sonunda ~{duration_deficit:.1f}s sessizlik olacak!")
+                self.log(f"⚠️ [LONG VIDEO] Audio kısa ({audio_duration:.1f}s / {actual_total_duration}s), script uzatılıyor...")
+
+                # Script'i uzat (daha agresif hedef: 2.0 WPS)
+                extended_target_words = int(actual_total_duration * 2.0)
+                extended_result = await self.creator.execute({
+                    "action": "create_speech_script",
+                    "topic": topic,
+                    "target_duration": actual_total_duration,
+                    "target_words": extended_target_words,
+                    "segment_count": segment_count,
+                    "segment_duration": actual_segment_duration,
+                    "tone": "friendly",
+                    "post_id": post_id
+                })
+
+                if extended_result.get("success") and extended_result.get("speech_script"):
+                    extended_script = extended_result["speech_script"]
+                    self.log(f"✅ Script uzatıldı: {len(extended_script.split())} kelime")
+
+                    # TTS'i yeniden üret (aynı fonksiyon)
+                    new_tts_result = await generate_speech_with_retry(
+                        text=extended_script,
+                        max_retries=3
+                    )
+
+                    if new_tts_result.get("success"):
+                        audio_path = new_tts_result.get("audio_path")
+                        new_audio_duration = await get_audio_duration(audio_path)
+                        self.log(f"✅ Yeni audio: {new_audio_duration:.1f}s")
+
+                        # Değişkenleri güncelle
+                        audio_duration = new_audio_duration
+                        speech_script = extended_script
+                        result["audio_duration"] = audio_duration
+                    else:
+                        self.log(f"⚠️ TTS retry başarısız, orijinal audio kullanılacak")
+                else:
+                    self.log(f"⚠️ Script extension başarısız, orijinal audio kullanılacak")
 
             # ========== AŞAMA 5: Multi-Scene Prompt Üretimi ==========
             self.log(f"[LONG VIDEO] Aşama 5: {segment_count} sahne promptu üretiliyor...")
