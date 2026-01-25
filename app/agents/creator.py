@@ -3059,12 +3059,12 @@ Sadece JSON döndür.
         brand_voice = self.load_context("social-media-expert.md")
 
         # Calculate word targets for Sora 2 / Sora 2 Pro native speech
-        # Her iki Sora modeli de konuşmayı yavaş üretir ve timing kontrolü zayıf
-        # 5 saniye buffer: son bölüm tamamen sessiz reaction shot olmalı
-        dialog_buffer = 5
-        effective_dialog_duration = target_duration - dialog_buffer  # 12s video için 7s dialog
-        dialog_words = int(effective_dialog_duration * 1.3)  # ~1.3 kelime/saniye (güvenli)
-        # 12s video: 7s * 1.3 = ~9 kelime toplam (çok kısa, net dialog)
+        # Sora konuşma hızı tutarsız (1.2-1.8 kelime/sn arası değişiyor)
+        # 3.5 saniye buffer: yeterli sessiz kapanış için
+        dialog_buffer = 3.5
+        effective_dialog_duration = target_duration - dialog_buffer  # 12s video için 8.5s dialog
+        dialog_words = int(effective_dialog_duration * 1.5)  # ~1.5 kelime/saniye (dengeli)
+        # 12s video: 8.5s * 1.5 = ~13 kelime toplam (4 satır dialog için uygun)
 
         # Dynamic B-roll word limit based on expected video duration
         # Default: 8s video, 1.5s delay, 0.5s buffer = 6s available
@@ -3101,20 +3101,21 @@ Ses tipi: {voice_type}
 **DIALOG YAPISI (ZORUNLU):**
 - ERKEK (speaker: "male"): Problem/soru sorar (merakli, endiseli)
 - KADIN (speaker: "female"): Cozum sunar (guvenli, bilgili)
-- SADECE 3 satir dialog (fazla YASAK!)
+- 3-4 satir dialog (doğal akış için)
 - Satır 1 (male): 3-5 kelime - problem/soru
-- Satır 2 (female): 4-6 kelime - çözüm
-- Satır 3 (male veya female): SADECE 1-2 KELİME! (örn: "Süper!", "Teşekkürler!")
-- Toplam MAKSIMUM {dialog_words} kelime
+- Satır 2 (female): 5-7 kelime - çözüm başlangıcı
+- Satır 3 (male): 2-4 kelime - tepki/soru
+- Satır 4 (female): 2-3 kelime - kapanış (örn: "Aynen öyle!", "Kesinlikle!")
+- Toplam MAKSIMUM {dialog_words} kelime (~13 kelime)
 - EMOJI KULLANMA
 
 **⚠️ KRİTİK TIMING - SORA 2 / SORA 2 PRO NATIVE SPEECH İÇİN:**
 - Video süresi: {target_duration} saniye
-- TÜM KONUŞMA {effective_dialog_duration}. saniyede BİTMELİ (saniye {effective_dialog_duration}'den sonra SES YOK!)
-- Son {dialog_buffer} saniye ({effective_dialog_duration}-{target_duration}): TAMAMEN SESSİZ
-- Sessiz bölümde: gülümseme, baş sallama, memnun bakışlar
-- SON SATIR KRİTİK: Maksimum 2 kelime! ("Harika!", "Anladım!", "Süper!")
-- Uzun son satır = KESİK SES = BAŞARISIZ VİDEO
+- Dialog 8-9. saniyeye kadar devam etmeli (çok erken bitmesin!)
+- TÜM KONUŞMA en geç {effective_dialog_duration:.0f}. saniyede BİTMELİ
+- Son {dialog_buffer:.0f} saniye: sessiz kapanış (gülümseme, baş sallama)
+- Son satır kısa tutulmalı: 2-3 kelime
+- Doğal kapanış önemli - ani kesme olmamalı
 
 **KARAKTER TON:**
 - ERKEK: Merakli, problem odakli, samimi, endiseli
@@ -3254,30 +3255,33 @@ Sadece JSON döndür.
                 last_line_text = dialog_lines[-1].get("text", "")
                 last_line_words = len(last_line_text.split())
 
-                if last_line_words > 2:
+                if last_line_words > 3:
                     self.log(f"⚠️ Son satır çok uzun ({last_line_words} kelime: '{last_line_text}'), kısaltılıyor...")
                     import random
-                    short_endings = ["Teşekkürler!", "Harika!", "Süper!", "Mükemmel!", "Anladım!", "Tamam!"]
+                    short_endings = ["Aynen öyle!", "Kesinlikle!", "Harika!", "Teşekkürler!", "Süper!", "Mükemmel!"]
                     dialog_lines[-1]["text"] = random.choice(short_endings)
                     result["dialog_lines"] = dialog_lines
                     self.log(f"   → Yeni son satır: '{dialog_lines[-1]['text']}'")
 
-            # Validate total word count doesn't exceed safe limit
+            # Validate total word count (min and max)
             total_words = sum(len(line.get("text", "").split()) for line in dialog_lines)
-            safe_max_words = int((target_duration - 5) * 1.3)  # Conservative limit for Sora
+            safe_min_words = int((target_duration - 3.5) * 1.2)  # Minimum for natural dialog
+            safe_max_words = int((target_duration - 3.5) * 1.8)  # Maximum for Sora timing
+
+            if total_words < safe_min_words:
+                self.log(f"⚠️ Dialog çok kısa ({total_words} kelime, min: {safe_min_words}) - Sora'da boşluk kalabilir")
 
             if total_words > safe_max_words:
-                self.log(f"⚠️ Dialog toplam kelime sayısı çok yüksek ({total_words}, max: {safe_max_words})")
-                # Log warning but continue - Sora might still handle it
+                self.log(f"⚠️ Dialog çok uzun ({total_words} kelime, max: {safe_max_words}) - Sora kesebilir")
 
-            # Validate line count (max 3 for tight timing with Sora models)
-            if len(dialog_lines) > 3:
-                self.log(f"⚠️ Çok fazla dialog satırı ({len(dialog_lines)}), ilk 3'e kısaltılıyor...")
-                result["dialog_lines"] = dialog_lines[:3]
-                # Ensure last line is still short
-                if len(result["dialog_lines"][-1].get("text", "").split()) > 2:
+            # Validate line count (max 4 for balanced timing with Sora models)
+            if len(dialog_lines) > 4:
+                self.log(f"⚠️ Çok fazla dialog satırı ({len(dialog_lines)}), ilk 4'e kısaltılıyor...")
+                result["dialog_lines"] = dialog_lines[:4]
+                # Ensure last line is reasonably short
+                if len(result["dialog_lines"][-1].get("text", "").split()) > 3:
                     import random
-                    short_endings = ["Teşekkürler!", "Harika!", "Süper!"]
+                    short_endings = ["Aynen öyle!", "Kesinlikle!", "Harika!", "Teşekkürler!"]
                     result["dialog_lines"][-1]["text"] = random.choice(short_endings)
 
             # Style prefix validation - video_prompt için
