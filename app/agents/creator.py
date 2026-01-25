@@ -3059,12 +3059,12 @@ Sadece JSON döndür.
         brand_voice = self.load_context("social-media-expert.md")
 
         # Calculate word targets for Sora 2 / Sora 2 Pro native speech
-        # Sora konuşma hızı tutarsız (1.2-1.8 kelime/sn arası değişiyor)
-        # 3.5 saniye buffer: yeterli sessiz kapanış için
-        dialog_buffer = 3.5
-        effective_dialog_duration = target_duration - dialog_buffer  # 12s video için 8.5s dialog
-        dialog_words = int(effective_dialog_duration * 1.5)  # ~1.5 kelime/saniye (dengeli)
-        # 12s video: 8.5s * 1.5 = ~13 kelime toplam (4 satır dialog için uygun)
+        # Dialog satırları Sora'ya verilecek, daha uzun ve bilgilendirici olabilir
+        # 2.5 saniye buffer: kısa sessiz kapanış yeterli
+        dialog_buffer = 2.5
+        effective_dialog_duration = target_duration - dialog_buffer  # 12s video için 9.5s dialog
+        dialog_words = int(effective_dialog_duration * 2.2)  # ~2.2 kelime/saniye (Türkçe normal konuşma hızı)
+        # 12s video: 9.5s * 2.2 = ~21 kelime toplam (bilgilendirici dialog için uygun)
 
         # Dynamic B-roll word limit based on expected video duration
         # Default: 8s video, 1.5s delay, 0.5s buffer = 6s available
@@ -3098,23 +3098,29 @@ Ses tipi: {voice_type}
 
 ## FORMAT KURALLARI:
 
-**DIALOG YAPISI (ZORUNLU):**
-- ERKEK (speaker: "male"): Problem/soru sorar (merakli, endiseli)
-- KADIN (speaker: "female"): Cozum sunar (guvenli, bilgili)
-- 3-4 satir dialog (doğal akış için)
-- Satır 1 (male): 3-5 kelime - problem/soru
-- Satır 2 (female): 5-7 kelime - çözüm başlangıcı
-- Satır 3 (male): 2-4 kelime - tepki/soru
-- Satır 4 (female): 2-3 kelime - kapanış (örn: "Aynen öyle!", "Kesinlikle!")
-- Toplam MAKSIMUM {dialog_words} kelime (~13 kelime)
+**DIALOG YAPISI (BİLGİLENDİRİCİ VE AKICI):**
+- ERKEK (speaker: "male"): Somut problem anlatır (endişeli, dramatik)
+- KADIN (speaker: "female"): Detaylı çözüm açıklar (uzman, güvenilir)
+
+**4 SATIR ZORUNLU:**
+- Satır 1 (male): 6-8 kelime - SOMUT PROBLEM ("Dün motor durdu, iki gün üretim aksadı!")
+- Satır 2 (female): 8-10 kelime - ÇÖZÜM AÇIKLAMASI ("Titreşim sensörü bunu bir hafta önce tespit edebilirdi.")
+- Satır 3 (male): 2-4 kelime - MERAK/SORU ("Nasıl çalışıyor?" veya "Gerçekten mi?")
+- Satır 4 (female): 4-6 kelime - KISA AÇIKLAMA ("Anormal titreşimi algılayıp uyarı gönderiyor.")
+
+**İÇERİK KURALLARI:**
+- Satır 1: Rakam veya somut kayıp içermeli (para, zaman, üretim)
+- Satır 2: IoT/sensör çözümünü NET açıklamalı
+- Satır 4: Teknik detay veya fayda eklemeli (sadece "Evet" veya "Aynen" YASAK!)
+- Toplam: {dialog_words} kelime (~20-22 kelime)
 - EMOJI KULLANMA
 
 **⚠️ KRİTİK TIMING - SORA 2 / SORA 2 PRO NATIVE SPEECH İÇİN:**
 - Video süresi: {target_duration} saniye
-- Dialog 8-9. saniyeye kadar devam etmeli (çok erken bitmesin!)
+- Dialog doğal tempoda, 9-10. saniyeye kadar devam etmeli
 - TÜM KONUŞMA en geç {effective_dialog_duration:.0f}. saniyede BİTMELİ
-- Son {dialog_buffer:.0f} saniye: sessiz kapanış (gülümseme, baş sallama)
-- Son satır kısa tutulmalı: 2-3 kelime
+- Son {dialog_buffer:.0f} saniye: kısa sessiz kapanış (memnun bakışlar)
+- DİALOG SATIRLARI SORA'YA VERİLECEK - tam bu kelimeleri söyleyecek!
 - Doğal kapanış önemli - ani kesme olmamalı
 
 **KARAKTER TON:**
@@ -3255,7 +3261,7 @@ Sadece JSON döndür.
                 last_line_text = dialog_lines[-1].get("text", "")
                 last_line_words = len(last_line_text.split())
 
-                if last_line_words > 3:
+                if last_line_words > 6:
                     self.log(f"⚠️ Son satır çok uzun ({last_line_words} kelime: '{last_line_text}'), kısaltılıyor...")
                     import random
                     short_endings = ["Aynen öyle!", "Kesinlikle!", "Harika!", "Teşekkürler!", "Süper!", "Mükemmel!"]
@@ -3265,8 +3271,8 @@ Sadece JSON döndür.
 
             # Validate total word count (min and max)
             total_words = sum(len(line.get("text", "").split()) for line in dialog_lines)
-            safe_min_words = int((target_duration - 3.5) * 1.2)  # Minimum for natural dialog
-            safe_max_words = int((target_duration - 3.5) * 1.8)  # Maximum for Sora timing
+            safe_min_words = int((target_duration - 2.5) * 1.8)  # Minimum: ~17 kelime (12s video)
+            safe_max_words = int((target_duration - 2.5) * 2.5)  # Maximum: ~24 kelime (12s video)
 
             if total_words < safe_min_words:
                 self.log(f"⚠️ Dialog çok kısa ({total_words} kelime, min: {safe_min_words}) - Sora'da boşluk kalabilir")
@@ -3278,8 +3284,8 @@ Sadece JSON döndür.
             if len(dialog_lines) > 4:
                 self.log(f"⚠️ Çok fazla dialog satırı ({len(dialog_lines)}), ilk 4'e kısaltılıyor...")
                 result["dialog_lines"] = dialog_lines[:4]
-                # Ensure last line is reasonably short
-                if len(result["dialog_lines"][-1].get("text", "").split()) > 3:
+                # Ensure last line is reasonably short (4-6 words acceptable now)
+                if len(result["dialog_lines"][-1].get("text", "").split()) > 6:
                     import random
                     short_endings = ["Aynen öyle!", "Kesinlikle!", "Harika!", "Teşekkürler!"]
                     result["dialog_lines"][-1]["text"] = random.choice(short_endings)
@@ -3297,6 +3303,30 @@ Sadece JSON döndür.
                 if not broll_prompt.lower().startswith(style_prefix[:20].lower()):
                     self.log(f"[CONV] broll_prompt stil prefix ile başlamıyor, ekleniyor...")
                     result["broll_prompt"] = style_prefix + broll_prompt
+
+            # Inject actual dialog lines into video_prompt for Sora
+            # Sora needs exact dialogue to speak, not just general instructions
+            if dialog_lines and result.get("video_prompt"):
+                dialog_script = "\n".join([
+                    f"{'MALE' if line.get('speaker') == 'male' else 'FEMALE'}: \"{line.get('text', '')}\""
+                    for line in dialog_lines
+                ])
+
+                dialog_injection = f"""
+
+=== EXACT DIALOGUE - SORA MUST SAY THESE EXACT WORDS ===
+{dialog_script}
+
+CRITICAL INSTRUCTIONS:
+- Characters MUST speak these EXACT Turkish sentences
+- Do NOT improvise, do NOT change any words
+- Do NOT add extra dialogue
+- Speak at natural Turkish conversation pace (~2 words/second)
+- After the last line, characters smile and nod - NO MORE SPEECH
+============================================================
+"""
+                result["video_prompt"] = result["video_prompt"] + dialog_injection
+                self.log(f"[CONV] Dialog satırları video_prompt'a eklendi ({len(dialog_lines)} satır, {sum(len(l.get('text','').split()) for l in dialog_lines)} kelime)")
 
             # Log action
             log_agent_action(
