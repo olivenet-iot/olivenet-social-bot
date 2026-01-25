@@ -3058,10 +3058,13 @@ Sadece JSON döndür.
         company_profile = self.load_context("company-profile.md")
         brand_voice = self.load_context("social-media-expert.md")
 
-        # Calculate word targets for Sora native speech
-        # Sora konuşmayı daha yavaş üretir, 4 saniye buffer bırak
-        effective_dialog_duration = target_duration - 4  # 12s video için 8s dialog
-        dialog_words = int(effective_dialog_duration * 1.7)  # ~1.7 kelime/saniye
+        # Calculate word targets for Sora 2 / Sora 2 Pro native speech
+        # Her iki Sora modeli de konuşmayı yavaş üretir ve timing kontrolü zayıf
+        # 5 saniye buffer: son bölüm tamamen sessiz reaction shot olmalı
+        dialog_buffer = 5
+        effective_dialog_duration = target_duration - dialog_buffer  # 12s video için 7s dialog
+        dialog_words = int(effective_dialog_duration * 1.3)  # ~1.3 kelime/saniye (güvenli)
+        # 12s video: 7s * 1.3 = ~9 kelime toplam (çok kısa, net dialog)
 
         # Dynamic B-roll word limit based on expected video duration
         # Default: 8s video, 1.5s delay, 0.5s buffer = 6s available
@@ -3098,17 +3101,20 @@ Ses tipi: {voice_type}
 **DIALOG YAPISI (ZORUNLU):**
 - ERKEK (speaker: "male"): Problem/soru sorar (merakli, endiseli)
 - KADIN (speaker: "female"): Cozum sunar (guvenli, bilgili)
-- 3-4 satir dialog (alternating male/female ile basla) - KISA TUT
-- Toplam MAKSIMUM {dialog_words} kelime ({effective_dialog_duration} saniye içinde)
-- Her satir çok kısa: 3-8 kelime (uzun cümleler YASAK)
-- Dogal konusma dili, EMOJI KULLANMA
+- SADECE 3 satir dialog (fazla YASAK!)
+- Satır 1 (male): 3-5 kelime - problem/soru
+- Satır 2 (female): 4-6 kelime - çözüm
+- Satır 3 (male veya female): SADECE 1-2 KELİME! (örn: "Süper!", "Teşekkürler!")
+- Toplam MAKSIMUM {dialog_words} kelime
+- EMOJI KULLANMA
 
-**TIMING (ÇOK ÖNEMLİ - MUTLAKA UYULMALI):**
+**⚠️ KRİTİK TIMING - SORA 2 / SORA 2 PRO NATIVE SPEECH İÇİN:**
 - Video süresi: {target_duration} saniye
-- Dialog MUTLAKA {effective_dialog_duration}. saniyede BİTMELİ
-- Son 4 saniye: Doğal kapanış - baş sallama, gülümseme, el hareketi
-- Dialog ASLA {effective_dialog_duration}. saniyeden sonra devam ETMEMELİ
-- Son replik kısa ve net olmalı (örn: "Teşekkürler!", "Anladım.", "Harika!")
+- TÜM KONUŞMA {effective_dialog_duration}. saniyede BİTMELİ (saniye {effective_dialog_duration}'den sonra SES YOK!)
+- Son {dialog_buffer} saniye ({effective_dialog_duration}-{target_duration}): TAMAMEN SESSİZ
+- Sessiz bölümde: gülümseme, baş sallama, memnun bakışlar
+- SON SATIR KRİTİK: Maksimum 2 kelime! ("Harika!", "Anladım!", "Süper!")
+- Uzun son satır = KESİK SES = BAŞARISIZ VİDEO
 
 **KARAKTER TON:**
 - ERKEK: Merakli, problem odakli, samimi, endiseli
@@ -3159,15 +3165,25 @@ CHARACTER 2 - FEMALE:
 Speaking Turkish {char_desc['tone_female']}, explaining the solution.
 Clear lip movements synchronized with Turkish speech.
 
-DIALOGUE FLOW:
-- Natural Turkish conversation - male speaks first about problem
-- Female responds with IoT solution, both speaking fluent Turkish
-- Conversation MUST conclude naturally by second {target_duration - 2}
-- Final exchange should be a clear conclusion (not mid-thought)
-- Last 2 seconds: satisfied nods, smiles, or natural reaction shot
-- Final 0.5 seconds: static hold on the final expressions
+DIALOGUE FLOW - STRICT TIMING (SORA 2 / SORA 2 PRO):
+- SHORT Turkish conversation - only 3 exchanges total
+- Male asks brief question (3-5 words)
+- Female gives brief answer (4-6 words)
+- Final response: ONE OR TWO WORDS ONLY ("Teşekkürler!", "Harika!")
+- ALL DIALOGUE MUST END BY SECOND {effective_dialog_duration}
 
-AUDIO: Clear Turkish dialogue, ambient sounds matching the scene, natural silence at end.
+⚠️ CRITICAL - SILENT ENDING (seconds {effective_dialog_duration} to {target_duration}):
+- ABSOLUTELY NO SPEECH after second {effective_dialog_duration}
+- NO talking, NO voice, NO dialogue - COMPLETE SILENCE
+- Visual only: characters smile, nod approvingly, look satisfied
+- Gentle, peaceful body language - no sudden movements
+- Camera holds on their content expressions
+- Final 2 seconds: nearly still frame, serene ending
+
+AUDIO TIMELINE:
+- Seconds 0-{effective_dialog_duration}: Clear Turkish dialogue
+- Seconds {effective_dialog_duration}-{target_duration}: ONLY ambient sounds, NO HUMAN VOICE
+- Smooth audio fade, natural room tone, peaceful ending
 
 CAMERA: Medium two-shot showing both characters, professional composition.
 ---
@@ -3201,10 +3217,9 @@ CAMERA: Medium two-shot showing both characters, professional composition.
 ```json
 {{
     "dialog_lines": [
-        {{"speaker": "male", "text": "Ilk soru/problem..."}},
-        {{"speaker": "female", "text": "Ilk cozum..."}},
-        {{"speaker": "male", "text": "Ikinci soru..."}},
-        {{"speaker": "female", "text": "Ikinci cozum/kapanış..."}}
+        {{"speaker": "male", "text": "Kısa soru (3-5 kelime)"}},
+        {{"speaker": "female", "text": "Kısa cevap (4-6 kelime)"}},
+        {{"speaker": "male", "text": "Teşekkürler!"}}
     ],
     "video_prompt": "BU ALANI DOLDUR: Yukarıdaki VIDEO PROMPT ŞABLONUNU kullan. Stil prefix ({style_prefix}) ile başla, karakter tanımlarını ve sahne tanımını aynen kullan. Tamamı İngilizce.",
     "broll_prompt": "BU ALANI DOLDUR: Stil prefix ({style_prefix}) ile başla, sahne ortamına uygun IoT sensör/ekipman close-up. İngilizce, 9:16, insan yok.",
@@ -3213,6 +3228,8 @@ CAMERA: Medium two-shot showing both characters, professional composition.
     "hashtags": ["#Olivenet", "#KKTC", "#IoT", "...sektorel taglar..."]
 }}
 ```
+
+(Not: Sadece 3 satır, son satır 1-2 kelime - Sora 2 ve Sora 2 Pro için zorunlu)
 
 ÖNEMLİ: video_prompt ve broll_prompt alanlarını yukarıdaki ŞABLONLARI ve KARAKTERLERİ kullanarak DOLDUR. Placeholder bırakma!
 
@@ -3231,6 +3248,37 @@ Sadece JSON döndür.
                     "success": False,
                     "error": f"Insufficient dialog lines: {len(dialog_lines)}, minimum 3 required"
                 }
+
+            # Validate last line is SHORT (critical for Sora 2 / Sora 2 Pro timing)
+            if dialog_lines:
+                last_line_text = dialog_lines[-1].get("text", "")
+                last_line_words = len(last_line_text.split())
+
+                if last_line_words > 2:
+                    self.log(f"⚠️ Son satır çok uzun ({last_line_words} kelime: '{last_line_text}'), kısaltılıyor...")
+                    import random
+                    short_endings = ["Teşekkürler!", "Harika!", "Süper!", "Mükemmel!", "Anladım!", "Tamam!"]
+                    dialog_lines[-1]["text"] = random.choice(short_endings)
+                    result["dialog_lines"] = dialog_lines
+                    self.log(f"   → Yeni son satır: '{dialog_lines[-1]['text']}'")
+
+            # Validate total word count doesn't exceed safe limit
+            total_words = sum(len(line.get("text", "").split()) for line in dialog_lines)
+            safe_max_words = int((target_duration - 5) * 1.3)  # Conservative limit for Sora
+
+            if total_words > safe_max_words:
+                self.log(f"⚠️ Dialog toplam kelime sayısı çok yüksek ({total_words}, max: {safe_max_words})")
+                # Log warning but continue - Sora might still handle it
+
+            # Validate line count (max 3 for tight timing with Sora models)
+            if len(dialog_lines) > 3:
+                self.log(f"⚠️ Çok fazla dialog satırı ({len(dialog_lines)}), ilk 3'e kısaltılıyor...")
+                result["dialog_lines"] = dialog_lines[:3]
+                # Ensure last line is still short
+                if len(result["dialog_lines"][-1].get("text", "").split()) > 2:
+                    import random
+                    short_endings = ["Teşekkürler!", "Harika!", "Süper!"]
+                    result["dialog_lines"][-1]["text"] = random.choice(short_endings)
 
             # Style prefix validation - video_prompt için
             video_prompt = result.get("video_prompt", "")
