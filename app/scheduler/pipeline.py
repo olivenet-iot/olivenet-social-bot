@@ -2651,10 +2651,13 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
 
         # Segment sayısını doğrula (2-6 arası)
         segment_count = max(2, min(6, segment_count))
-        actual_total_duration = segment_count * actual_segment_duration
+
+        # Crossfade overlap'leri hesapla (N segment = N-1 crossfade)
+        crossfade_overlap = (segment_count - 1) * transition_duration
+        actual_video_duration = (segment_count * actual_segment_duration) - crossfade_overlap
 
         self.log(f"🎬 UZUN VIDEO: Pipeline başlatılıyor...")
-        self.log(f"   Segment: {segment_count}x{actual_segment_duration}s = {actual_total_duration}s")
+        self.log(f"   Segment: {segment_count}x{actual_segment_duration}s - {crossfade_overlap}s crossfade = {actual_video_duration}s")
         self.log(f"   Model: {model_id}")
         self.log(f"   Geçiş: {transition_type} ({transition_duration}s)")
         self.state = PipelineState.PLANNING
@@ -2666,7 +2669,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             "long_video": True,
             "voice_enabled": True,
             "segment_count": segment_count,
-            "total_duration": actual_total_duration,
+            "total_duration": actual_video_duration,
             "model_id": model_id
         }
 
@@ -2734,15 +2737,15 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             result["post_id"] = post_id
 
             # ========== AŞAMA 3: Speech Script Üretimi ==========
-            self.log(f"[LONG VIDEO] Aşama 3: Voiceover scripti üretiliyor ({actual_total_duration}s)...")
+            self.log(f"[LONG VIDEO] Aşama 3: Voiceover scripti üretiliyor ({actual_video_duration}s)...")
 
-            # Kelime hedefi: ~2.0 kelime/saniye (daha uzun TTS için artırıldı)
-            target_words = int(actual_total_duration * 2.0)
+            # Kelime hedefi: ~1.8 kelime/saniye (ElevenLabs Türkçe TTS ölçümü)
+            target_words = int(actual_video_duration * 1.8)
 
             speech_result = await self.creator.execute({
                 "action": "create_speech_script",
                 "topic": topic,
-                "target_duration": actual_total_duration,
+                "target_duration": actual_video_duration,
                 "target_words": target_words,
                 "segment_count": segment_count,
                 "segment_duration": actual_segment_duration,
@@ -2771,7 +2774,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 raise Exception(f"TTS hatası: {tts_result.get('error')}")
 
             audio_path = tts_result.get("audio_path")
-            estimated_duration = tts_result.get("duration", actual_total_duration)
+            estimated_duration = tts_result.get("duration", actual_video_duration)
 
             # GERÇEK audio süresini ffprobe ile ölç (Voice Reels ile aynı)
             from app.instagram_helper import get_audio_duration
@@ -2786,18 +2789,18 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             result["audio_duration"] = audio_duration
 
             # Post-TTS süre validasyonu
-            min_acceptable_duration = actual_total_duration * 0.85  # %15 tolerans
+            min_acceptable_duration = actual_video_duration * 0.85  # %15 tolerans
             if audio_duration < min_acceptable_duration:
-                duration_deficit = actual_total_duration - audio_duration
-                deficit_percent = (duration_deficit / actual_total_duration) * 100
-                self.log(f"⚠️ [LONG VIDEO] Audio kısa ({audio_duration:.1f}s / {actual_total_duration}s), script uzatılıyor...")
+                duration_deficit = actual_video_duration - audio_duration
+                deficit_percent = (duration_deficit / actual_video_duration) * 100
+                self.log(f"⚠️ [LONG VIDEO] Audio kısa ({audio_duration:.1f}s / {actual_video_duration}s), script uzatılıyor...")
 
-                # Script'i uzat (daha agresif hedef: 2.0 WPS)
-                extended_target_words = int(actual_total_duration * 2.0)
+                # Script'i uzat (1.8 WPS - ElevenLabs Türkçe TTS ölçümü)
+                extended_target_words = int(actual_video_duration * 1.8)
                 extended_result = await self.creator.execute({
                     "action": "create_speech_script",
                     "topic": topic,
-                    "target_duration": actual_total_duration,
+                    "target_duration": actual_video_duration,
                     "target_words": extended_target_words,
                     "segment_count": segment_count,
                     "segment_duration": actual_segment_duration,
@@ -2833,7 +2836,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             self.log(f"[LONG VIDEO] Aşama 5: {segment_count} sahne promptu üretiliyor...")
 
             # Shot structure'ı çıkar
-            shot_structure = extract_shot_structure(speech_script, actual_total_duration)
+            shot_structure = extract_shot_structure(speech_script, actual_video_duration)
 
             scene_result = await self.creator.execute({
                 "action": "create_multi_scene_prompts",
