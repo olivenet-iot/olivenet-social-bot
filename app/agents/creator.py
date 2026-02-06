@@ -1258,6 +1258,15 @@ Sadece JSON döndür.
         category = input_data.get("category", "egitici")
         hooks = input_data.get("suggested_hooks", [])
         visual_type = input_data.get("visual_type", "flux")
+        original_user_brief = input_data.get("original_user_brief")
+
+        # Orijinal kullanıcı açıklaması varsa prompt'a eklenecek bölüm
+        original_brief_section = ""
+        if original_user_brief and len(original_user_brief) > 50:
+            original_brief_section = f"""
+- KULLANICININ DETAYLI AÇIKLAMASI (teknik kavramları ve ana tezi MUTLAKA koru):
+{original_user_brief}
+NOT: Yukarıdaki açıklamadaki spesifik teknik terimleri, kavramları ve karşılaştırmaları caption'da kullan. Konuyu genelleştirme."""
 
         company_profile = self.load_context("company-profile.md")
         content_strategy = self.load_context("content-strategy.md")
@@ -1272,7 +1281,7 @@ Sadece JSON döndür.
 {content_strategy}
 
 ### Post Detayları
-- Konu: {topic}
+- Konu: {topic}{original_brief_section}
 - Kategori: {category}
 - Görsel tipi: {visual_type}
 
@@ -2114,6 +2123,7 @@ Sadece JSON döndür, başka açıklama ekleme.
         speech_structure = input_data.get("speech_structure", [])
         model_id = input_data.get("model_id", "kling-2.6-pro")
         visual_style = input_data.get("visual_style", "cinematic_4k")
+        original_user_brief = input_data.get("original_user_brief")
 
         # Segment sayısı sınırla
         segment_count = max(2, min(6, segment_count))
@@ -2160,6 +2170,15 @@ Sadece JSON döndür, başka açıklama ekleme.
             narrative_arc_json = "hook -> development -> resolution"
             example_roles = ["hook"] + ["development"] * (segment_count - 2) + ["resolution"]
 
+        # Orijinal kullanıcı açıklaması varsa prompt'a eklenecek bölüm
+        original_brief_section = ""
+        if original_user_brief and len(original_user_brief) > 50:
+            original_brief_section = f"""
+
+### KULLANICININ DETAYLI AÇIKLAMASI (sahnelerde bu kavramları görsel olarak yansıt):
+{original_user_brief}
+ÖNEMLİ: Video prompt'ları yukarıdaki açıklamadaki spesifik teknolojileri görselleştirmeli."""
+
         prompt = f"""
 ## GÖREV: Multi-Segment Video Sahne Planlaması
 
@@ -2167,7 +2186,7 @@ Aşağıdaki konu için {segment_count} adet tutarlı video sahnesi oluştur.
 Her sahne {segment_duration} saniye sürecek, toplam {total_duration} saniye.
 
 ### KONU:
-{topic}
+{topic}{original_brief_section}
 
 ### SES YAPISI (varsa):
 {speech_hints if speech_hints else "Ses yapısı belirtilmedi."}
@@ -2364,6 +2383,7 @@ Sonuç ve CTA. Takip et, kaydet veya düşündürücü soru.
         target_duration = input_data.get("target_duration", 15)
         tone = input_data.get("tone", "friendly")  # Samimi ton varsayılan
         post_id = input_data.get("post_id")
+        original_user_brief = input_data.get("original_user_brief")
 
         # Pipeline'dan gelen target_words'u kullan (varsa)
         target_words = input_data.get("target_words")
@@ -2412,11 +2432,20 @@ Bölümler arasında doğal geçiş olmalı ama her bölüm video segmentiyle se
    - "Kaydet" VEYA
    - Düşündürücü soru"""
 
+        # Orijinal kullanıcı açıklaması varsa prompt'a eklenecek bölüm
+        original_brief_section = ""
+        if original_user_brief and len(original_user_brief) > 50:
+            original_brief_section = f"""
+
+### KULLANICININ DETAYLI AÇIKLAMASI (teknik kavramları MUTLAKA koru):
+{original_user_brief}
+ÖNEMLİ: Script yukarıdaki spesifik teknik terimleri kullanmalı. Konuyu genelleştirme."""
+
         prompt = f"""
 ## GÖREV: Instagram Reels Voiceover Scripti Yaz
 
 ### Konu
-{topic}
+{topic}{original_brief_section}
 
 ### Hedefler
 - Süre: {target_duration} saniye
@@ -2445,7 +2474,7 @@ Bölümler arasında doğal geçiş olmalı ama her bölüm video segmentiyle se
 - "Merhaba", "Selam" (vakit kaybı)
 - "Bu videoda" (belli zaten)
 - Aşırı uzun cümleler
-- Jargon ve teknik terimler (basitleştir)
+- {"Kullanıcının belirttiği teknik terimleri koru, gereksiz jargon ekleme" if original_user_brief and len(original_user_brief) > 50 else "Jargon ve teknik terimler (basitleştir)"}
 
 ### TON: {tone.upper()}
 {tone_desc}
@@ -2967,6 +2996,10 @@ KURALLAR:
 3. 8-12 kelime arasında başlık
 4. Somut değer/fayda içermeli
 5. Türkçe ve profesyonel ton
+6. Kullanıcının metnindeki spesifik teknik terimleri başlıkta koru.
+   Örneğin metin "akustik emisyon sensörü" diyorsa, başlıkta da "akustik emisyon" geçmeli.
+   Genel terimlerle ("sensör teknolojisi") değiştirme.
+7. Ana tezi koru — metin iki teknolojiyi karşılaştırıyorsa, başlık da bunu yansıtmalı.
 
 ÖRNEK DÖNÜŞÜMLER:
 - "sera sulama" → "Sera Sulama Otomasyonu: %40 Su Tasarrufu Nasıl Sağlanır?"

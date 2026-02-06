@@ -2673,6 +2673,9 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             "model_id": model_id
         }
 
+        # Orijinal kullanıcı metnini pipeline boyunca taşı (teknik detaylar korunsun)
+        original_user_brief = topic if (topic and manual_topic_mode) else None
+
         try:
             # ========== AŞAMA 1: Konu Seçimi ==========
             if topic and manual_topic_mode:
@@ -2720,7 +2723,8 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 "topic": topic,
                 "platform": "instagram",
                 "visual_type": "reels",
-                "category": topic_data.get("category", "tanitim")
+                "category": topic_data.get("category", "tanitim"),
+                "original_user_brief": original_user_brief,
             })
 
             caption = content_result.get("post_text_ig") or content_result.get("post_text", "")
@@ -2750,7 +2754,8 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 "segment_count": segment_count,
                 "segment_duration": actual_segment_duration,
                 "tone": "friendly",  # Samimi ton (voice reels ile aynı)
-                "post_id": post_id
+                "post_id": post_id,
+                "original_user_brief": original_user_brief,
             })
 
             if not speech_result.get("success"):
@@ -2845,7 +2850,8 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 "segment_duration": actual_segment_duration,
                 "speech_structure": shot_structure,
                 "model_id": model_id,
-                "visual_style": visual_style
+                "visual_style": visual_style,
+                "original_user_brief": original_user_brief,
             })
 
             if not scene_result.get("success"):
