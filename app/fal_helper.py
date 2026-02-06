@@ -51,6 +51,13 @@ class FalVideoGenerator:
             "max_duration": 10,
             "has_audio": True
         },
+        "kling_v3_pro": {
+            "text_to_video": "fal-ai/kling-video/v3/pro/text-to-video",
+            "image_to_video": "fal-ai/kling-video/v3/pro/image-to-video",
+            "name": "Kling 3.0 Pro",
+            "max_duration": 15,
+            "has_audio": True
+        },
         # Minimax Hailuo 02 modelleri
         "hailuo_standard": {
             "text_to_video": "fal-ai/minimax/hailuo-2.3/standard/text-to-video",

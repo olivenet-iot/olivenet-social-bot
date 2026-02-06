@@ -246,6 +246,7 @@ async def generate_video_smart(
         # Multi-model voice reels ID'leri (video_models.py → fal_helper.py)
         "kling-2.5-pro": "kling_pro",
         "kling-2.6-pro": "kling_26_pro",
+        "kling-3.0-pro": "kling_v3_pro",
         "kling-2.1": "kling_pro",  # Backward compatibility
         "wan-2.1": "wan_26",
         "veo-2": "veo3",

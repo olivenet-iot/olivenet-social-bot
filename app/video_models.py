@@ -102,6 +102,21 @@ VIDEO_MODELS: Dict[str, dict] = {
         "has_native_audio": True,
         "disable_audio_for_voice": True  # TTS voiceover için native audio kapat
     },
+    "kling-3.0-pro": {
+        "name": "Kling 3.0 Pro",
+        "provider": "fal",
+        "emoji": "🔮",
+        "durations": [5, 10, 15],
+        "default_duration": 10,
+        "max_duration": 15,
+        "aspect_ratio": "9:16",
+        "prompt_key": "video_prompt_kling3",
+        "description": "Sinematik yönetmenlik, 15s, fizik tabanlı hareket ⭐",
+        "helper_module": "fal_helper",
+        "fal_model": "kling_v3_pro",
+        "has_native_audio": True,
+        "disable_audio_for_voice": True
+    },
     "wan-2.1": {
         "name": "Wan 2.1",
         "provider": "fal",

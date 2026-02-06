@@ -1941,6 +1941,7 @@ Tüm video prompt'larının BAŞINA şu stil prefix'ini ekle: "{style_prefix}"
     "video_prompt_sora": "SORA 2 formatında detaylı İngilizce prompt (sahne + cinematography + lighting + actions + sound)",
     "video_prompt_veo": "VEO 3 timestamp formatında İngilizce prompt ([00:00-00:02] format)",
     "video_prompt_kling": "KLING formatında kısa İngilizce prompt (Subject + Movement + Scene + Camera + Lighting + Atmosphere, virgülle ayrılmış, max 200 karakter)",
+    "video_prompt_kling3": "KLING 3.0 formatında sinematik İngilizce prompt (sahne yönetmenliği tarzı, explicit kamera + hareket talimatları, zaman içinde gelişim, 300-600 karakter)",
     "video_prompt_hailuo": "HAILUO formatında dinamik İngilizce prompt (Camera Motion + Subject + Action + Scene + Lighting + Style, aksiyon odaklı, max 200 karakter)",
     "video_prompt_wan": "WAN formatında multi-shot sinematik prompt (Global style + Shot timing brackets [0-5s] + Camera action, max 600 karakter)",
     "complexity": "low|medium|high",
@@ -1955,7 +1956,7 @@ Tüm video prompt'larının BAŞINA şu stil prefix'ini ekle: "{style_prefix}"
 ```
 
 ### ÖNEMLİ KURALLAR:
-1. video_prompt_sora, video_prompt_veo, video_prompt_kling, video_prompt_hailuo ve video_prompt_wan İNGİLİZCE olmalı
+1. video_prompt_sora, video_prompt_veo, video_prompt_kling, video_prompt_kling3, video_prompt_hailuo ve video_prompt_wan İNGİLİZCE olmalı
 2. 9:16 dikey format belirt (720x1280)
 3. Süre 5-6 saniye hedefle (Kling için 10 saniyeye kadar olabilir)
 4. İlk 2 saniye HOOK olmalı - dikkat çekici
@@ -1971,6 +1972,18 @@ Tüm video prompt'larının BAŞINA şu stil prefix'ini ekle: "{style_prefix}"
 - Sayı kullanma, "multiple" veya "several" yaz
 - Karmaşık fiziksel hareket YOK (top sektirme, koşma vb.)
 - Örnek: "Medium shot, bokeh background, a technician in safety helmet, checking sensor readings, industrial factory, warm ambient lighting, professional documentary style."
+
+### KLING 3.0 FORMAT KURALLARI (video_prompt_kling3):
+- SAHNE YÖNETMENLİĞİ formatında yaz, ANAHTAR KELİME LİSTESİ DEĞİL
+- Prompt başında ana özneyi (subject) tanımla ve tutarlı tut
+- Kamera davranışını zaman içinde anlat: "Camera starts wide, then pushes in, holds on detail"
+- Explicit hareket talimatları ver: ne hareket ediyor, nasıl, ne hızda
+- Fiziksel etkileşimleri belirt: ışık yansıması, parçacık hareketi, enerji akışı
+- Sinematik dil kullan: tracking shot, profile shot, macro close-up, crane, dolly
+- 300-600 karakter (Kling 2.6'dan UZUN, çünkü model sahne anlayışı ile çalışıyor)
+- 15 saniyeye kadar içerik — uzun sürelerde zaman içinde gelişim anlat
+- Photorealistic 3D render, Octane, ray-traced gibi render talimatları EKLENEBİLİR
+- Örnek: "A sleek IoT sensor module mounted on industrial machinery pulses with sky blue diagnostic light. Camera holds a medium shot, then slowly orbits 180 degrees around the device. As it orbits, holographic data streams emerge from the sensor, flowing upward like aurora waves. The camera settles into a close-up as warning indicators shift from amber to green. Photorealistic 3D render, Octane quality, volumetric lighting, olive green and sky blue palette."
 
 ### HAILUO FORMAT KURALLARI (video_prompt_hailuo):
 - Dinamik kamera hareketleri: tracking shot, dolly, pan
@@ -1992,6 +2005,7 @@ Tüm video prompt'larının BAŞINA şu stil prefix'ini ekle: "{style_prefix}"
 - LOW: Tek sahne, statik/basit hareket → veo3 veya kling_pro
 - MEDIUM: Kamera takibi, 2-3 element → sora-2 veya hailuo_pro (dinamik sahneler için)
 - HIGH: Dönüşüm, kompleks hareket → sora-2-pro veya hailuo_pro
+- CINEMATIC: Sahne yönetmenliği gerektiren, kamera + obje hareketi + fizik → kling-3.0-pro
 
 Sadece JSON döndür, başka açıklama ekleme.
 """
@@ -2179,6 +2193,19 @@ Sadece JSON döndür, başka açıklama ekleme.
 {original_user_brief}
 ÖNEMLİ: Video prompt'ları yukarıdaki açıklamadaki spesifik teknolojileri görselleştirmeli."""
 
+        kling3_instruction = ""
+        if model_id == "kling-3.0-pro":
+            kling3_instruction = """
+### KLING 3.0 ÖZEL TALİMATLAR:
+- Her sahne promptunu SAHNE YÖNETMENLİĞİ formatında yaz (anahtar kelime listesi DEĞİL)
+- Prompt başında ana özneyi tanımla, sonra kamera ve hareket talimatları ver
+- Zaman içinde gelişim anlat: "starts X, transitions to Y, settles on Z"
+- Explicit fiziksel etkileşimler: ışık kırılması, parçacık hareketi, enerji yayılımı
+- Her prompt 300-600 karakter olmalı (Kling 2.6'dan daha uzun ve detaylı)
+- 3D render talimatları eklenebilir: Photorealistic, Octane, ray-traced, volumetric
+- Sinematik dil: tracking, dolly, crane, orbit, rack focus, macro, profile shot
+"""
+
         prompt = f"""
 ## GÖREV: Multi-Segment Video Sahne Planlaması
 
@@ -2225,7 +2252,7 @@ Model: {model_id}
 - Her prompt 50-80 kelime arası olmalı
 - Kamera hareketini açıkça belirt
 - Sahne detaylarını (nesne, eylem, ortam) açıkla
-
+{kling3_instruction}
 ### KAMERA ÇEŞİTLİLİĞİ KURALI:
 - Her sahne/segment için FARKLI bir kamera hareketi kullan. Ardışık sahnelerde aynı kamera hareketini TEKRARLAMA. Sinematik çeşitlilik kritik önem taşıyor.
 

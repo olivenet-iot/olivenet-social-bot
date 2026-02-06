@@ -750,6 +750,9 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 InlineKeyboardButton("🔊 Kling 2.6", callback_data="video_model:kling_26_pro"),
             ],
             [
+                InlineKeyboardButton("🔮 Kling 3.0 Pro", callback_data="video_model:kling_v3_pro"),
+            ],
+            [
                 InlineKeyboardButton("🌀 Hailuo Pro", callback_data="video_model:hailuo_pro"),
                 InlineKeyboardButton("🎞️ Wan 2.6", callback_data="video_model:wan_26"),
             ],
@@ -769,6 +772,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "• *Sora 2*: OpenAI, 8s, yaratıcı\n"
             "• *Kling 2.5 Pro*: fal.ai, 10s, hızlı\n"
             "• *Kling 2.6 Pro*: fal.ai, 10s, 🔊 ambient sesli\n"
+            "• *Kling 3.0 Pro*: fal.ai, 15s, 🔮 sinematik yönetmenlik\n"
             "• *Hailuo Pro*: 🌀 Dinamik hareketler, 6s\n"
             "• *Wan 2.6*: 🎞️ Multi-shot, sinematik, 15s\n"
             "• *Kling 2.1 Master*: fal.ai, 10s, en iyi kalite\n\n"
@@ -787,6 +791,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "sora2": "Sora 2 (OpenAI)",
             "kling_pro": "Kling 2.5 Pro (fal.ai)",
             "kling_26_pro": "Kling 2.6 Pro (fal.ai)",
+            "kling_v3_pro": "Kling 3.0 Pro (fal.ai)",
             "hailuo_pro": "Hailuo 02 Pro (fal.ai)",
             "wan_26": "Wan 2.6 (fal.ai)",
             "kling_master": "Kling 2.1 Master (fal.ai)"
@@ -862,7 +867,8 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Sessiz reels: Konu seçim menüsü
             model_names = {
                 "veo3": "Veo 3", "sora2": "Sora 2", "kling_pro": "Kling 2.5",
-                "kling_26_pro": "Kling 2.6", "hailuo_pro": "Hailuo", "wan_26": "Wan 2.6",
+                "kling_26_pro": "Kling 2.6", "kling_v3_pro": "Kling 3.0",
+                "hailuo_pro": "Hailuo", "wan_26": "Wan 2.6",
                 "kling_master": "Kling Master"
             }
             model_name = model_names.get(model, model)
@@ -970,6 +976,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "sora2": "Sora 2 (OpenAI)",
             "kling_pro": "Kling 2.5 Pro (fal.ai)",
             "kling_26_pro": "Kling 2.6 Pro (fal.ai)",
+            "kling_v3_pro": "Kling 3.0 Pro (fal.ai)",
             "hailuo_pro": "Hailuo 02 Pro (fal.ai)",
             "wan_26": "Wan 2.6 (fal.ai)",
             "kling_master": "Kling 2.1 Master (fal.ai)"
@@ -1004,6 +1011,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "sora2": "Sora 2 (OpenAI)",
             "kling_pro": "Kling 2.5 Pro (fal.ai)",
             "kling_26_pro": "Kling 2.6 Pro (fal.ai)",
+            "kling_v3_pro": "Kling 3.0 Pro (fal.ai)",
             "hailuo_pro": "Hailuo 02 Pro (fal.ai)",
             "wan_26": "Wan 2.6 (fal.ai)",
             "kling_master": "Kling 2.1 Master (fal.ai)"
@@ -1050,6 +1058,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "🎥 *Veo 2* - Google, hızlı ve tutarlı (max 8s)\n"
             "🎬 *Kling 2.5 Pro* - Hızlı üretim (max 10s)\n"
             "🎥 *Kling 2.6 Pro* - Cinematic 1080p kalite ⭐ (max 10s)\n"
+            "🔮 *Kling 3.0 Pro* - Sinematik yönetmenlik ⭐ (max 15s)\n"
             "🌊 *Wan 2.1* - En uzun video! (max 15s)\n"
             "🎯 *Minimax* - Hızlı ve ekonomik (max 5s)\n\n"
             "🔊 Tüm modellerde Türkçe AI voiceover eklenir.",
@@ -1327,6 +1336,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "📊 *Segment süreleri modele göre değişir:*\n"
             "• Sora 2/Pro: 12s/segment\n"
             "• Kling 2.6: 10s/segment\n"
+            "• Kling 3.0: 10s/segment (sinematik)\n"
             "• Veo 2: 8s/segment\n"
             "• Wan 2.1: 15s/segment\n\n"
             "🎬 *Segment sayısı seçin:*",
@@ -1347,6 +1357,9 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 InlineKeyboardButton(f"🎯 Veo 2 ({segment_count}x8s={segment_count*8}s)", callback_data=f"long_model:{segment_count}:veo-2")
             ],
             [
+                InlineKeyboardButton(f"🔮 Kling 3.0 ({segment_count}x10s={segment_count*10}s)", callback_data=f"long_model:{segment_count}:kling-3.0-pro"),
+            ],
+            [
                 InlineKeyboardButton(f"🌊 Wan 2.1 ({segment_count}x15s={segment_count*15}s)", callback_data=f"long_model:{segment_count}:wan-2.1")
             ],
             [InlineKeyboardButton("◀️ Geri", callback_data="create_long_video")]
@@ -1357,6 +1370,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "• *⭐ Sora 2 Pro:* Premium kalite (~$0.60/segment) ⭐\n"
             "• *Sora 2:* Yüksek kalite (~$0.50/segment)\n"
             "• *Kling 2.6:* Dengeli kalite/fiyat (~$0.30/segment)\n"
+            "• *Kling 3.0:* Sinematik yönetmenlik (~$0.35/segment)\n"
             "• *Veo 2:* Hızlı üretim (~$0.20/segment)\n"
             "• *Wan 2.1:* Uzun segment desteği (~$0.15/segment)",
             reply_markup=InlineKeyboardMarkup(keyboard),
@@ -2231,6 +2245,7 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "sora2": "Sora 2",
             "kling_pro": "Kling 2.5 Pro",
             "kling_26_pro": "Kling 2.6 Pro",
+            "kling_v3_pro": "Kling 3.0 Pro",
             "hailuo_pro": "Hailuo 02 Pro",
             "wan_26": "Wan 2.6",
             "kling_master": "Kling 2.1 Master"
