@@ -269,7 +269,7 @@ async def generate_video_smart(
                 generate_audio = False  # TTS voiceover için native audio kapat
                 print(f"[VIDEO] → Voice mode: Native audio KAPALI")
             else:
-                generate_audio = True if model == "kling_26_pro" else None
+                generate_audio = True if model in ("kling_26_pro", "kling_v3_pro") else None
             result = await FalVideoGenerator.generate_video(
                 prompt=prompt,
                 model=model,
