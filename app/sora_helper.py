@@ -4,6 +4,7 @@ Docs: https://platform.openai.com/docs/api-reference/videos
 """
 
 import os
+import random
 import httpx
 import asyncio
 from datetime import datetime
@@ -411,17 +412,64 @@ async def generate_videos_parallel(
     print(f"[PARALLEL VIDEO] Model: {model}, Segment süresi: {duration}s")
     print(f"[PARALLEL VIDEO] Max concurrent: {max_concurrent}")
 
-    # Segment-specific shot type ve kamera prefix'leri (görsel çeşitlilik için)
-    SEGMENT_PREFIXES = [
+    # Rol-bazlı kamera havuzları (görsel çeşitlilik için)
+    OPENING_SHOTS = [
         "WIDE ESTABLISHING SHOT, slow dolly forward, cinematic depth of field, ",
-        "MEDIUM SHOT, tracking alongside subject, dynamic camera movement, ",
-        "CLOSE-UP DETAIL SHOT, smooth push in, macro focus, emotional impact, "
+        "AERIAL DRONE SHOT, descending reveal, sweeping landscape, ",
+        "LOW-ANGLE HERO SHOT, steady push in, dramatic perspective, ",
+        "SILHOUETTE WIDE SHOT, golden hour backlight, atmospheric haze, ",
+        "CRANE SHOT, rising from ground level, expansive reveal, ",
+        "DUTCH ANGLE WIDE SHOT, slow rotation to level, tension build, ",
+        "TRACKING WIDE SHOT, lateral dolly, layered parallax depth, ",
+        "OVERHEAD BIRD'S-EYE SHOT, slow descend, geometric composition, ",
     ]
 
-    # Her segment için farklı prefix + style prefix ekle
+    DEVELOPMENT_SHOTS = [
+        "MEDIUM SHOT, tracking alongside subject, dynamic camera movement, ",
+        "OVER-THE-SHOULDER SHOT, shallow depth of field, intimate framing, ",
+        "STEADICAM FOLLOW SHOT, fluid motion, immersive perspective, ",
+        "WHIP PAN, fast transition, energetic motion blur, ",
+        "RACK FOCUS MEDIUM SHOT, foreground-to-background shift, layered storytelling, ",
+        "ORBIT SHOT, 180-degree arc around subject, dimensional reveal, ",
+        "HANDHELD MEDIUM SHOT, subtle movement, documentary authenticity, ",
+        "DOLLY ZOOM SHOT, vertigo effect, psychological tension, ",
+        "SLIDER SHOT, smooth lateral glide, parallax movement, ",
+        "TILT-UP MEDIUM SHOT, revealing subject top-to-bottom, gradual disclosure, ",
+        "PUSH-IN MEDIUM SHOT, steady advance, increasing intimacy, ",
+        "PULL-BACK REVEAL SHOT, widening frame, contextual surprise, ",
+    ]
+
+    CLOSING_SHOTS = [
+        "CLOSE-UP DETAIL SHOT, smooth push in, macro focus, emotional impact, ",
+        "EXTREME CLOSE-UP, slow drift, textural detail, sensory immersion, ",
+        "PULL-BACK WIDE SHOT, gradual reveal, sense of closure, ",
+        "SLOW-MOTION CLOSE-UP, dreamy quality, emotional resonance, ",
+        "CRANE SHOT rising, ascending farewell, expanding horizon, ",
+        "GOLDEN HOUR CLOSE-UP, warm backlight, soft bokeh, nostalgic feel, ",
+        "STATIC LOCK-OFF SHOT, composed stillness, contemplative ending, ",
+        "RACK FOCUS TO DISTANCE, foreground blur, symbolic departure, ",
+    ]
+
+    # Her segment için rol-bazlı random seçim (ardışık tekrar engelli)
+    n = len(prompts)
     full_prompts = []
+    last_prefix = None
     for i, prompt in enumerate(prompts):
-        seg_prefix = SEGMENT_PREFIXES[i % len(SEGMENT_PREFIXES)]
+        # Segment rolünü belirle: ilk = opening, son = closing, arası = development
+        if i == 0:
+            pool = OPENING_SHOTS
+        elif i == n - 1:
+            pool = CLOSING_SHOTS
+        else:
+            pool = DEVELOPMENT_SHOTS
+
+        # Ardışık tekrar engelle
+        candidates = [p for p in pool if p != last_prefix]
+        if not candidates:
+            candidates = pool
+        seg_prefix = random.choice(candidates)
+        last_prefix = seg_prefix
+
         if style_prefix:
             full_prompt = f"{seg_prefix}{style_prefix}\n\n{prompt}"
         else:

@@ -1940,7 +1940,7 @@ Tüm video prompt'larının BAŞINA şu stil prefix'ini ekle: "{style_prefix}"
     "hook_description": "İlk 2 saniyede ne görünecek (Türkçe)",
     "caption_ig": "Instagram Reels caption (Türkçe, max 50 kelime, hook+değer+CTA formatı, emoji'li)",
     "hashtags": ["#Olivenet", "#KKTC", "#IoT", "#AkıllıTarım", "...8-12 adet toplam"],
-    "camera_movement": "static|dolly|pan|arc|reveal",
+    "camera_movement": "static|dolly_in|dolly_out|pan_left|pan_right|tilt_up|tilt_down|arc_orbit|crane_up|crane_down|steadicam_follow|whip_pan|rack_focus|slider|drone_descend|drone_ascend|push_in|pull_back|dutch_rotation",
     "mood": "professional|calm|energetic|inspirational"
 }}
 ```
@@ -2192,7 +2192,7 @@ Her sahne {segment_duration} saniye sürecek, toplam {total_duration} saniye.
             "time_range": "{time_ranges[0]}",
             "narrative_role": "{example_roles[0]}",
             "visual_concept": "Kısa açıklama",
-            "camera_movement": "Kamera hareketi (dolly, pan, zoom, etc.)",
+            "camera_movement": "Kamera hareketi — şunlardan biri: static, dolly_in, dolly_out, pan_left, pan_right, tilt_up, tilt_down, arc_orbit, crane_up, crane_down, steadicam_follow, whip_pan, rack_focus, slider, drone_descend, drone_ascend, push_in, pull_back, dutch_rotation. AYNI HAREKETİ İKİ SAHNEDE KULLANMA.",
             "prompt": "Detaylı video prompt (İngilizce, 50-80 kelime)"
         }},
         ...
@@ -2206,6 +2206,9 @@ Model: {model_id}
 - Her prompt 50-80 kelime arası olmalı
 - Kamera hareketini açıkça belirt
 - Sahne detaylarını (nesne, eylem, ortam) açıkla
+
+### KAMERA ÇEŞİTLİLİĞİ KURALI:
+- Her sahne/segment için FARKLI bir kamera hareketi kullan. Ardışık sahnelerde aynı kamera hareketini TEKRARLAMA. Sinematik çeşitlilik kritik önem taşıyor.
 
 Sadece JSON döndür.
 """
