@@ -152,11 +152,22 @@ def get_model_config(model_id: str) -> dict:
 
     Args:
         model_id: Model identifier (e.g., "sora-2", "wan-2.1")
+                  Also accepts fal internal names (e.g., "kling_v3_pro")
 
     Returns:
         Model configuration dict. Falls back to veo-2 if not found.
     """
-    return VIDEO_MODELS.get(model_id, VIDEO_MODELS["veo-2"])
+    # Direct key lookup
+    if model_id in VIDEO_MODELS:
+        return VIDEO_MODELS[model_id]
+
+    # Reverse lookup by fal_model name (kling_v3_pro → kling-3.0-pro)
+    for key, config in VIDEO_MODELS.items():
+        if config.get("fal_model") == model_id:
+            return config
+
+    # Fallback
+    return VIDEO_MODELS["veo-2"]
 
 
 def get_available_models() -> List[str]:
