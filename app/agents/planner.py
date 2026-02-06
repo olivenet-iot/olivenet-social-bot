@@ -222,6 +222,8 @@ class PlannerAgent(BaseAgent):
         }
 
         for topic in topics:
+            if not topic:
+                continue
             topic_lower = topic.lower()
             matched = False
             for sector, words in keywords.items():

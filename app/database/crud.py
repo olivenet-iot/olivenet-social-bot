@@ -1670,7 +1670,7 @@ def get_prompt_hash(prompt: str) -> str:
     Returns:
         12 karakterlik MD5 hash
     """
-    normalized = ' '.join(prompt.lower().split())
+    normalized = ' '.join((prompt or "").lower().split())
     return hashlib.md5(normalized.encode()).hexdigest()[:12]
 
 
@@ -1746,10 +1746,10 @@ def check_duplicate_prompt(
     conn.close()
 
     similar = []
-    prompt_lower = prompt.lower()
+    prompt_lower = (prompt or "").lower()
 
     for row in recent:
-        ratio = SequenceMatcher(None, prompt_lower, row['prompt_text'].lower()).ratio()
+        ratio = SequenceMatcher(None, prompt_lower, (row['prompt_text'] or "").lower()).ratio()
         if ratio >= threshold:
             text = row['prompt_text']
             similar.append({

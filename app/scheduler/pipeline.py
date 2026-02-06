@@ -965,7 +965,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
 
     async def run_autonomous_content_with_plan(self, plan: dict) -> Dict[str, Any]:
         """Plana göre otonom içerik üret ve paylaş - Engagement stratejileriyle"""
-        topic = plan.get('topic_suggestion', 'Genel IoT konusu')
+        topic = plan.get('topic_suggestion') or 'Genel IoT konusu'
         self.log(f"Planlı içerik üretiliyor: {topic[:50]}...")
 
         result = {
@@ -975,8 +975,8 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
         }
 
         try:
-            category = plan.get('topic_category', 'egitici')
-            visual_type = plan.get('visual_type_suggestion', 'flux')
+            category = plan.get('topic_category') or 'egitici'
+            visual_type = plan.get('visual_type_suggestion') or 'flux'
 
             # Engagement strategy fields from calendar
             viral_format = plan.get('viral_format')
@@ -2512,7 +2512,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             # ========== AŞAMA 5: Final Review (opsiyonel) ==========
             if enable_ab:
                 # A/B'de zaten review yapıldı, winning score'u kullan
-                score = comparison_result.get(f"variant_{winner.lower()}_scores", {}).get("total", 7)
+                score = comparison_result.get(f"variant_{(winner or 'a').lower()}_scores", {}).get("total", 7)
             else:
                 # Normal review
                 self.log("[A/B] Aşama 5: Kalite kontrol...")

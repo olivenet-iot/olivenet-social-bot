@@ -710,7 +710,7 @@ class CreatorAgent(BaseAgent):
         HTML-rendered visuals (infographic, carousel) can include text.
         """
         # HTML render = text OK, AI generation = avoid text
-        return visual_type.lower() not in ["infographic", "html", "carousel"]
+        return (visual_type or "").lower() not in ["infographic", "html", "carousel"]
 
     def generate_comment_cta(
         self,
@@ -1386,7 +1386,7 @@ Sadece JSON döndür.
             topic=topic,
             topic_category=category,
             is_educational=category in ["lorawan", "edge_ai"],
-            is_data_heavy="istatistik" in topic.lower() or "veri" in topic.lower() or "%" in topic
+            is_data_heavy="istatistik" in (topic or "").lower() or "veri" in (topic or "").lower() or "%" in (topic or "")
         )
 
         # Instagram içeriği (kısa)
@@ -2813,7 +2813,7 @@ Sadece JSON döndür.
             "post": 80,
             "image": 80
         }
-        return limits.get(content_type.lower(), 60)
+        return limits.get((content_type or "post").lower(), 60)
 
     async def _shorten_caption(self, caption: str, max_words: int) -> str:
         """
@@ -2861,7 +2861,7 @@ Sadece kısaltılmış caption'ı döndür, başka bir şey ekleme.
             Tespit edilen stil: 'aerial', 'pov', 'cinematic', 'documentary',
                                'timelapse', 'closeup', 'macro', 'general'
         """
-        prompt_lower = prompt.lower()
+        prompt_lower = (prompt or "").lower()
 
         # Stil keyword'leri (öncelik sırasına göre)
         style_keywords = {
