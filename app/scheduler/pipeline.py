@@ -1237,6 +1237,8 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 elif model and model.startswith("hailuo"):
                     return prompt_result.get("video_prompt_hailuo") or prompt_result.get("video_prompt_kling", "")
                 elif model and model.startswith("kling"):
+                    if model == "kling_v3_pro":
+                        return prompt_result.get("video_prompt_kling3") or prompt_result.get("video_prompt_kling", "")
                     return prompt_result.get("video_prompt_kling") or prompt_result.get("video_prompt_sora", "")
                 elif model and (model == "veo3" or model.startswith("veo")):
                     return prompt_result.get("video_prompt_veo") or prompt_result.get("video_prompt_sora", "")
