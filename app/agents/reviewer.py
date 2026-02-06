@@ -436,8 +436,8 @@ Sadece JSON döndür.
             last_type = slides[-1].get("slide_type", "")
             if first_type != "cover":
                 issues.append("UYARI: İlk slide 'cover' tipinde olmalı")
-            if last_type != "cta":
-                issues.append("UYARI: Son slide 'cta' tipinde olmalı")
+            if last_type not in ("cta", "summary"):
+                issues.append("UYARI: Son slide 'cta' veya 'summary' tipinde olmalı")
 
         # 6. Cover'da "kaydet" OLMAMALI (sadece CTA'da olmalı)
         if slides and len(slides) > 0:

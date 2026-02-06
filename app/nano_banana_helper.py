@@ -437,7 +437,8 @@ def _build_carousel_slide_prompt(
         "content": "Information-rich slide with bullet points, icons, and clear visual hierarchy.",
         "stats": "Data visualization slide with large numbers, charts, or comparison elements.",
         "comparison": "Side-by-side comparison layout with pros/cons or before/after elements.",
-        "cta": "Call-to-action slide with @olivenet.io mention and engagement prompt."
+        "cta": "Call-to-action slide with @olivenet.io mention and engagement prompt.",
+        "summary": "Summary slide with key takeaway and @olivenet.io mention."
     }
 
     slide_instruction = slide_instructions.get(slide_type, slide_instructions["content"])

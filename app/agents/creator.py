@@ -1293,13 +1293,14 @@ NOT: Yukarıdaki açıklamadaki spesifik teknik terimleri, kavramları ve karş�
 Yukarıdaki bilgilere dayanarak etkili bir Facebook post metni yaz.
 
 KURALLAR:
-1. İlk cümle (hook) çok dikkat çekici olmalı
-2. Değer önerisi net olmalı
+1. İlk cümle (hook) merak uyandırıcı teknik bilgi veya sektörel istatistik olmalı
+2. Eğitici ve bilgilendirici ton (satış dili YASAK)
 3. Emoji kullanımı dengeli (3-5 emoji)
-4. CTA (aksiyon çağrısı) olmalı
+4. Saf bilgi ver, satış dili YASAK
 5. Hashtag'ler en sonda olmalı
 6. Uzunluk: 150-300 kelime arası
 7. Paragraflar kısa olmalı (2-3 cümle)
+8. Olivenet referansı sadece doğal düşüyorsa, son paragrafta
 
 ÇIKTI FORMATI (JSON):
 ```json
@@ -1400,7 +1401,7 @@ Sadece JSON döndür.
 
         # Instagram içeriği (kısa)
         ig_prompt = f"""
-## GÖREV: Instagram Post Yaz
+## GÖREV: Instagram Post Yaz (Eğitici Mikro-Blog Formatı)
 
 ### Konu
 {topic}
@@ -1416,59 +1417,46 @@ Sadece JSON döndür.
 
 ### INSTAGRAM FORMATI (ÇOK ÖNEMLİ!)
 - MAX 80 KELİME (kesinlikle aşma!)
-- Hook ile başla (yukarıdaki öncelikli tiplerden birini kullan)
-- 2-3 cümle ana mesaj (kısa ve öz)
-- 8-12 hashtag (ZORUNLU: #Olivenet #KKTC #IoT + 5-9 sektörel/genel)
+- Bu bir EĞİTİCİ İÇERİK, reklam DEĞİL.
 - MARKDOWN KULLANMA: **bold**, *italic*, `code` YASAK (Instagram desteklemiyor)
 - Vurgu için BÜYÜK HARF veya emoji kullan
+- 8-12 hashtag (ZORUNLU: #Olivenet #KKTC #IoT + 5-9 sektörel/genel)
 
-### SAVE TETIKLEYICI (ZORUNLU!)
-Caption'da MUTLAKA guclu bir kaydetme tetikleyicisi olmali (Comment CTA'dan ONCE).
+### İÇERİK YAKLAŞIMI
 
-**Onerilen Trigger Tipi:** {save_trigger['trigger_type'].upper()}
-**Ornek:** {save_trigger['trigger_text']}
-**Psikoloji:** {save_trigger['psychology']}
+**HOOK (ilk cümle):**
+- Teknik bilgi, istatistik veya merak uyandıran gerçek ile başla
+- Yukarıdaki öncelikli hook tiplerinden birini kullan
 
-**SAVE TETIKLEYICI KURALLARI:**
-1. **URGENCY (Aciliyet)** - "📌 Bu bilgi 3 ay sonra lazim olacak. SIMDI kaydet!"
-2. **VALUE (Deger)** - "📌 Bu tablo baska yerde yok. Kaydet."
-3. **FOMO (Kacirma Korkusu)** - "📌 Rakiplerin bunu coktan kaydetti. Sen?"
-4. **PRACTICAL (Pratik Kullanim)** - "📌 Mudurune gostermek icin kaydet."
-5. **CHECKLIST (Liste)** - "✅ Checklist olarak kaydet, adim adim uygula."
+**ANA İÇERİK (2-3 cümle):**
+- Saf bilgi ver: ne, neden, nasıl
+- Somut rakam veya pratik bilgi içermeli
+- 2-3 kısa madde tercih edilir
 
-**YASAK SAVE IFADELERI:**
-- "Kaydet 📌" (cok kisa, zayif)
-- "Begen ve kaydet" (generic)
-- "Isine yararsa kaydet" (pasif)
+**KAPANIŞ:**
+- Düşündürücü soru VEYA pratik ipucu ile bitir
+- Satış dili, agresif CTA, "Kaydet!", "Takip et!" YASAK
 
-### COMMENT ENGAGEMENT CTA (ZORUNLU!)
-Caption'in MUTLAKA guclu bir comment tetikleyici ile bitmeli (hashtaglardan ONCE, Save trigger'dan SONRA).
+**HASHTAG:**
+- 8-12 adet, en sonda
 
-Onerilen CTA tipi: **{comment_cta['cta_type'].upper()}**
-{cta_example}
+### YASAK YAKLAŞIMLAR
+- "📌 Kaydet!", "🔖 Yer imi ekle!", "Takip et!" gibi agresif CTA'lar
+- "Bizi arayın", "info@olivenet.io", "İletişime geçin" gibi satış dili
+- Problem → Çözüm → "Biz yaparız" reklam yapısı
 
-**CTA TIPLERI VE KURALLARI:**
-1. **POLL (A/B Secim)** - "🅰️ Manuel mi, 🅱️ Otomatik mi? Yorumlara yaz 👇"
-2. **FILL_BLANK (Bosluk Doldur)** - "IoT olmadan ____ yapamam. Tamamla 👇"
-3. **NUMBER_GAME (Sayi/Puan)** - "1-10 arasi IoT bilgin kac? 👇"
-4. **TAG_SOMEONE (Etiketleme)** - "Sera sahibi birini etiketle 👇"
-5. **HOT_TAKE (Tartismali Fikir)** - "Manuel sulama tarihe karismali. Katiliyor musun? 👇"
-6. **EXPERIENCE (Deneyim)** - "Sen de yasadin mi? Anlat 👇"
-
-**ZORUNLU:** Caption'in son satiri (hashtaglardan once) MUTLAKA yukaridaki tiplerden biri olmali.
-**YASAK:** Sadece "Yorumlara yaz", "Ne dusunuyorsun?" gibi ZAYIF CTA'lar YASAK.
+### DOĞRU TON
+- İYİ: "Sera sıcaklığı gece 2°C düşerse, meyve verimi %30 azalır. Akıllı sensörler bu farkı gerçek zamanlı yakalar."
+- KÖTÜ: "Seranız tehlikede! Olivenet IoT ile 7/24 koruma. Hemen kaydet! 📌"
+- İYİ: "Toprak nemini saatte bir ölçmek, haftalık ölçüme göre %40 daha az su harcar."
+- KÖTÜ: "Su tasarrufu istiyorsan bize ulaş! 💧 Kaydet ve takip et!"
 
 ### ÖRNEK FORMAT
-🌱 [Dikkat çekici hook]
+🌱 [Teknik bilgi veya istatistik hook]
 
-[Ana mesaj - kısa ve öz]
+[2-3 kısa bilgi maddesi]
 
-- Madde 1
-- Madde 2
-
-📌 [SAVE TRIGGER - guclu kaydetme tetikleyicisi]
-
-[COMMENT CTA - yorum tetikleyici soru/poll] 👇
+[Düşündürücü soru veya pratik ipucu]
 
 #Olivenet #KKTC #IoT #AkıllıTarım ...
 
@@ -1500,10 +1488,10 @@ Sadece post metnini yaz, başka açıklama ekleme.
 
 ### FACEBOOK FORMATI
 - 200-300 kelime (daha detaylı)
-- Problem → Çözüm → Fayda yapısı
+- Durum tespiti → Teknik açıklama → Pratik çıkarımlar
 - Profesyonel ama samimi ton
-- Detaylı açıklama ve değer önerisi
-- CTA ile bitir (iletişim bilgisi: info@olivenet.io)
+- Detaylı açıklama ve eğitici bilgi
+- Olivenet sadece doğal düşüyorsa son paragrafta
 - 8-12 hashtag (ZORUNLU: #Olivenet #KKTC #IoT + sektörel)
 
 Sadece post metnini yaz, başka açıklama ekleme.
@@ -1948,7 +1936,7 @@ Tüm video prompt'larının BAŞINA şu stil prefix'ini ekle: "{style_prefix}"
     "recommended_model": "veo3|sora-2|sora-2-pro|kling_pro|hailuo_pro|wan_26",
     "recommended_duration": 5,
     "hook_description": "İlk 2 saniyede ne görünecek (Türkçe)",
-    "caption_ig": "Instagram Reels caption (Türkçe, max 50 kelime, hook+değer+CTA formatı, emoji'li)",
+    "caption_ig": "eğitici mikro-blog: teknik bilgi hook + 2-3 bilgi maddesi, Olivenet minimal, satış dili ve agresif CTA YASAK, emoji'li",
     "hashtags": ["#Olivenet", "#KKTC", "#IoT", "#AkıllıTarım", "...8-12 adet toplam"],
     "camera_movement": "static|dolly_in|dolly_out|pan_left|pan_right|tilt_up|tilt_down|arc_orbit|crane_up|crane_down|steadicam_follow|whip_pan|rack_focus|slider|drone_descend|drone_ascend|push_in|pull_back|dutch_rotation",
     "mood": "professional|calm|energetic|inspirational"
@@ -2454,10 +2442,10 @@ Bölümler arasında doğal geçiş olmalı ama her bölüm video segmentiyle se
    - Somut fayda veya bilgi
    - Pratik uygulama
 
-3. **CTA (son 3 saniye)**: Aksiyon çağrısı
-   - "Takip et" VEYA
-   - "Kaydet" VEYA
-   - Düşündürücü soru"""
+3. **KAPANIŞ (son 3 saniye)**: Doğal kapanış
+   - Düşündürücü soru VEYA
+   - Pratik ipucu VEYA
+   - Yumuşak yönlendirme (satış YASAK)"""
 
         # Orijinal kullanıcı açıklaması varsa prompt'a eklenecek bölüm
         original_brief_section = ""
@@ -2718,34 +2706,34 @@ Eğitici ve görsel açıdan tutarlı bir carousel oluştur.
 ### Slide Yapısı ve Tipleri:
 1. **Slide 1 (cover)**: Dikkat çekici kısa başlık + merak uyandıran soru/istatistik
 2. **Slide 2-{slide_count-1} (content/stats)**: Ana bilgiler, adımlar veya karşılaştırmalar
-3. **Slide {slide_count} (cta)**: "📌 Kaydet & Takip Et!" + CTA
+3. **Slide {slide_count} (summary)**: Özet veya anahtar çıkarım + @olivenet.io
 
 ### SLIDE TİPLERİ (ZORUNLU):
 - **cover**: İlk slide, dikkat çekici hook (KAYDET KULLANMA!)
 - **content**: Bullet point'ler, numaralı liste
 - **stats**: Büyük rakamlar, istatistikler
 - **comparison**: Yan yana karşılaştırma
-- **cta**: Son slide, kaydet/takip et çağrısı
+- **summary**: Son slide, anahtar çıkarım veya özet
 
 ### ⛔ COVER SLIDE KURALLARI (KRİTİK):
 - Cover'da "KAYDET" kelimesi KULLANMA
 - Cover'da 📌 veya 🔖 emojileri KULLANMA
 - Cover sadece dikkat çekici başlık içermeli (5-8 kelime)
-- "KAYDET" SADECE son slide'da (CTA) kullanılabilir!
+- Son slide özet slide'ıdır
 
-### SAVE-OPTİMİZE İÇERİK:
-- Son slide kaydetmeye teşvik etmeli (📌 emojisi)
+### EĞİTİCİ İÇERİK KALİTESİ:
 - İçerik referans değeri taşımalı (checklist, adımlar, karşılaştırma)
+- Bilgi kalitesi doğal kaydetme davranışı oluşturmalı
 
 ### Her Slide İçin:
-- slide_type: cover, content, stats, comparison veya cta
+- slide_type: cover, content, stats, comparison veya summary
 - title: Kısa başlık (max 5 kelime)
 - content: Ana metin (max 30 kelime, bullet point'ler tercih edilir)
 
-### Caption (KISA ve SAVE-FOCUSED):
+### Caption (KISA ve EĞİTİCİ):
 - MAX 30 KELİME (bilgi slide'larda, caption minimal!)
 - Tek satır hook veya soru ile başla
-- "📌 Kaydet!" veya "🔖 Yer imi ekle!" ile bitir
+- Pratik ipucu veya düşündürücü soru ile bitir
 - Slide içeriğini caption'da TEKRARLAMA
 
 ### Hashtag'ler:
@@ -2776,9 +2764,9 @@ Eğitici ve görsel açıdan tutarlı bir carousel oluştur.
             "content": "%75 verimlilik artışı\\n%50 maliyet düşüşü"
         }},
         {{
-            "slide_type": "cta",
-            "title": "📌 Kaydet!",
-            "content": "Daha fazlası için takip et\\n@olivenet.io"
+            "slide_type": "summary",
+            "title": "Özetle",
+            "content": "Anahtar çıkarım veya özet bilgi\\n@olivenet.io"
         }}
     ],
     "hashtags": ["#Olivenet", "#KKTC", "#IoT", ...]
@@ -2786,8 +2774,8 @@ Eğitici ve görsel açıdan tutarlı bir carousel oluştur.
 ```
 
 ### ÖNEMLİ:
-1. Her slide'da slide_type zorunlu (cover, content, stats, comparison, cta)
-2. İlk slide: cover, son slide: cta olmalı
+1. Her slide'da slide_type zorunlu (cover, content, stats, comparison, summary)
+2. İlk slide: cover, son slide: summary olmalı
 3. Slides dizisi tam {slide_count} element içermeli
 4. Title ve content Türkçe olmalı
 
@@ -3270,15 +3258,15 @@ CAMERA: Medium two-shot showing both characters, professional composition.
 **B-ROLL VOICEOVER:**
 - MAKSIMUM {broll_words} kelime (~{available_broll_duration:.0f} saniye)
 - B-roll video {expected_broll_duration}s, başta {broll_delay}s delay var - KISA TUT!
-- CTA icermeli: "Takip et", "Kaydet" veya soru
+- Bilgilendirici kapanış: düşündürücü soru, pratik ipucu veya konuyu özetleyen cümle (satış dili YASAK)
 - Tek ses (narrator)
 - Turkce
 
 **INSTAGRAM CAPTION:**
 - MAX 80 KELİME
-- Hook ile başla (dikkat çekici soru veya istatistik)
+- Teknik bilgi veya istatistik ile hook
 - 2-3 cümle ana mesaj
-- Kapanışta soru veya "📌 Kaydet!"
+- Kapanışta düşündürücü soru veya pratik ipucu (satış dili YASAK)
 - 8-12 hashtag (ZORUNLU: #Olivenet #KKTC #IoT + sektörel)
 
 ---
@@ -3293,7 +3281,7 @@ CAMERA: Medium two-shot showing both characters, professional composition.
     ],
     "video_prompt": "BU ALANI DOLDUR: Yukarıdaki VIDEO PROMPT ŞABLONUNU kullan. Stil prefix ({style_prefix}) ile başla, karakter tanımlarını ve sahne tanımını aynen kullan. Tamamı İngilizce.",
     "broll_prompt": "BU ALANI DOLDUR: Stil prefix ({style_prefix}) ile başla, sahne ortamına uygun IoT sensör/ekipman close-up. İngilizce, 9:16, insan yok.",
-    "broll_voiceover": "Turkce ~8 kelime CTA. Ornek: Olivenet IoT ile seraniz 7/24 guvende. Takip et!",
+    "broll_voiceover": "Turkce ~8 kelime bilgilendirici kapanış. Ornek: Akıllı sera sistemleri, verimliliği yüzde kırk artırıyor.",
     "caption": "Instagram caption (max 80 kelime, hook ile basla)",
     "hashtags": ["#Olivenet", "#KKTC", "#IoT", "...sektorel taglar..."]
 }}
