@@ -273,7 +273,7 @@ async def generate_video_smart(
             result = await FalVideoGenerator.generate_video(
                 prompt=prompt,
                 model=model,
-                duration=min(duration, 10),  # Kling 10 saniyeye kadar destekliyor
+                duration=min(duration, 15 if model in ("kling_v3_pro",) else 10),
                 aspect_ratio="9:16",
                 generate_audio=generate_audio
             )

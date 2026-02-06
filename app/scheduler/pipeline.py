@@ -1265,7 +1265,8 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             self.log(f"[REELS]   Önerilen model: {recommended_model}")
 
             # ========== AŞAMA 4: Video Üretimi ==========
-            self.log("[REELS] Aşama 4: Video üretiliyor...")
+            model_duration = get_max_duration(model_to_use) if model_to_use else 8
+            self.log(f"[REELS] Aşama 4: Video üretiliyor ({model_duration}s, {model_to_use})...")
 
             from app.sora_helper import generate_video_smart
 
@@ -1273,7 +1274,8 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             video_result = await generate_video_smart(
                 prompt=video_prompt,
                 topic=topic,
-                force_model=model_to_use
+                force_model=model_to_use,
+                duration=model_duration
             )
 
             if not video_result.get("success"):
