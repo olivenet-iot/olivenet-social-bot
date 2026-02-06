@@ -94,7 +94,7 @@ def extract_shot_structure(speech_script: str, target_duration: int) -> list:
         return []
 
     words = speech_script.split()
-    num_shots = max(1, target_duration // 4)  # Her 4s = 1 shot
+    num_shots = max(1, int(target_duration // 4))  # Her 4s = 1 shot
     words_per_shot = max(1, len(words) // num_shots)
 
     shots = []
