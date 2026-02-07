@@ -231,7 +231,7 @@ class FalVideoGenerator:
             logger.debug(f"Status URL: {status_url}")
             logger.debug(f"Result URL: {result_url}")
 
-            max_attempts = 120  # 10 dakika (5 saniye aralikli)
+            max_attempts = 240  # 20 dakika (5 saniye aralikli)
             for attempt in range(max_attempts):
                 await asyncio.sleep(5)
 
@@ -255,7 +255,7 @@ class FalVideoGenerator:
 
                 # IN_QUEUE veya IN_PROGRESS - devam et
 
-            raise Exception("Video uretimi zaman asimina ugradi (10 dakika)")
+            raise Exception("Video uretimi zaman asimina ugradi (15 dakika)")
 
     @staticmethod
     async def _download_video(video_url: str) -> str:
