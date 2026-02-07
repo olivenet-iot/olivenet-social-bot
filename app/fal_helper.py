@@ -231,7 +231,7 @@ class FalVideoGenerator:
             logger.debug(f"Status URL: {status_url}")
             logger.debug(f"Result URL: {result_url}")
 
-            max_attempts = 240  # 20 dakika (5 saniye aralikli)
+            max_attempts = 360  # 30 dakika (5 saniye aralikli)
             for attempt in range(max_attempts):
                 await asyncio.sleep(5)
 
