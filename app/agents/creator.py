@@ -1416,7 +1416,7 @@ Sadece JSON döndür.
 {hook_hint}
 
 ### INSTAGRAM FORMATI (ÇOK ÖNEMLİ!)
-- MAX 80 KELİME (kesinlikle aşma!)
+- 100-150 KELİME (eğitici içerik detaylı olmalı, kısa tutma)
 - Bu bir EĞİTİCİ İÇERİK, reklam DEĞİL.
 - MARKDOWN KULLANMA: **bold**, *italic*, `code` YASAK (Instagram desteklemiyor)
 - Vurgu için BÜYÜK HARF veya emoji kullan
@@ -1936,7 +1936,7 @@ Tüm video prompt'larının BAŞINA şu stil prefix'ini ekle: "{style_prefix}"
     "recommended_model": "veo3|sora-2|sora-2-pro|kling_pro|hailuo_pro|wan_26",
     "recommended_duration": 5,
     "hook_description": "İlk 2 saniyede ne görünecek (Türkçe)",
-    "caption_ig": "eğitici mikro-blog: teknik bilgi hook + 2-3 bilgi maddesi, Olivenet minimal, satış dili ve agresif CTA YASAK, emoji'li",
+    "caption_ig": "Instagram Reels caption (Türkçe, 80-120 kelime, eğitici mikro-blog: teknik bilgi hook + 3-5 bilgi maddesi + düşündürücü kapanış, Olivenet minimal, satış dili ve agresif CTA YASAK, emoji'li, hashtag'ler dahil)",
     "hashtags": ["#Olivenet", "#KKTC", "#IoT", "#AkıllıTarım", "...8-12 adet toplam"],
     "camera_movement": "static|dolly_in|dolly_out|pan_left|pan_right|tilt_up|tilt_down|arc_orbit|crane_up|crane_down|steadicam_follow|whip_pan|rack_focus|slider|drone_descend|drone_ascend|push_in|pull_back|dutch_rotation",
     "mood": "professional|calm|energetic|inspirational"
@@ -2852,10 +2852,10 @@ Sadece JSON döndür.
             Max kelime sayısı
         """
         limits = {
-            "reels": 50,
+            "reels": 120,
             "carousel": 30,
-            "post": 80,
-            "image": 80
+            "post": 150,
+            "image": 120
         }
         return limits.get((content_type or "post").lower(), 60)
 
@@ -3263,7 +3263,7 @@ CAMERA: Medium two-shot showing both characters, professional composition.
 - Turkce
 
 **INSTAGRAM CAPTION:**
-- MAX 80 KELİME
+- 80-120 KELİME
 - Teknik bilgi veya istatistik ile hook
 - 2-3 cümle ana mesaj
 - Kapanışta düşündürücü soru veya pratik ipucu (satış dili YASAK)
@@ -3282,7 +3282,7 @@ CAMERA: Medium two-shot showing both characters, professional composition.
     "video_prompt": "BU ALANI DOLDUR: Yukarıdaki VIDEO PROMPT ŞABLONUNU kullan. Stil prefix ({style_prefix}) ile başla, karakter tanımlarını ve sahne tanımını aynen kullan. Tamamı İngilizce.",
     "broll_prompt": "BU ALANI DOLDUR: Stil prefix ({style_prefix}) ile başla, sahne ortamına uygun IoT sensör/ekipman close-up. İngilizce, 9:16, insan yok.",
     "broll_voiceover": "Turkce ~8 kelime bilgilendirici kapanış. Ornek: Akıllı sera sistemleri, verimliliği yüzde kırk artırıyor.",
-    "caption": "Instagram caption (max 80 kelime, hook ile basla)",
+    "caption": "Instagram caption (80-120 kelime, eğitici mikro-blog, hook ile basla)",
     "hashtags": ["#Olivenet", "#KKTC", "#IoT", "...sektorel taglar..."]
 }}
 ```
