@@ -231,6 +231,12 @@ class ElevenLabsHelper:
                 if response.status_code == 401:
                     raise ElevenLabsError("Invalid API key")
 
+                if response.status_code == 402:
+                    raise ElevenLabsError(
+                        "Payment required - voice may be a library voice not available on free tier. "
+                        "Use a premade or cloned voice instead."
+                    )
+
                 if response.status_code == 400:
                     error_text = response.text
                     if "quota" in error_text.lower() or "limit" in error_text.lower():
