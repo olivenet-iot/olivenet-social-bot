@@ -1264,9 +1264,19 @@ Sadece JSON döndür.
         original_brief_section = ""
         if original_user_brief and len(original_user_brief) > 50:
             original_brief_section = f"""
-- KULLANICININ DETAYLI AÇIKLAMASI (teknik kavramları ve ana tezi MUTLAKA koru):
+
+### KULLANICININ DETAYLI AÇIKLAMASI:
 {original_user_brief}
-NOT: Yukarıdaki açıklamadaki spesifik teknik terimleri, kavramları ve karşılaştırmaları caption'da kullan. Konuyu genelleştirme."""
+
+⚠️ KRİTİK — BRİEF'E SADAKAT TALİMATLARI:
+1. Önce yukarıdaki açıklamadan ANA TEZLERİ ve BENZERSİZ ARGÜMANLARI çıkar
+2. Her ana tezi caption'a MUTLAKA yansıt — kelime limiti yüzünden hiçbir ana fikri ATLAMA
+3. Eğer brief bir paradigma değişimi anlatıyorsa (ör. "insan döngüde değil, dışarıda izler"), bu caption'da yer almalı
+4. Eğer brief bir öğrenme/evrilme/iterasyon süreci anlatıyorsa (ör. "her iterasyonda öğrenir"), bunu caption'a dahil et
+5. Eğer brief "A vs B" karşılaştırması içeriyorsa, caption da bu karşılaştırmayı korumalı
+6. Spesifik teknik terimleri koru — genel terimlerle DEĞİŞTİRME
+7. Genel bilgi verme, kullanıcının SPESİFİK anlatımını ve bakış açısını özetle
+8. Caption kısaltılsa bile kullanıcının benzersiz bakış açısı ve farklılaştırıcı noktaları korunmalı"""
 
         company_profile = self.load_context("company-profile.md")
         content_strategy = self.load_context("content-strategy.md")
@@ -1361,6 +1371,24 @@ Sadece JSON döndür.
         topic = input_data.get("topic", "")
         category = input_data.get("category", "egitici")
         visual_type = input_data.get("visual_type", "flux")
+        original_user_brief = input_data.get("original_user_brief")
+
+        # Orijinal kullanıcı açıklaması varsa prompt'a eklenecek bölüm
+        original_brief_section = ""
+        if original_user_brief and len(original_user_brief) > 50:
+            original_brief_section = f"""
+
+### KULLANICININ DETAYLI AÇIKLAMASI:
+{original_user_brief}
+
+⚠️ KRİTİK — BRİEF'E SADAKAT TALİMATLARI:
+1. Önce yukarıdaki açıklamadan ANA TEZLERİ ve BENZERSİZ ARGÜMANLARI çıkar
+2. Her ana tezi caption'a MUTLAKA yansıt — kelime limiti yüzünden hiçbir ana fikri ATLAMA
+3. Eğer brief bir paradigma değişimi anlatıyorsa, bu caption'da yer almalı
+4. Eğer brief bir öğrenme/evrilme/iterasyon süreci anlatıyorsa, bunu caption'a dahil et
+5. Eğer brief "A vs B" karşılaştırması içeriyorsa, caption da bu karşılaştırmayı korumalı
+6. Spesifik teknik terimleri koru — genel terimlerle DEĞİŞTİRME
+7. Genel bilgi verme, kullanıcının SPESİFİK anlatımını özetle"""
 
         company_profile = self.load_context("company-profile.md")
         content_strategy = self.load_context("content-strategy.md")
@@ -1404,7 +1432,7 @@ Sadece JSON döndür.
 ## GÖREV: Instagram Post Yaz (Eğitici Mikro-Blog Formatı)
 
 ### Konu
-{topic}
+{topic}{original_brief_section}
 
 ### Kategori
 {category}
@@ -1478,7 +1506,7 @@ Sadece post metnini yaz, başka açıklama ekleme.
 ## GÖREV: Facebook Post Yaz
 
 ### Konu
-{topic}
+{topic}{original_brief_section}
 
 ### Kategori
 {category}
@@ -2177,9 +2205,17 @@ Sadece JSON döndür, başka açıklama ekleme.
         if original_user_brief and len(original_user_brief) > 50:
             original_brief_section = f"""
 
-### KULLANICININ DETAYLI AÇIKLAMASI (sahnelerde bu kavramları görsel olarak yansıt):
+### KULLANICININ DETAYLI AÇIKLAMASI:
 {original_user_brief}
-ÖNEMLİ: Video prompt'ları yukarıdaki açıklamadaki spesifik teknolojileri görselleştirmeli."""
+
+⚠️ KRİTİK — BRİEF'E SADAKAT TALİMATLARI:
+1. Önce yukarıdaki açıklamadan ANA TEZLERİ ve BENZERSİZ ARGÜMANLARI çıkar
+2. Her ana tezi sahne prompt'larına MUTLAKA yansıt — hiçbir ana fikri ATLAMA
+3. Eğer brief bir paradigma değişimi anlatıyorsa, bunu görsel olarak yansıt
+4. Eğer brief bir öğrenme/evrilme/iterasyon süreci anlatıyorsa, sahnelerde bu süreci göster
+5. Eğer brief "A vs B" karşılaştırması içeriyorsa, sahnelerde bu karşıtlığı görselleştir
+6. Spesifik teknolojileri ve kavramları görsel prompt'lara dahil et — genel görseller DEĞİL
+7. Kullanıcının SPESİFİK anlatımındaki benzersiz noktaları sahne detaylarına yansıt"""
 
         kling3_instruction = ""
         if model_id == "kling-3.0-pro":
@@ -2452,9 +2488,17 @@ Bölümler arasında doğal geçiş olmalı ama her bölüm video segmentiyle se
         if original_user_brief and len(original_user_brief) > 50:
             original_brief_section = f"""
 
-### KULLANICININ DETAYLI AÇIKLAMASI (teknik kavramları MUTLAKA koru):
+### KULLANICININ DETAYLI AÇIKLAMASI:
 {original_user_brief}
-ÖNEMLİ: Script yukarıdaki spesifik teknik terimleri kullanmalı. Konuyu genelleştirme."""
+
+⚠️ KRİTİK — BRİEF'E SADAKAT TALİMATLARI:
+1. Önce yukarıdaki açıklamadan ANA TEZLERİ ve BENZERSİZ ARGÜMANLARI çıkar
+2. Her ana tezi script'e MUTLAKA yansıt — süre limiti yüzünden hiçbir ana fikri ATLAMA
+3. Eğer brief bir paradigma değişimi anlatıyorsa, bu script'te yer almalı
+4. Eğer brief bir öğrenme/evrilme/iterasyon süreci anlatıyorsa, bunu script'e dahil et
+5. Eğer brief "A vs B" karşılaştırması içeriyorsa, script de bu karşılaştırmayı korumalı
+6. Spesifik teknik terimleri koru — genel terimlerle DEĞİŞTİRME
+7. Genel bilgi verme, kullanıcının SPESİFİK anlatımını ve bakış açısını özetle"""
 
         prompt = f"""
 ## GÖREV: Instagram Reels Voiceover Scripti Yaz
