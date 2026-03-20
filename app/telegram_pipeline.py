@@ -763,7 +763,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "🎬 *Video Modeli Seçin*\n\n"
             "• *Veo 3.1*: Google, 8s, native audio + lip-sync\n"
             "• *Sora 2*: OpenAI, 12s, sinematik kalite\n"
-            "• *Kling 3.0 Pro*: fal.ai, 15s, 🔮 sinematik yönetmenlik\n\n"
+            "• *Kling 3.0 Pro*: Kling API, 15s, 🔮 sinematik yönetmenlik\n\n"
             "🎙️ *Sesli Reels*: Türkçe voiceover + video\n\n"
             "💡 Tüm modeller 9:16 dikey format kullanır.",
             parse_mode="Markdown",
@@ -777,7 +777,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         model_names = {
             "veo3": "Veo 3.1 (Google)",
             "sora2": "Sora 2 (OpenAI)",
-            "kling_v3_pro": "Kling 3.0 Pro (fal.ai)",
+            "kling_v3_pro": "Kling 3.0 Pro",
         }
         model_name = model_names.get(model, model)
 
@@ -955,12 +955,12 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         model_names = {
             "veo3": "Veo 3 (Google)",
             "sora2": "Sora 2 (OpenAI)",
-            "kling_pro": "Kling 2.5 Pro (fal.ai)",
-            "kling_26_pro": "Kling 2.6 Pro (fal.ai)",
-            "kling_v3_pro": "Kling 3.0 Pro (fal.ai)",
-            "hailuo_pro": "Hailuo 02 Pro (fal.ai)",
-            "wan_26": "Wan 2.6 (fal.ai)",
-            "kling_master": "Kling 2.1 Master (fal.ai)"
+            "kling_pro": "Kling 2.5 Pro",
+            "kling_26_pro": "Kling 2.6 Pro",
+            "kling_v3_pro": "Kling 3.0 Pro",
+            "hailuo_pro": "Hailuo 02 Pro",
+            "wan_26": "Wan 2.6",
+            "kling_master": "Kling 2.1 Master"
         }
         model_name = model_names.get(model, model)
         style_config = get_style_config(style_id)
@@ -990,12 +990,12 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         model_names = {
             "veo3": "Veo 3 (Google)",
             "sora2": "Sora 2 (OpenAI)",
-            "kling_pro": "Kling 2.5 Pro (fal.ai)",
-            "kling_26_pro": "Kling 2.6 Pro (fal.ai)",
-            "kling_v3_pro": "Kling 3.0 Pro (fal.ai)",
-            "hailuo_pro": "Hailuo 02 Pro (fal.ai)",
-            "wan_26": "Wan 2.6 (fal.ai)",
-            "kling_master": "Kling 2.1 Master (fal.ai)"
+            "kling_pro": "Kling 2.5 Pro",
+            "kling_26_pro": "Kling 2.6 Pro",
+            "kling_v3_pro": "Kling 3.0 Pro",
+            "hailuo_pro": "Hailuo 02 Pro",
+            "wan_26": "Wan 2.6",
+            "kling_master": "Kling 2.1 Master"
         }
         model_name = model_names.get(model, model)
         style_config = get_style_config(style_id)

@@ -235,7 +235,7 @@ KURALLAR:
 YARATICI PARAMETRELER:
 - model_id: Video model seçimi. İçeriğe göre aktif seçim yap.
   MODEL SEÇİMİ REHBERİ:
-  - kling-3.0-pro: Hızlı üretim (2-3 dk), 15s'e kadar, ambient ses destekli. Endüstriyel, gerçekçi sahneler için ideal. fal.ai üzerinden.
+  - kling-3.0-pro: Hızlı üretim (2-3 dk), 15s'e kadar, ambient ses destekli. Endüstriyel, gerçekçi sahneler için ideal. Kling Direct API.
   - sora-2: Yüksek sinematik kalite, 12s max, yavaş (5-8 dk). Yaratıcı ve artistik sahneler için. Sesli reels'te iyi sonuç verir.
   - sora-2-pro: Sora 2'nin premium versiyonu, native speech destekli. Conversational ve voice reels için en iyi seçim.
   - veo-3.1: Google'ın modeli, 8s max, native speech destekli. Hızlı ve kaliteli, doğa/açık alan sahneleri için güçlü.

@@ -1,6 +1,6 @@
 # Olivenet Social Bot
 
-AI destekli Instagram icerik otomasyonu. Multi-agent mimari ile icerik planlama, olusturma ve yayinlama.
+AI destekli Instagram icerik otomasyonu. v2 mimaride Brain Agent, Feed System ve 7 modular production pipeline ile otonom icerik planlama, olusturma ve yayinlama.
 
 ![Python](https://img.shields.io/badge/python-3.10+-blue)
 ![Platform](https://img.shields.io/badge/platform-Instagram-E4405F)
@@ -10,16 +10,16 @@ AI destekli Instagram icerik otomasyonu. Multi-agent mimari ile icerik planlama,
 
 ## Ozellikler
 
-- **Multi-Agent Sistem** - 6 uzman agent ile orkestrasyon
-- **Video Uretimi** - Sora 2, Veo 3.1, Kling AI entegrasyonu
-- **Gorsel Uretimi** - FLUX.2 Pro, Gemini ile yuksek kalite
+- **Brain Agent** - Otonom karar motoru, 2 saatlik dongulerle icerik uretim kararlari
+- **Feed System** - 10 RSS feed ile icerik firsati toplama, skorlama ve havuz yonetimi
+- **Multi-Agent Sistem** - 8 uzman agent (Brain, Orchestrator, Planner, Creator, Reviewer, Publisher, Analytics + BaseAgent)
+- **7 Production Pipeline** - post, reels, carousel, voice_reels, long_video, news_reels, conversational
+- **Video Uretimi** - Sora 2, Sora 2 Pro, Veo 3.1, Kling 3.0 Pro (Direct API)
+- **Gorsel Uretimi** - FLUX.2 Pro (fotorealistik), Nano Banana (Gemini 3 Pro Image infographic)
 - **Sesli Reels** - ElevenLabs TTS ile Turkce seslendirme
 - **Otomatik Altyazi** - Whisper ile word-level timing
-- **Audio Sync** - Akilli ses/video senkronizasyonu
-- **11 Infographic Template** - HTML tabanlı carousel sablonlari
-- **Telegram Kontrol** - Onay akisi ve yonetim paneli
-- **Performance Learning** - Hook ve konu performans takibi
-- **A/B Testing** - Varyant karsilastirma ve ogrenme
+- **Telegram Kontrol** - 14 komut ile yonetim paneli
+- **Performance Learning** - Hook ve konu performans takibi, A/B testing
 
 ---
 
@@ -31,7 +31,7 @@ git clone https://github.com/olivenet-iot/olivenet-social-bot.git
 cd olivenet-social-bot
 
 # Virtual environment
-python -m venv venv
+python3 -m venv venv
 source venv/bin/activate
 
 # Bagimliliklar
@@ -42,53 +42,50 @@ cp .env.example .env
 nano .env  # API key'leri duzenle
 
 # Veritabani
-python -m app.database.models
+python3 -m app.database.models
 
-# Calistir
-python -m app.telegram_pipeline
+# Calistir (v2 - Brain + Feed + Telegram)
+python3 app/main.py
 ```
 
 Detayli kurulum: [QUICKSTART.md](QUICKSTART.md)
 
 ---
 
-## Mimari
+## Mimari (v2)
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                  TELEGRAM BOT                        │
-│           /start /manual /status /sync              │
-└──────────────────────┬──────────────────────────────┘
-                       │
-              ┌────────▼────────┐
-              │    PIPELINE     │
-              │  Daily/Reels/   │
-              │  Carousel/A-B   │
-              └────────┬────────┘
-                       │
-    ┌──────────────────┼──────────────────┐
-    │                  │                  │
-┌───▼───┐         ┌────▼────┐        ┌────▼────┐
-│PLANNER│────────▶│ CREATOR │───────▶│REVIEWER │
-└───────┘         └────┬────┘        └────┬────┘
-                       │                  │
-              ┌────────▼────────┐         │
-              │   AI Services   │         │
-              │ Sora/Veo/FLUX   │         │
-              │ ElevenLabs/CDN  │         │
-              └─────────────────┘         │
-                                          │
-                       ┌──────────────────┘
-                       │
-              ┌────────▼────────┐
-              │    PUBLISHER    │
-              │  Instagram API  │
-              └────────┬────────┘
-                       │
-              ┌────────▼────────┐
-              │    ANALYTICS    │
-              │   Insights API  │
-              └─────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                        KAYNAKLAR (Sources)                        │
+│  10 RSS Feed → FeedAggregator → content_opportunities havuzu      │
+└──────────────────────────┬───────────────────────────────────────┘
+                           │
+              ┌────────────▼────────────┐
+              │      BRAIN AGENT        │
+              │  (Otonom Karar Motoru)   │
+              │  2h dongu, Claude API    │
+              └────────────┬────────────┘
+                           │
+┌──────────────────────────▼───────────────────────────────────────┐
+│                   PRODUCTION PIPELINES                             │
+│  post │ reels │ carousel │ voice_reels │ long_video │ news_reels  │
+│                        │ conversational                           │
+└──────────────────────────┬───────────────────────────────────────┘
+                           │
+    ┌──────────────────────┼──────────────────┐
+    │                      │                  │
+┌───▼────┐          ┌──────▼──────┐    ┌──────▼──────┐
+│ AGENTS │          │ AI SERVICES │    │   PUBLISH   │
+│ Creator│          │ Sora/Veo/   │    │ Instagram   │
+│Reviewer│          │ Kling/FLUX  │    │  Graph API  │
+│Planner │          │ ElevenLabs  │    └─────────────┘
+└────────┘          └─────────────┘
+
+┌──────────────────────────────────────────────────────────────────┐
+│                     TELEGRAM BOT (14 komut)                       │
+│  /start /status /manual /stats /next /schedule /sync /prompts     │
+│  /pool /brain /feeds /pause /resume /force                        │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -103,41 +100,74 @@ Detayli kurulum: [QUICKSTART.md](QUICKSTART.md)
 
 ---
 
-## Video Modelleri
+## Video Modelleri (4 model)
 
-| Model | Sure | Kalite | Kullanim |
-|-------|------|--------|----------|
-| Sora 2 | 4-12s | En yuksek | Sinematik, voice reels |
-| Veo 3.1 | 4-8s | Yuksek | Hizli uretim |
-| Kling Pro | 5-10s | Iyi | Alternatif |
-| Minimax | 5-6s | Iyi | Hizli uretim |
-| Wan 2.6 | 5-15s | Iyi | Uzun icerik |
-
----
-
-## Agent Sistemi
-
-| Agent | Gorev | Metodlar |
-|-------|-------|----------|
-| **Orchestrator** | Haftalik plan, strateji | `plan_week()`, `daily_check()` |
-| **Planner** | Konu secimi, hook onerisi | `suggest_topic()`, `get_top_topics()` |
-| **Creator** | Icerik uretimi | `create_post()`, `create_reels_prompt()` |
-| **Reviewer** | Kalite kontrol (0-10 puan) | `review_post()`, `final_approval()` |
-| **Publisher** | Instagram yayinlama | `publish()`, `publish_carousel()` |
-| **Analytics** | Metrik analizi, viral skor | `fetch_analytics()`, `calculate_viral_score()` |
+| Model | Provider | Sure | Ozellikler |
+|-------|----------|------|------------|
+| sora-2 | OpenAI | 4/8/12s | En yuksek kalite, gercekci |
+| sora-2-pro | OpenAI | 4/8/12s | Native speech, conversational only |
+| veo-3.1 | Google | 4/6/8s | Native audio + lip-sync |
+| kling-3.0-pro | Kling Direct API | 5/10/15s | Sinematik, fizik tabanli, native audio |
 
 ---
 
-## Telegram Komutlari
+## Agent Sistemi (8 agent)
+
+| Agent | Gorev | Dosya |
+|-------|-------|-------|
+| **BrainAgent** | Otonom karar motoru, 2h dongu | `agents/brain.py` |
+| **Orchestrator** | Haftalik plan, strateji | `agents/orchestrator.py` |
+| **Planner** | Konu secimi, hook onerisi | `agents/planner.py` |
+| **Creator** | Icerik uretimi | `agents/creator.py` |
+| **Reviewer** | Kalite kontrol (0-10 puan) | `agents/reviewer.py` |
+| **Publisher** | Instagram yayinlama | `agents/publisher.py` |
+| **Analytics** | Metrik analizi, viral skor | `agents/analytics.py` |
+| **BaseAgent** | Temel sinif, retry logic | `agents/base_agent.py` |
+
+---
+
+## RSS Feed'ler (10 feed)
+
+| Feed | Kategori |
+|------|----------|
+| IoT Now | iot |
+| RAKwireless News | lorawan |
+| Hackaday | maker |
+| LoRa Alliance Blog | lorawan |
+| Embedded Computing Design | embedded |
+| TechCrunch AI | tech |
+| MIT Technology Review | research |
+| CleanTechnica | energy |
+| Renewable Energy World | energy |
+| AgFunder News | agriculture |
+
+---
+
+## Telegram Komutlari (14 komut)
+
+### v1 Komutlar
 
 | Komut | Aciklama |
 |-------|----------|
 | `/start` | Bot'u baslat |
-| `/manual` | Manuel icerik olustur |
 | `/status` | Pipeline durumu |
+| `/manual` | Manuel icerik olustur |
+| `/stats` | Istatistikler |
+| `/next` | Siradaki icerik |
 | `/schedule` | Haftalik program |
 | `/sync` | Metrikleri senkronize et |
-| `/stats` | Istatistikler |
+| `/prompts` | Prompt istatistikleri |
+
+### v2 Komutlar
+
+| Komut | Aciklama |
+|-------|----------|
+| `/pool` | Icerik firsati havuzu |
+| `/brain` | Brain Agent kararlari |
+| `/feeds` | Feed aggregator durumu |
+| `/pause` | Sistemi duraklat |
+| `/resume` | Sistemi devam ettir |
+| `/force` | Firsati hemen uret |
 
 ---
 
@@ -148,8 +178,9 @@ Detayli kurulum: [QUICKSTART.md](QUICKSTART.md)
 | Instagram Graph | Post yayinlama, insights | `instagram_helper.py` |
 | OpenAI Sora | Video uretimi | `sora_helper.py` |
 | Google Veo | Video uretimi | `veo_helper.py` |
-| fal.ai Kling | Video uretimi | `fal_helper.py` |
+| Kling Direct API | Video uretimi (JWT auth) | `kling_helper.py` |
 | FLUX.2 Pro | Gorsel uretimi | `flux_helper.py` |
+| Nano Banana | Infographic uretimi (Gemini 3 Pro) | `nano_banana_helper.py` |
 | ElevenLabs | Turkce TTS | `elevenlabs_helper.py` |
 | Cloudinary | Video CDN | `cloudinary_helper.py` |
 | Meta Ads | Reklam metrikleri | `meta_ads_helper.py` |
@@ -161,13 +192,17 @@ Detayli kurulum: [QUICKSTART.md](QUICKSTART.md)
 ```
 olivenet-social-bot/
 ├── app/
-│   ├── agents/          # 6 AI agent
-│   ├── database/        # SQLite models + CRUD
-│   ├── scheduler/       # Pipeline ve zamanlama
+│   ├── agents/          # 8 AI agent (brain, orchestrator, planner, ...)
+│   ├── database/        # SQLite models + CRUD (12 tablo)
+│   ├── engine/          # v2: scheduler, state, event_bus
+│   ├── production/      # 7 production pipeline
+│   ├── sources/         # Feed aggregator + config (10 RSS)
+│   ├── scheduler/       # v1 pipeline ve zamanlama
+│   ├── utils/           # Logger
+│   ├── validators/      # Text validation
 │   └── *.py             # API helpers
-├── context/             # AI context dosyalari
-├── templates/           # 11 HTML template
-├── data/                # SQLite veritabani
+├── context/             # AI context dosyalari + agent personas
+├── data/                # SQLite veritabani (12 tablo)
 ├── outputs/             # Uretilen icerikler
 └── logs/                # Uygulama loglari
 ```
@@ -179,7 +214,7 @@ olivenet-social-bot/
 | Dosya | Icerik |
 |-------|--------|
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Sistem mimarisi |
-| [DATABASE.md](DATABASE.md) | Veritabani semasi |
+| [DATABASE.md](DATABASE.md) | Veritabani semasi (12 tablo) |
 | [API_INTEGRATIONS.md](API_INTEGRATIONS.md) | API detaylari |
 | [CONFIGURATION.md](CONFIGURATION.md) | Konfigurasyon rehberi |
 | [QUICKSTART.md](QUICKSTART.md) | Hizli baslangic |
@@ -190,9 +225,9 @@ olivenet-social-bot/
 
 ## Gereksinimler
 
-- Python 3.11+
+- Python 3.10+
 - FFmpeg 6.0+ (video donusturme)
-- Playwright (HTML render)
+- Playwright (carousel slide render)
 - SQLite
 
 ---
@@ -210,10 +245,11 @@ TELEGRAM_ADMIN_CHAT_ID=...
 INSTAGRAM_ACCESS_TOKEN=...
 INSTAGRAM_USER_ID=...
 
-# Video (en az biri)
-OPENAI_API_KEY=...      # Sora
-GEMINI_API_KEY=...      # Veo
-FAL_API_KEY=...         # Kling
+# Video
+OPENAI_API_KEY=...          # Sora
+GEMINI_API_KEY=...          # Veo + Nano Banana
+KLING_ACCESS_KEY=...        # Kling Direct API
+KLING_SECRET_KEY=...        # Kling Direct API
 
 # Gorsel
 FLUX_API_KEY=...
@@ -226,6 +262,17 @@ ELEVENLABS_VOICE_ID=...
 CLOUDINARY_CLOUD_NAME=...
 CLOUDINARY_API_KEY=...
 CLOUDINARY_API_SECRET=...
+
+# Brain Agent (v2)
+BRAIN_DRY_RUN=true          # true=logla, false=uret
+BRAIN_CYCLE_MINUTES=120
+BRAIN_MAX_DAILY_POSTS=2
+BRAIN_MIN_POST_INTERVAL_HOURS=4
+BRAIN_MIN_SCORE_PRODUCE=60
+
+# Feed System (v2)
+FEED_POLL_MINUTES=30
+EXPIRY_CHECK_HOURS=6
 ```
 
 Detaylar: [CONFIGURATION.md](CONFIGURATION.md)
@@ -234,22 +281,21 @@ Detaylar: [CONFIGURATION.md](CONFIGURATION.md)
 
 ## Skills (Claude Code)
 
-Proje `.claude/skills/` altinda 12 optimize edilmis skill icerir:
+Proje `.claude/skills/` altinda 11 optimize edilmis skill icerir:
 
 | Skill | Aciklama |
 |-------|----------|
-| `video-generation` | Sora/Veo/Kling model secimi |
+| `video-generation` | Sora/Veo/Kling Direct API model secimi |
 | `instagram-api` | Graph API v21.0 referansi |
-| `database-patterns` | SQLite CRUD ornekleri |
-| `multi-agent-architecture` | Pipeline akislari |
+| `database-patterns` | SQLite CRUD ornekleri (12 tablo) |
+| `multi-agent-architecture` | v2 mimari, Brain Agent, pipeline akislari |
 | `olivenet-brand` | Marka sesi ve kurallar |
-| `telegram-bot` | Komut ve handler referansi |
-| `template-system` | 11 HTML template |
+| `telegram-bot` | 14 komut ve handler referansi |
 | `helper-reference` | Tum helper fonksiyonlari |
 | `flux-image` | FLUX.2 Pro gorsel uretimi |
 | `cloudinary-cdn` | Video CDN yonetimi |
 | `error-handling` | Hata ayiklama rehberi |
-| `recent-changes` | Son degisiklikler logu |
+| `recent-changes` | v2 migrasyon degisiklik logu |
 
 ---
 

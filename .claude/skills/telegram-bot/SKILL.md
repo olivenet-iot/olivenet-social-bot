@@ -5,7 +5,9 @@ description: Telegram bot komutlari ve handler referansi. Use when working with 
 
 # Telegram Bot Reference
 
-## Commands
+## Commands (14 komut)
+
+### v1 Komutlar
 
 | Command | Description |
 |---------|-------------|
@@ -16,6 +18,18 @@ description: Telegram bot komutlari ve handler referansi. Use when working with 
 | /next | Siradaki icerik |
 | /schedule | Haftalik takvim |
 | /sync | Insights sync |
+| /prompts | Prompt istatistikleri |
+
+### v2 Komutlar
+
+| Command | Description |
+|---------|-------------|
+| /pool | Icerik firsati havuzu durumu |
+| /brain | Brain Agent son kararlari ve durumu |
+| /feeds | Feed aggregator durumu |
+| /pause | Sistemi duraklat (Brain + uretim) |
+| /resume | Sistemi devam ettir |
+| /force | Belirli firsati hemen uret (opp_id + type) |
 
 ## Main Menu
 
@@ -46,6 +60,21 @@ description: Telegram bot komutlari ve handler referansi. Use when working with 
 2. Content → [Onayla] [Yeniden Yaz] [Iptal]
 3. Visual → [Onayla] [Yeniden Uret] [Iptal]
 4. Final → [YAYINLA] [Zamanla] [Iptal]
+```
+
+## v2 Integration
+
+```python
+# main.py'de v2 bilesenleri Telegram modülüne set edilir:
+import app.telegram_pipeline as telegram_pipeline_mod
+telegram_pipeline_mod.brain_agent = brain
+telegram_pipeline_mod.feed_aggregator = aggregator
+
+# /brain komutu
+decisions = brain.get_last_decisions(limit=5)
+
+# /force komutu
+result = await brain.force_produce(opp_id=42, content_type="reels")
 ```
 
 ## Pipeline Integration
@@ -87,5 +116,7 @@ TELEGRAM_ADMIN_USER_IDS=123,456  # Optional extra admins
 
 ## Deep Links
 
-- `app/telegram_pipeline.py` - Bot + handlers
-- `app/scheduler/pipeline.py` - Pipeline integration
+- `app/telegram_pipeline.py` - Bot + 14 komut handler
+- `app/scheduler/pipeline.py` - v1 pipeline integration
+- `app/agents/brain.py` - Brain Agent (/brain, /force)
+- `app/sources/feed_aggregator.py` - Feed (/feeds)

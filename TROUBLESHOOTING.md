@@ -34,8 +34,8 @@ Error: Video generation timed out after 300 seconds
 
 1. **Farklı model dene:**
    ```python
-   # Sora yerine Veo
-   await pipeline.run_reels_content(topic="...", force_model="veo")
+   # Kling 3.0 Pro en hızlı (2-3 dk)
+   result = await kling.generate_video(prompt="...", duration=5)
    ```
 
 2. **Daha kısa süre:**
@@ -69,7 +69,31 @@ Error: (#4) Application request limit reached
 
 ---
 
-### 4. Cloudinary Upload Failed
+### 4. Kling API Authentication Failed
+
+**Belirti:**
+```
+Error: JWT authentication failed
+Error: KLING_ACCESS_KEY ve KLING_SECRET_KEY tanimli degil
+```
+
+**Çözüm:**
+
+1. `.env` dosyasında key'lerin doğru olduğunu kontrol edin:
+   ```bash
+   KLING_ACCESS_KEY=your_access_key
+   KLING_SECRET_KEY=your_secret_key
+   ```
+
+2. Key'lerin geçerli olduğunu doğrulayın (Kling AI dashboard'dan)
+
+3. JWT token otomatik yenilenir (30 dk), manual müdahale gerekmez
+
+4. API endpoint: `api-singapore.klingai.com` — ağ erişimini kontrol edin
+
+---
+
+### 5. Cloudinary Upload Failed
 
 **Belirti:**
 ```
@@ -78,20 +102,13 @@ Error: Cloudinary upload failed - Invalid credentials
 
 **Çözüm:**
 
-1. `.env` dosyasındaki credentials'ları kontrol et:
-   ```bash
-   CLOUDINARY_CLOUD_NAME=your_cloud
-   CLOUDINARY_API_KEY=your_key
-   CLOUDINARY_API_SECRET=your_secret
-   ```
-
+1. `.env` dosyasındaki credentials'ları kontrol et
 2. Cloudinary dashboard'dan credentials'ları doğrula
-
 3. Video boyutunu kontrol et (max 100MB)
 
 ---
 
-### 5. ElevenLabs Quota Exceeded
+### 6. ElevenLabs Quota Exceeded
 
 **Belirti:**
 ```
@@ -102,15 +119,11 @@ Error: QuotaExceededError - Monthly character limit reached
 
 1. [ElevenLabs Dashboard](https://elevenlabs.io/) → Usage kontrol et
 2. Plan upgrade et veya
-3. Kısa metinler kullan:
-   ```python
-   # Max 500 karakter önerisi
-   speech_script = speech_script[:500]
-   ```
+3. Kısa metinler kullan (max 500 karakter önerisi)
 
 ---
 
-### 6. Bot Yanıt Vermiyor
+### 7. Bot Yanıt Vermiyor
 
 **Belirti:**
 - Telegram komutlarına yanıt yok
@@ -120,7 +133,7 @@ Error: QuotaExceededError - Monthly character limit reached
 
 1. **Service durumunu kontrol et:**
    ```bash
-   sudo systemctl status olivenet-bot
+   sudo systemctl status olivenet-bot-v2
    ```
 
 2. **Logları incele:**
@@ -130,18 +143,17 @@ Error: QuotaExceededError - Monthly character limit reached
 
 3. **Token'ı kontrol et:**
    - @BotFather'dan token'ın aktif olduğunu doğrula
-   - Token'ı yenile
 
 4. **Manuel başlat:**
    ```bash
    cd /opt/olivenet-social-bot
    source venv/bin/activate
-   python -m app.telegram_pipeline
+   python3 app/main.py
    ```
 
 ---
 
-### 7. Database Locked
+### 8. Database Locked
 
 **Belirti:**
 ```
@@ -155,19 +167,14 @@ Error: database is locked
    fuser /opt/olivenet-social-bot/data/content.db
    ```
 
-2. **Process'leri sonlandır:**
+2. **Tek instance çalıştığından emin ol:**
    ```bash
-   kill -9 <pid>
-   ```
-
-3. **Tek instance çalıştığından emin ol:**
-   ```bash
-   ps aux | grep telegram_pipeline
+   ps aux | grep "app/main.py"
    ```
 
 ---
 
-### 8. HTML Render Failed
+### 9. HTML Render Failed
 
 **Belirti:**
 ```
@@ -179,34 +186,10 @@ Error: Playwright browser not found
 1. **Playwright'ı yeniden kur:**
    ```bash
    playwright install chromium
-   ```
-
-2. **Sistem bağımlılıklarını kur:**
-   ```bash
    playwright install-deps
    ```
 
----
-
-### 9. FFmpeg Not Found
-
-**Belirti:**
-```
-Error: ffmpeg not found in PATH
-```
-
-**Çözüm:**
-
-1. **FFmpeg kur:**
-   ```bash
-   sudo apt update
-   sudo apt install ffmpeg
-   ```
-
-2. **Kontrol et:**
-   ```bash
-   ffmpeg -version
-   ```
+**Not:** renderer.py carousel slide rendering için hala kullanılıyor (template dosyaları olmadan).
 
 ---
 
@@ -219,19 +202,103 @@ Error: Container status: ERROR
 
 **Çözüm:**
 
-1. **Video formatını kontrol et:**
-   - Codec: H.264
-   - Audio: AAC
-   - Çözünürlük: 720x1280 (9:16)
-   - FPS: 30
-   - Maks süre: 90 saniye
-
-2. **Video'yu dönüştür:**
+1. Video formatını kontrol et: H.264, AAC, 720x1280, 30fps, max 90s
+2. Video'yu dönüştür:
    ```bash
    ffmpeg -i input.mp4 -c:v libx264 -c:a aac -r 30 -vf "scale=720:1280" output.mp4
    ```
+3. Dosya boyutunu kontrol et: Maks 100MB
 
-3. **Dosya boyutunu kontrol et:** Maks 100MB
+---
+
+## Brain Agent Sorun Giderme
+
+### Brain Karar Vermiyor
+
+**Belirti:** `/brain` komutu hep "wait" gösteriyor
+
+**Kontrol Listesi:**
+
+1. **Havuzda fırsat var mı?**
+   ```
+   /pool
+   ```
+   Eğer boş ise → Feed'leri kontrol edin: `/feeds`
+
+2. **Sistem duraklatılmış mı?**
+   ```
+   /resume  # Sistemi devam ettir
+   ```
+
+3. **Gece saati mi?** Brain 23:00-07:00 arası üretim yapmaz
+
+4. **Min interval geçmiş mi?** Son paylaşımdan `BRAIN_MIN_POST_INTERVAL_HOURS` saat geçmeli
+
+5. **Min skor sağlanıyor mu?** Fırsatın skoru `BRAIN_MIN_SCORE_PRODUCE` üstünde olmalı
+
+6. **Dry-run aktif mi?**
+   ```bash
+   grep BRAIN_DRY_RUN .env
+   # true ise kararlar loglanır ama üretim yapılmaz
+   ```
+
+### Brain Agent Logları
+
+```bash
+# Brain kararlarını izle
+grep "Brain decision" logs/app.log | tail -10
+
+# Dry-run kararlarını izle
+grep "DRY-RUN" logs/app.log | tail -10
+
+# Agent log'larını kontrol et
+sqlite3 data/content.db "SELECT timestamp, json_extract(output_data, '$.action'), json_extract(output_data, '$.reason') FROM agent_logs WHERE agent_name='brain' ORDER BY timestamp DESC LIMIT 10;"
+```
+
+### Feed'ler Çalışmıyor
+
+**Belirti:** `/feeds` boş veya hata gösteriyor
+
+**Çözüm:**
+
+1. İnternet bağlantısını kontrol edin
+2. Feed URL'lerinin erişilebilir olduğunu kontrol edin:
+   ```bash
+   curl -s https://www.iot-now.com/feed/ | head -5
+   ```
+3. `FEED_POLL_MINUTES` değerini kontrol edin (varsayılan 30)
+4. Logları inceleyin:
+   ```bash
+   grep "FEED" logs/app.log | tail -10
+   ```
+
+---
+
+## v2 Service Yönetimi
+
+### Yeniden Başlat
+
+```bash
+sudo systemctl restart olivenet-bot-v2
+```
+
+### Durdur
+
+```bash
+sudo systemctl stop olivenet-bot-v2
+```
+
+### Logları Görüntüle
+
+```bash
+sudo journalctl -u olivenet-bot-v2 -f
+```
+
+### Durumu Kontrol Et
+
+```bash
+sudo systemctl status olivenet-bot-v2
+```
 
 ---
 
@@ -246,30 +313,23 @@ Error: Container status: ERROR
 └── errors.log        # Sadece hatalar
 ```
 
-### Log Seviyeleri
-
-| Seviye | Açıklama |
-|--------|----------|
-| DEBUG | Detaylı bilgi |
-| INFO | Normal işlem |
-| WARNING | Potansiyel sorun |
-| ERROR | Hata oluştu |
-| CRITICAL | Kritik hata |
-
 ### Log Filtreleme
 
 ```bash
 # Sadece hatalar
 grep "ERROR\|CRITICAL" logs/app.log
 
+# Brain Agent kararları
+grep "Brain decision\|DRY-RUN\|BRAIN" logs/app.log
+
+# Feed aktivitesi
+grep "FEED\|feed" logs/app.log
+
 # Son 100 satır
 tail -100 logs/app.log
 
 # Canlı takip
 tail -f logs/app.log
-
-# Belirli agent
-grep "CreatorAgent" logs/agents.log
 ```
 
 ---
@@ -286,17 +346,16 @@ sqlite3 /opt/olivenet-social-bot/data/content.db
 -- Son postlar
 SELECT id, topic, status, created_at FROM posts ORDER BY id DESC LIMIT 10;
 
--- Bekleyen onaylar
-SELECT id, topic FROM posts WHERE status = 'approved' AND published_at IS NULL;
+-- İçerik fırsatları durumu
+SELECT status, COUNT(*) FROM content_opportunities GROUP BY status;
 
 -- Hook performansı
 SELECT hook_type, viral_score FROM hook_performance ORDER BY viral_score DESC;
-```
 
-### Veritabanı Boyutu
-
-```bash
-du -h /opt/olivenet-social-bot/data/content.db
+-- Brain Agent son kararları
+SELECT timestamp, json_extract(output_data, '$.action') as decision
+FROM agent_logs WHERE agent_name = 'brain'
+ORDER BY timestamp DESC LIMIT 5;
 ```
 
 ---
@@ -311,12 +370,13 @@ info = get_account_info()
 print(info)
 ```
 
-### OpenAI (Sora)
+### Kling Direct API
 
 ```python
-import openai
-openai.api_key = "your_key"
-# Test API call
+from app.kling_helper import KlingHelper
+kling = KlingHelper()
+token = kling._generate_jwt()
+print(f"JWT token generated: {token[:20]}...")
 ```
 
 ### ElevenLabs
@@ -326,34 +386,6 @@ from app.elevenlabs_helper import ElevenLabsHelper
 tts = ElevenLabsHelper()
 result = await tts.generate_speech("Test")
 print(result)
-```
-
----
-
-## Service Yönetimi
-
-### Yeniden Başlat
-
-```bash
-sudo systemctl restart olivenet-bot
-```
-
-### Durdur
-
-```bash
-sudo systemctl stop olivenet-bot
-```
-
-### Logları Görüntüle
-
-```bash
-sudo journalctl -u olivenet-bot -f
-```
-
-### Durumu Kontrol Et
-
-```bash
-sudo systemctl status olivenet-bot
 ```
 
 ---
@@ -369,12 +401,13 @@ sudo systemctl status olivenet-bot
 
 2. Service'i yeniden başlat:
    ```bash
-   sudo systemctl restart olivenet-bot
+   sudo systemctl restart olivenet-bot-v2
    ```
 
 3. Bekleyen içerikleri kontrol et:
    ```sql
    SELECT * FROM posts WHERE status = 'approved' AND published_at IS NULL;
+   SELECT * FROM content_opportunities WHERE status = 'producing';
    ```
 
 ### Token Sızdıysa
@@ -390,6 +423,6 @@ sudo systemctl status olivenet-bot
 
 Daha fazla yardım için:
 
-- [ARCHITECTURE.md](ARCHITECTURE.md) - Sistem mimarisi
+- [ARCHITECTURE.md](ARCHITECTURE.md) - v2 sistem mimarisi
 - [API_INTEGRATIONS.md](API_INTEGRATIONS.md) - API detayları
 - [CONFIGURATION.md](CONFIGURATION.md) - Konfigürasyon
