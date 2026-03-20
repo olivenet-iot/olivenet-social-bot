@@ -33,11 +33,11 @@ class PostPipeline(BasePipeline):
 
             # Manuel konu modunda planner'ı atla
             if manual_topic_mode and topic:
-                self.log(f"Manuel konu kullanılıyor: {topic}, görsel: {visual_type or 'infographic'}")
+                self.log(f"Manuel konu kullanılıyor: {topic}, görsel: {visual_type or 'nano_banana'}")
                 topic_result = {
                     "topic": topic,
                     "category": "manuel",
-                    "suggested_visual": visual_type or "infographic",
+                    "suggested_visual": visual_type or "nano_banana",
                     "best_time": "10:00",
                     "reasoning": "Manuel olarak belirlenen konu",
                     "suggested_hooks": [f"🔥 {topic}"],

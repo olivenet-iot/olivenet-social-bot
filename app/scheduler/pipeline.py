@@ -245,11 +245,11 @@ Show natural gestures and expressions, NO actual speech.
 
             # Manuel konu modunda planner'ı atla
             if manual_topic_mode and topic:
-                self.log(f"Manuel konu kullanılıyor: {topic}, görsel: {visual_type or 'infographic'}")
+                self.log(f"Manuel konu kullanılıyor: {topic}, görsel: {visual_type or 'nano_banana'}")
                 topic_result = {
                     "topic": topic,
                     "category": "manuel",
-                    "suggested_visual": visual_type or "infographic",
+                    "suggested_visual": visual_type or "nano_banana",
                     "best_time": "10:00",
                     "reasoning": "Manuel olarak belirlenen konu",
                     "suggested_hooks": [f"🔥 {topic}"],
@@ -1239,11 +1239,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             # Model'e göre doğru prompt'u seç
             def get_video_prompt_for_model(prompt_result: dict, model: str) -> str:
                 """Model'e göre optimize edilmiş prompt seç"""
-                if model == "wan_26":
-                    return prompt_result.get("video_prompt_wan") or prompt_result.get("video_prompt_veo", "")
-                elif model and model.startswith("hailuo"):
-                    return prompt_result.get("video_prompt_hailuo") or prompt_result.get("video_prompt_kling", "")
-                elif model and model.startswith("kling"):
+                if model and model.startswith("kling"):
                     if model == "kling_v3_pro":
                         return prompt_result.get("video_prompt_kling3") or prompt_result.get("video_prompt_kling", "")
                     return prompt_result.get("video_prompt_kling") or prompt_result.get("video_prompt_sora", "")
@@ -1440,7 +1436,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             force_model: Video modeli zorla (backward compat, deprecated)
             target_duration: Hedef süre (modele göre max sınır uygulanır)
             manual_topic_mode: True ise topic Creator ile profesyonelleştirilir
-            model_id: Video model ID (sora-2, veo-2, kling-2.1, wan-2.1, minimax)
+            model_id: Video model ID (sora-2, sora-2-pro, veo-3.1, kling-3.0-pro)
             visual_style: Görsel stil (cinematic_4k, anime, vb.)
 
         Returns:
@@ -2648,7 +2644,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
         self,
         topic: str = None,
         segment_count: int = 2,
-        model_id: str = "kling-2.6-pro",
+        model_id: str = "kling-3.0-pro",
         transition_type: str = "crossfade",
         transition_duration: float = 0.5,
         manual_topic_mode: bool = False,
@@ -2669,7 +2665,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
         self,
         topic: str = None,
         segment_count: int = 2,
-        model_id: str = "kling-2.6-pro",
+        model_id: str = "kling-3.0-pro",
         transition_type: str = "crossfade",
         transition_duration: float = 0.5,
         manual_topic_mode: bool = False,
@@ -2696,7 +2692,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
         Args:
             topic: Konu (None ise Planner'dan alınır)
             segment_count: Segment sayısı (2-6 arası, default 2)
-            model_id: Video model ID (kling-2.6-pro, sora-2, veo-2, wan-2.1)
+            model_id: Video model ID (kling-3.0-pro, sora-2, sora-2-pro, veo-3.1)
             transition_type: Geçiş tipi (crossfade, cut)
             transition_duration: Crossfade süresi (0.5s default)
             manual_topic_mode: True ise topic Creator ile işlenir
@@ -3183,7 +3179,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             topic: Topic (None uses Planner suggestion)
             manual_topic_mode: Process topic through Creator if True
             visual_style: Görsel stil (cinematic_4k, anime, vb.)
-            model_id: Video model (sora-2, veo-2, kling-2.5-pro)
+            model_id: Video model (sora-2, sora-2-pro, veo-3.1, kling-3.0-pro)
 
         Returns:
             Pipeline result dict

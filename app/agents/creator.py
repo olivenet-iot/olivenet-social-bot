@@ -461,13 +461,11 @@ VIRAL_CONTENT_FORMATS = {
         "camera_movement": "handheld_pov",
         "shot_type": "first_person_subjective",
         "transition_style": "quick_cut_reaction",
-        "recommended_models": ["sora-2", "kling_pro", "hailuo_pro"],
+        "recommended_models": ["sora-2", "kling_v3_pro"],
         "model_notes": {
             "sora": "First-person POV, handheld camera shake, phone screen reveal, dramatic lighting shift",
             "veo": "[00:00-00:02] POV perspective, phone notification. [00:02-00:04] Reaction reveal. [00:04-00:06] Solution shown",
-            "kling": "POV handheld shot, first person view, phone notification, dramatic reveal, cinematic",
-            "hailuo": "Handheld POV tracking, first person perspective, dynamic shake, emotional reaction",
-            "wan": "[0-3s] First person POV phone check. [3-6s] Reveal reaction shot. [6-10s] Problem context"
+            "kling": "POV handheld shot, first person view, phone notification, dramatic reveal, cinematic"
         },
         "ai_limitations": "Avoid showing hands holding phone - focus on screen/environment reaction"
     },
@@ -490,9 +488,7 @@ VIRAL_CONTENT_FORMATS = {
         "model_notes": {
             "sora": "Two-part video: First half shows wrong way with red/frustrated tint, hard cut to right way with green/satisfied tint",
             "veo": "[00:00-00:03] Wrong approach scene, frustrated mood, red tint. [00:03-00:06] Same scene correct approach, satisfied, green tint",
-            "kling": "Before-after comparison, frustrated to satisfied transition, color shift from red to green, mood change",
-            "hailuo": "Quick cut comparison, wrong approach then right approach, dramatic mood transition, color grading shift",
-            "wan": "[0-5s] Wrong approach demo, red warning vibe, frustrated. [5-10s] Right approach, green success, satisfied"
+            "kling": "Before-after comparison, frustrated to satisfied transition, color shift from red to green, mood change"
         },
         "ai_limitations": "AI cannot do true split-screen - use sequential before/after with color grading instead"
     },
@@ -511,13 +507,11 @@ VIRAL_CONTENT_FORMATS = {
         "camera_movement": "slow_push_in",
         "shot_type": "reveal_close_up",
         "transition_style": "blur_to_sharp",
-        "recommended_models": ["veo3", "sora-2", "kling_pro"],
+        "recommended_models": ["veo3", "sora-2", "kling_v3_pro"],
         "model_notes": {
             "sora": "Mystery reveal: blurred/obscured background slowly sharpens to show hidden detail, dramatic lighting builds",
             "veo": "[00:00-00:02] Obscured/blurred view, mystery. [00:02-00:04] Camera pushes in, focus reveals. [00:04-00:06] Clear detail shot, discovery",
-            "kling": "Slow zoom reveal, blur to sharp focus, mystery lighting, discovery moment, dramatic reveal",
-            "hailuo": "Push in reveal shot, defocus to focus transition, mysterious atmosphere to clear discovery",
-            "wan": "[0-4s] Wide blurred shot, mystery mood. [4-8s] Slow dolly in, focus sharpening. [8-12s] Sharp close-up reveal, discovery"
+            "kling": "Slow zoom reveal, blur to sharp focus, mystery lighting, discovery moment, dramatic reveal"
         },
         "ai_limitations": "Works well with most models - avoid text overlays, use visual mystery instead"
     },
@@ -536,13 +530,11 @@ VIRAL_CONTENT_FORMATS = {
         "camera_movement": "slow_dramatic_push",
         "shot_type": "warning_reveal",
         "transition_style": "ominous_slow",
-        "recommended_models": ["sora-2", "veo3", "kling_pro"],
+        "recommended_models": ["sora-2", "veo3", "kling_v3_pro"],
         "model_notes": {
             "sora": "Warning atmosphere: red-tinted lighting gradually builds, slow ominous push to concerning detail, dramatic tension",
             "veo": "[00:00-00:02] Normal scene, calm. [00:02-00:04] Red tint grows, warning mood builds. [00:04-00:06] Problem revealed, dramatic",
-            "kling": "Slow push to problem area, red warning lighting gradually increasing, ominous reveal, dramatic tension",
-            "hailuo": "Dramatic slow push, red color grading intensifies, warning atmosphere builds, tension reveal",
-            "wan": "[0-5s] Normal appearance, calm. [5-10s] Warning signs emerge, red tint. [10-15s] Red flag problem revealed"
+            "kling": "Slow push to problem area, red warning lighting gradually increasing, ominous reveal, dramatic tension"
         },
         "ai_limitations": "Use red color grading and ominous mood lighting - avoid red flag emoji/symbol rendering"
     },
@@ -561,13 +553,11 @@ VIRAL_CONTENT_FORMATS = {
         "camera_movement": "timelapse_or_tracking",
         "shot_type": "progress_montage",
         "transition_style": "time_jump_cuts",
-        "recommended_models": ["wan_26", "sora-2"],
+        "recommended_models": ["kling_v3_pro", "sora-2"],
         "model_notes": {
             "sora": "Timelapse-style progress montage: morning light setup, midday work intensity, evening golden hour results celebration",
             "veo": "[00:00-00:03] Challenge start, determined mood. [00:03-00:05] Mid-progress montage, effort. [00:05-00:08] Final result reveal, celebration",
-            "kling": "Fast-paced montage, time passing through lighting changes, progress shots, energetic dynamic movement",
-            "hailuo": "Dynamic tracking montage, time jump cuts with energy, progress building, celebration finish",
-            "wan": "[0-5s] Challenge begins, setup. [5-10s] Progress montage, effort. [10-15s] Result celebration, success"
+            "kling": "Fast-paced montage, time passing through lighting changes, progress shots, energetic dynamic movement"
         },
         "ai_limitations": "Best with longer duration models (Wan 15s) - single shot models need time compression visual cues"
     },
@@ -590,9 +580,7 @@ VIRAL_CONTENT_FORMATS = {
         "model_notes": {
             "sora": "Visual QUANTITY representation: show MANY sensors/devices/items to imply large number, dramatic zoom to scale",
             "veo": "[00:00-00:02] Wide shot showing massive scale/quantity. [00:02-00:04] Dramatic zoom to detail. [00:04-00:06] Impact close-up",
-            "kling": "Dramatic zoom to visual quantity display, scale reveal through many items, impact lighting, impressive scope",
-            "hailuo": "Slam zoom to subject showing scale, visual quantity demonstration through many objects, impactful reveal",
-            "wan": "[0-5s] Establish massive scale, many items. [5-10s] Zoom reveals quantity. [10-15s] Impact close-up, impressive"
+            "kling": "Dramatic zoom to visual quantity display, scale reveal through many items, impact lighting, impressive scope"
         },
         "ai_limitations": "AI CANNOT render numbers/text - show VISUAL QUANTITY instead (many items, scale comparison, before/after size)"
     },
@@ -615,9 +603,7 @@ VIRAL_CONTENT_FORMATS = {
         "model_notes": {
             "sora": "Visual contrast: expectation scene (complex, expensive-looking, intimidating) dissolves to reality (simple, accessible, friendly)",
             "veo": "[00:00-00:03] Myth visualization - intimidating, complex. [00:03-00:06] Dissolve transition to reality - approachable, simple",
-            "kling": "Expectation to reality visual transition, mood shift from intimidating to friendly, contrast reveal, dissolve",
-            "hailuo": "Cross dissolve from myth scene (complex) to reality scene (simple), dramatic tone shift, revelation",
-            "wan": "[0-5s] Myth visualization, intimidating. [5-10s] Dissolve transition. [10-15s] Reality reveal, approachable"
+            "kling": "Expectation to reality visual transition, mood shift from intimidating to friendly, contrast reveal, dissolve"
         },
         "ai_limitations": "Use visual metaphors for myth/reality contrast - avoid X marks, checkmarks, or text rendering"
     },
@@ -636,13 +622,11 @@ VIRAL_CONTENT_FORMATS = {
         "camera_movement": "varied_documentary",
         "shot_type": "routine_montage",
         "transition_style": "time_of_day_shift",
-        "recommended_models": ["wan_26"],
+        "recommended_models": ["kling_v3_pro"],
         "model_notes": {
             "sora": "Day progression through lighting: dawn pink light morning routine, bright midday work, golden hour evening review",
             "veo": "[00:00-00:03] Morning scene, dawn light, start of day. [00:03-00:05] Midday activity, bright. [00:05-00:08] Evening wind-down, golden hour",
-            "kling": "Day montage, lighting shifts dramatically from dawn pink to midday bright to dusk golden, routine activities flow",
-            "hailuo": "Time-of-day progression through lighting changes, daily routine flow, dawn to dusk visual journey",
-            "wan": "[0-5s] 07:00 Morning start, dawn light. [5-10s] 12:00 Midday work, bright sun. [10-15s] 18:00 Evening review, golden hour"
+            "kling": "Day montage, lighting shifts dramatically from dawn pink to midday bright to dusk golden, routine activities flow"
         },
         "ai_limitations": "Wan 15s is IDEAL for this format - captures full day progression through multi-shot, others need lighting cues"
     }
@@ -1916,9 +1900,6 @@ Bu Reels için önerilen viral format: **{viral_format['format_name']}**
 
 **KLING prompt için:** {model_notes.get('kling', 'Keep under 200 chars, comma-separated, simple structure')}
 
-**HAILUO prompt için:** {model_notes.get('hailuo', 'Focus on camera motion verbs and dynamic action')}
-
-**WAN prompt için:** {model_notes.get('wan', 'Use multi-shot [0-5s] timing brackets, max 600 chars')}
 
 ⚠️ **AI LİMİTASYONLARI:** {ai_limitations if ai_limitations else 'Standard limitations - no text/number rendering, avoid complex physics'}
 
@@ -1958,10 +1939,8 @@ Tüm video prompt'larının BAŞINA şu stil prefix'ini ekle: "{style_prefix}"
     "video_prompt_veo": "VEO 3 timestamp formatında İngilizce prompt ([00:00-00:02] format)",
     "video_prompt_kling": "KLING formatında kısa İngilizce prompt (Subject + Movement + Scene + Camera + Lighting + Atmosphere, virgülle ayrılmış, max 200 karakter)",
     "video_prompt_kling3": "KLING 3.0 formatında sinematik İngilizce prompt (sahne yönetmenliği tarzı, explicit kamera + hareket talimatları, zaman içinde gelişim, 300-600 karakter)",
-    "video_prompt_hailuo": "HAILUO formatında dinamik İngilizce prompt (Camera Motion + Subject + Action + Scene + Lighting + Style, aksiyon odaklı, max 200 karakter)",
-    "video_prompt_wan": "WAN formatında multi-shot sinematik prompt (Global style + Shot timing brackets [0-5s] + Camera action, max 600 karakter)",
     "complexity": "low|medium|high",
-    "recommended_model": "veo3|sora-2|sora-2-pro|kling_pro|hailuo_pro|wan_26",
+    "recommended_model": "veo3|sora-2|sora-2-pro|kling_v3_pro",
     "recommended_duration": 5,
     "hook_description": "İlk 2 saniyede ne görünecek (Türkçe)",
     "caption_ig": "Instagram Reels caption (Türkçe, 80-120 kelime, eğitici mikro-blog: teknik bilgi hook + 3-5 bilgi maddesi + düşündürücü kapanış, Olivenet minimal, satış dili ve agresif CTA YASAK, emoji'li, hashtag'ler dahil)",
@@ -2001,27 +1980,11 @@ Tüm video prompt'larının BAŞINA şu stil prefix'ini ekle: "{style_prefix}"
 - Photorealistic 3D render, Octane, ray-traced gibi render talimatları EKLENEBİLİR
 - Örnek: "A sleek IoT sensor module mounted on industrial machinery pulses with sky blue diagnostic light. Camera holds a medium shot, then slowly orbits 180 degrees around the device. As it orbits, holographic data streams emerge from the sensor, flowing upward like aurora waves. The camera settles into a close-up as warning indicators shift from amber to green. Photorealistic 3D render, Octane quality, volumetric lighting, olive green and sky blue palette."
 
-### HAILUO FORMAT KURALLARI (video_prompt_hailuo):
-- Dinamik kamera hareketleri: tracking shot, dolly, pan
-- Aksiyon fiilleri: running, spinning, transforming, flowing
-- Formül: [Camera Motion] + [Subject + Action] + [Scene] + [Lighting] + [Style]
-- Max 200 karakter
-- 6 saniyelik içerik için optimize et
-- Örnek: "Tracking shot, technician running through factory, sparks flying, industrial lighting, energetic cinematic style."
-
-### WAN FORMAT KURALLARI (video_prompt_wan):
-- İlk cümlede global stil (Photoreal, 4K, cinematic lighting)
-- Multi-shot için timing bracket: [0-5s], [5-10s], [10-15s]
-- Kamera hareketleri: push, pull, pan, track, orbit
-- Max 600 karakter
-- 15 saniyeye kadar içerik
-- Örnek: "Industrial facility. Cinematic, 4K. Shot 1 [0-5s] Wide establishing shot of factory exterior at dawn. Shot 2 [5-10s] Camera tracks through control room, engineers at dashboards. Shot 3 [10-15s] Close-up of IoT sensor with pulsing LED."
-
 ### COMPLEXITY KURALLARI:
-- LOW: Tek sahne, statik/basit hareket → veo3 veya kling_pro
-- MEDIUM: Kamera takibi, 2-3 element → sora-2 veya hailuo_pro (dinamik sahneler için)
-- HIGH: Dönüşüm, kompleks hareket → sora-2-pro veya hailuo_pro
-- CINEMATIC: Sahne yönetmenliği gerektiren, kamera + obje hareketi + fizik → kling-3.0-pro
+- LOW: Tek sahne, statik/basit hareket → veo3 veya kling_v3_pro
+- MEDIUM: Kamera takibi, 2-3 element → sora-2 veya kling_v3_pro
+- HIGH: Dönüşüm, kompleks hareket → sora-2-pro
+- CINEMATIC: Sahne yönetmenliği gerektiren, kamera + obje hareketi + fizik → kling_v3_pro
 
 Sadece JSON döndür, başka açıklama ekleme.
 """
@@ -2151,7 +2114,7 @@ Sadece JSON döndür, başka açıklama ekleme.
         segment_count = input_data.get("segment_count", 3)
         segment_duration = input_data.get("segment_duration", 10)
         speech_structure = input_data.get("speech_structure", [])
-        model_id = input_data.get("model_id", "kling-2.6-pro")
+        model_id = input_data.get("model_id", "kling-3.0-pro")
         visual_style = input_data.get("visual_style", "cinematic_4k")
         original_user_brief = input_data.get("original_user_brief")
 

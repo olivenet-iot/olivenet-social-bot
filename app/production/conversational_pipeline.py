@@ -70,7 +70,7 @@ Show natural gestures and expressions, NO actual speech.
             topic: Topic (None uses Planner suggestion)
             manual_topic_mode: Process topic through Creator if True
             visual_style: Görsel stil (cinematic_4k, anime, vb.)
-            model_id: Video model (sora-2, veo-2, kling-2.5-pro)
+            model_id: Video model (sora-2, sora-2-pro, veo-3.1, kling-3.0-pro)
 
         Returns:
             Pipeline result dict

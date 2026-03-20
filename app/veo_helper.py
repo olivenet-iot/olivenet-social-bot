@@ -1,6 +1,6 @@
 """
 Google Veo Video Generation API
-Veo 3.1 ve Veo 2 destekli
+Veo 3.1 destekli
 Docs: https://ai.google.dev/gemini-api/docs/veo
 """
 
@@ -59,7 +59,7 @@ async def generate_video_veo3(
         prompt: Video aciklamasi
         aspect_ratio: "9:16" (Reels), "16:9" (YouTube)
         duration_seconds: 4, 6, veya 8 saniye
-        model: "veo-3.1-generate-preview", "veo-3.1-fast-generate-preview", "veo-2"
+        model: "veo-3.1-generate-preview", "veo-3.1-fast-generate-preview"
     """
 
     if not GEMINI_API_KEY:
@@ -82,7 +82,6 @@ async def generate_video_veo3(
     models_to_try = [
         ("veo-3.1-generate-preview", "Veo 3.1"),
         ("veo-3.1-fast-generate-preview", "Veo 3.1 Fast"),
-        ("veo-2", "Veo 2")
     ]
 
     # Eger belirli model istendiyse once onu dene
