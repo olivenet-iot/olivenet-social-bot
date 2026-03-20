@@ -60,7 +60,8 @@ class SystemState:
                         "title": o["title"][:60],
                         "score": o["combined_score"],
                         "source": o["source_type"],
-                        "suggestion": o.get("content_type_suggestion", "")
+                        "suggestion": o.get("content_type_suggestion", ""),
+                        "hook": o.get("hook_suggestion", "")
                     }
                     for o in top
                 ]

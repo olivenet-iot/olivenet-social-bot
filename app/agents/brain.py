@@ -35,6 +35,21 @@ MIN_SCORE_TO_PRODUCE = float(os.getenv("BRAIN_MIN_SCORE_PRODUCE", "60"))
 # Optimal paylaşım saatleri (KKTC UTC+3)
 OPTIMAL_HOURS = [10, 14, 19]
 
+# Brain'in varsayılan model tercihleri
+MODEL_DEFAULTS = {
+    "news_reels": "kling-2.5-pro",
+    "voice_reels": "sora-2",
+    "reels": "kling-2.5-pro",
+    "long_video": "kling-2.6-pro",
+    "conversational": "sora-2",
+    "carousel": None,
+    "post": None,
+}
+
+VALID_MODELS = ["sora-2", "sora-2-pro", "veo-2", "veo-3.1", "kling-2.5-pro", "kling-2.6-pro", "kling-3.0-pro", "wan-2.1", "minimax"]
+VALID_VISUAL_STYLES = ["cinematic_4k", "documentary", "pov", "aerial", "anime", "cartoon_3d"]
+VALID_HOOK_TYPES = ["question", "statistic", "bold_claim", "problem", "value", "fear", "before_after", "list", "comparison", "local"]
+
 
 class BrainAgent(BaseAgent):
     """
@@ -63,7 +78,8 @@ class BrainAgent(BaseAgent):
         elif action == "force_produce":
             opp_id = input_data.get("opportunity_id")
             content_type = input_data.get("content_type", "reels")
-            return await self.force_produce(opp_id, content_type)
+            creative = {k: input_data[k] for k in ("model_id", "visual_style", "hook_type") if k in input_data}
+            return await self.force_produce(opp_id, content_type, decision=creative or None)
         return {"error": f"Unknown action: {action}"}
 
     async def decide(self) -> Dict[str, Any]:
@@ -117,13 +133,14 @@ class BrainAgent(BaseAgent):
 
             if opp_id:
                 result = await self.trigger_production(
-                    get_opportunity(opp_id), content_type
+                    get_opportunity(opp_id), content_type, decision=decision
                 )
                 decision["production_result"] = result
 
         elif decision.get("action") == "produce" and self._dry_run:
             self.log(f"[DRY-RUN] Would produce: opp={decision.get('opportunity_id')}, "
-                     f"type={decision.get('content_type')}, reason={decision.get('reason')}")
+                     f"type={decision.get('content_type')}, model={decision.get('model_id')}, "
+                     f"style={decision.get('visual_style')}, reason={decision.get('reason')}")
 
         # Event bus'a bildir
         if self.event_bus:
@@ -163,7 +180,7 @@ class BrainAgent(BaseAgent):
         # Top opportunities summary
         top_opps = pool.get("top_opportunities", [])
         opp_text = "\n".join([
-            f"  #{o['id']}: {o['title']} (score: {o['score']}, type: {o['suggestion']}, source: {o['source']})"
+            f"  #{o['id']}: {o['title']} (score: {o['score']}, type: {o['suggestion']}, source: {o['source']}, hook: {o.get('hook', 'N/A')})"
             for o in top_opps
         ]) or "  Hazır fırsat yok"
 
@@ -201,13 +218,24 @@ KURALLAR:
 6. Optimal saatler: {OPTIMAL_HOURS}
 7. Min skor: {MIN_SCORE_TO_PRODUCE}
 
+YARATICI PARAMETRELER:
+- model_id: Video model seçimi. Tercih sırası: news_reels→kling-2.5-pro, reels→kling-2.5-pro, voice_reels→sora-2
+  Mevcut modeller: {', '.join(VALID_MODELS)}
+- visual_style: Görsel stil. Seçenekler: {', '.join(VALID_VISUAL_STYLES)}. Varsayılan: cinematic_4k
+- hook_type: Sadece reels için. Seçenekler: {', '.join(VALID_HOOK_TYPES)}. Fırsatın hook önerisini dikkate al.
+- voice_mode: Sesli içerik mi? voice_reels/news_reels/conversational→true, diğerleri→false
+
 KARAR VER ve JSON formatında yanıt ver:
 {{
     "action": "produce" | "wait",
     "reason": "Kararın sebebi (Türkçe, 1-2 cümle)",
     "opportunity_id": null | <fırsat ID>,
     "content_type": null | "reels" | "voice_reels" | "news_reels" | "carousel" | "post",
-    "urgency": "low" | "medium" | "high"
+    "urgency": "low" | "medium" | "high",
+    "model_id": null | "<model ID>",
+    "visual_style": null | "<stil>",
+    "hook_type": null | "<hook tipi>",
+    "voice_mode": null | true | false
 }}"""
 
         try:
@@ -218,6 +246,18 @@ KARAR VER ve JSON formatında yanıt ver:
             if result.get("action") not in ("produce", "wait", "adjust_strategy"):
                 result["action"] = "wait"
                 result["reason"] = result.get("reason", "Invalid action from LLM")
+
+            # Creative parameter defaults
+            content_type = result.get("content_type")
+            if content_type and result.get("action") == "produce":
+                if not result.get("model_id") or result.get("model_id") not in VALID_MODELS:
+                    result["model_id"] = MODEL_DEFAULTS.get(content_type)
+                if not result.get("visual_style"):
+                    result["visual_style"] = "cinematic_4k"
+                if content_type != "reels":
+                    result["hook_type"] = None
+                if result.get("voice_mode") is None:
+                    result["voice_mode"] = content_type in ("voice_reels", "news_reels", "conversational")
 
             return result
 
@@ -239,7 +279,7 @@ KARAR VER ve JSON formatında yanıt ver:
         "conversational": ("app.production.conversational_pipeline", "ConversationalPipeline"),
     }
 
-    async def trigger_production(self, opportunity: Dict, content_type: str) -> Dict:
+    async def trigger_production(self, opportunity: Dict, content_type: str, decision: Dict = None) -> Dict:
         """Uygun production pipeline'ı tetikle."""
         if not opportunity:
             return {"error": "Opportunity not found"}
@@ -253,7 +293,13 @@ KARAR VER ve JSON formatında yanıt ver:
         pipeline_key = f"{content_type}_{opp_id}"
         self.state_manager.register_production(pipeline_key)
 
-        self.log(f"Triggering production: type={content_type}, opp={opp_id}, title={opportunity['title'][:50]}")
+        creative = decision or {}
+        model_id = creative.get("model_id")
+        visual_style = creative.get("visual_style", "cinematic_4k")
+        hook_type = creative.get("hook_type")
+
+        self.log(f"Triggering production: type={content_type}, opp={opp_id}, "
+                 f"model={model_id}, style={visual_style}, title={opportunity['title'][:50]}")
 
         try:
             pipeline_info = self.PIPELINE_MAP.get(content_type)
@@ -269,13 +315,42 @@ KARAR VER ve JSON formatında yanıt ver:
                 PipelineClass = getattr(module, class_name)
                 pipeline = PipelineClass()
 
-                # news_reels has opportunity-based interface
-                if content_type in ("news_reels",):
-                    result = await pipeline.run(opportunity=opportunity, autonomous=True)
-                else:
-                    # Other pipelines use topic-based interface
-                    topic = opportunity.get("title", "")
-                    result = await pipeline.run(topic=topic)
+                if content_type == "news_reels":
+                    kwargs = {"opportunity": opportunity, "autonomous": True}
+                    if model_id:
+                        kwargs["model_id"] = model_id
+                    if visual_style:
+                        kwargs["visual_style"] = visual_style
+                    result = await pipeline.run(**kwargs)
+
+                elif content_type == "reels":
+                    kwargs = {"topic": opportunity.get("title", "")}
+                    if model_id:
+                        kwargs["force_model"] = model_id  # ReelsPipeline uses force_model
+                    if visual_style:
+                        kwargs["visual_style"] = visual_style
+                    if hook_type:
+                        kwargs["hook_type"] = hook_type
+                    result = await pipeline.run(**kwargs)
+
+                elif content_type == "voice_reels":
+                    kwargs = {"topic": opportunity.get("title", "")}
+                    if model_id:
+                        kwargs["model_id"] = model_id
+                    if visual_style:
+                        kwargs["visual_style"] = visual_style
+                    result = await pipeline.run(**kwargs)
+
+                elif content_type in ("long_video", "conversational"):
+                    kwargs = {"topic": opportunity.get("title", "")}
+                    if model_id:
+                        kwargs["model_id"] = model_id
+                    if visual_style:
+                        kwargs["visual_style"] = visual_style
+                    result = await pipeline.run(**kwargs)
+
+                else:  # carousel, post — no video params
+                    result = await pipeline.run(topic=opportunity.get("title", ""))
 
         except Exception as e:
             self.log(f"Production error: {e}")
@@ -292,14 +367,17 @@ KARAR VER ve JSON formatında yanıt ver:
             "production_result": result
         }
 
-    async def force_produce(self, opp_id: int, content_type: str) -> Dict:
+    async def force_produce(self, opp_id: int, content_type: str, decision: Dict = None) -> Dict:
         """Telegram /force komutu ile belirli bir fırsatı hemen üret."""
         opp = get_opportunity(opp_id)
         if not opp:
             return {"error": f"Opportunity {opp_id} not found"}
 
-        self.log(f"Force producing: opp={opp_id}, type={content_type}")
-        return await self.trigger_production(opp, content_type)
+        if decision is None:
+            decision = {"model_id": MODEL_DEFAULTS.get(content_type), "visual_style": "cinematic_4k"}
+
+        self.log(f"Force producing: opp={opp_id}, type={content_type}, model={decision.get('model_id')}")
+        return await self.trigger_production(opp, content_type, decision=decision)
 
     def _record_decision(self, decision: Dict):
         """Son kararları tut (Telegram /brain komutu için)."""
