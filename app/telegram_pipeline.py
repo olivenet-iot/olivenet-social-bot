@@ -2519,15 +2519,15 @@ async def cmd_pool(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("📭 Havuzda fırsat yok.")
         return
 
-    lines = ["📊 *Opportunity Pool* (Top 10)\n"]
+    lines = ["📊 Opportunity Pool (Top 10)\n"]
     for i, o in enumerate(opps, 1):
-        title = escape_markdown(str(o.get("title", "?"))[:40], version=2)
+        title = str(o.get("title", "?"))[:40]
         score = o.get("combined_score", 0)
-        source = escape_markdown(str(o.get("source_type", "?")), version=2)
-        status = escape_markdown(str(o.get("status", "?")), version=2)
-        lines.append(f"{i}\\. *{title}*\n   Score: {score:.0f} \\| {source} \\| {status}")
+        source = str(o.get("source_type", "?"))
+        status = str(o.get("status", "?"))
+        lines.append(f"{i}. {title}\n   Score: {score:.0f} | {source} | {status}")
 
-    await update.message.reply_text("\n".join(lines), parse_mode="MarkdownV2")
+    await update.message.reply_text("\n".join(lines))
 
 
 async def cmd_brain(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -2551,34 +2551,34 @@ async def cmd_brain(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("🧠 Brain henüz karar almadı.")
             return
 
-        lines = ["🧠 *Brain Agent* (DB Logs)\n"]
+        lines = ["🧠 Brain Agent (DB Logs)\n"]
         for log in logs:
-            action = escape_markdown(str(log.get("action", "?")), version=2)
-            ts = escape_markdown(str(log.get("timestamp", "?"))[:16], version=2)
+            action = str(log.get("action", "?"))
+            ts = str(log.get("timestamp", "?"))[:16]
             output = log.get("output_data", "{}")
             try:
                 import json as _json
                 data = _json.loads(output) if isinstance(output, str) else (output or {})
-                reason = escape_markdown(str(data.get("reason", ""))[:80], version=2)
+                reason = str(data.get("reason", ""))[:80]
             except Exception:
                 reason = ""
-            lines.append(f"• `{action}` {ts}\n  {reason}")
+            lines.append(f"• {action} {ts}\n  {reason}")
 
-        await update.message.reply_text("\n".join(lines), parse_mode="MarkdownV2")
+        await update.message.reply_text("\n".join(lines))
         return
 
-    lines = ["🧠 *Brain Agent* (Son Kararlar)\n"]
+    lines = ["🧠 Brain Agent (Son Kararlar)\n"]
     for d in decisions:
-        action = escape_markdown(str(d.get("action", "?")), version=2)
-        reason = escape_markdown(str(d.get("reason", ""))[:80], version=2)
-        ts = escape_markdown(str(d.get("timestamp", "?"))[:16], version=2)
-        lines.append(f"• *{action}* {ts}\n  {reason}")
+        action = str(d.get("action", "?"))
+        reason = str(d.get("reason", ""))[:80]
+        ts = str(d.get("timestamp", "?"))[:16]
+        lines.append(f"• {action} {ts}\n  {reason}")
 
     dry_run = brain_agent.is_dry_run if brain_agent else True
-    mode = "DRY\\-RUN" if dry_run else "LIVE"
+    mode = "DRY-RUN" if dry_run else "LIVE"
     lines.append(f"\nMod: {mode}")
 
-    await update.message.reply_text("\n".join(lines), parse_mode="MarkdownV2")
+    await update.message.reply_text("\n".join(lines))
 
 
 async def cmd_feeds(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -2596,15 +2596,15 @@ async def cmd_feeds(update: Update, context: ContextTypes.DEFAULT_TYPE):
     source_lines = "\n".join([f"  {k}: {v}" for k, v in by_source.items()]) or "  Veri yok"
 
     text = (
-        f"📡 *Feed & Pool Stats*\n\n"
-        f"*Aktif:* {stats.get('active_count', 0)}\n"
-        f"*Ort. Skor:* {stats.get('avg_score', 0)}\n"
-        f"*Max Skor:* {stats.get('max_score', 0)}\n\n"
-        f"*Status:*\n{status_lines}\n\n"
-        f"*Kaynak:*\n{source_lines}"
+        f"📡 Feed & Pool Stats\n\n"
+        f"Aktif: {stats.get('active_count', 0)}\n"
+        f"Ort. Skor: {stats.get('avg_score', 0)}\n"
+        f"Max Skor: {stats.get('max_score', 0)}\n\n"
+        f"Status:\n{status_lines}\n\n"
+        f"Kaynak:\n{source_lines}"
     )
 
-    await update.message.reply_text(text, parse_mode="Markdown")
+    await update.message.reply_text(text)
 
 
 async def cmd_pause(update: Update, context: ContextTypes.DEFAULT_TYPE):

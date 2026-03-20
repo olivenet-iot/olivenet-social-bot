@@ -6,16 +6,16 @@ Feed Configuration - RSS feed tanımları ve kategori ağırlıkları
 FEEDS = [
     # ========== Tier 1: IoT / Endüstri (Çekirdek Alan) ==========
     {
-        "name": "IoT World Today",
-        "url": "https://www.iotworldtoday.com/rss",
+        "name": "IoT Now",
+        "url": "https://www.iot-now.com/feed/",
         "category": "iot",
         "language": "en",
         "priority": "high",
         "tags": ["iot", "industrial", "smart-factory"]
     },
     {
-        "name": "The Things Network Blog",
-        "url": "https://www.thethingsnetwork.org/blog.rss",
+        "name": "RAKwireless News",
+        "url": "https://news.rakwireless.com/rss/",
         "category": "lorawan",
         "language": "en",
         "priority": "high",
