@@ -62,13 +62,15 @@ class V2Scheduler:
     async def _feed_loop(self):
         """Feed aggregation döngüsü."""
         logger.info(f"Feed loop started (every {FEED_POLL_MINUTES}m)")
+        print("[FEED] Loop başladı")
 
         # İlk çalıştırmada 10 saniye bekle (sistemin başlamasını bekle)
         await asyncio.sleep(10)
 
         while self._running:
             try:
-                await self.feeds.run_feed_pipeline()
+                result = await self.feeds.run_feed_pipeline()
+                print(f"[FEED] Fetch tamamlandı: {result}")
 
                 if self.event_bus:
                     from app.database.crud import get_opportunity_stats
@@ -86,13 +88,15 @@ class V2Scheduler:
     async def _brain_loop(self):
         """Brain karar döngüsü."""
         logger.info(f"Brain loop started (every {BRAIN_CYCLE_MINUTES}m)")
+        print("[BRAIN] Loop başladı, ilk karar 60s içinde...")
 
-        # İlk çalıştırmada feed'lerin dolmasını bekle
-        await asyncio.sleep(FEED_POLL_MINUTES * 60 + 30)
+        # İlk feed fetch 10s'de başlıyor, 60s yeterli
+        await asyncio.sleep(60)
 
         while self._running:
             try:
                 decision = await self.brain.decide()
+                print(f"[BRAIN] Karar: {decision}")
                 logger.info(
                     f"Brain decision: {decision.get('action')} — "
                     f"{decision.get('reason', '')[:100]}"
@@ -106,6 +110,7 @@ class V2Scheduler:
     async def _analytics_loop(self):
         """Daily prediction accuracy check."""
         logger.info("Analytics loop started (every 24h)")
+        print("[ANALYTICS] Loop başladı")
 
         # İlk çalıştırmada 24 saat bekle
         await asyncio.sleep(86400)
@@ -125,6 +130,7 @@ class V2Scheduler:
     async def _expiry_loop(self):
         """Eski fırsatları temizleme döngüsü."""
         logger.info(f"Expiry loop started (every {EXPIRY_CHECK_HOURS}h)")
+        print("[EXPIRY] Loop başladı")
 
         # İlk çalıştırmada 1 saat bekle
         await asyncio.sleep(3600)
