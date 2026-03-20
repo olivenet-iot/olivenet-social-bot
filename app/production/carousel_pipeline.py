@@ -19,7 +19,8 @@ class CarouselPipeline(BasePipeline):
     def __init__(self, telegram_callback=None):
         super().__init__("carousel", telegram_callback)
 
-    async def run(self, topic=None, dry_run=False, carousel_type="html", manual_topic=None) -> Dict[str, Any]:
+    async def run(self, topic=None, dry_run=False, carousel_type="nano_banana", manual_topic=None,
+                  carousel_style="tech_blue", carousel_layout="storytelling", slide_count=5) -> Dict[str, Any]:
         """
         Instagram Carousel içerik üretim pipeline'ı.
 
@@ -76,7 +77,7 @@ class CarouselPipeline(BasePipeline):
             carousel_content = await self.creator.execute({
                 "action": "create_carousel_content",
                 "topic": topic,
-                "slide_count": 5,
+                "slide_count": slide_count,
                 "category": "egitici"
             })
 
@@ -156,10 +157,17 @@ class CarouselPipeline(BasePipeline):
                 self.log("[CAROUSEL] Aşama 3: Görseller Nano Banana ile üretiliyor...")
                 from app.nano_banana_helper import generate_carousel_infographics
 
+                # Build rich style string with design parameters
+                from app.agents.brain import CAROUSEL_STYLES
+                style_info = CAROUSEL_STYLES.get(carousel_style, CAROUSEL_STYLES["tech_blue"])
+                rich_style = (
+                    f"modern | Palette: {style_info['palette']} | "
+                    f"Mood: {style_info['mood']} | Layout: {carousel_layout}"
+                )
                 nano_result = await generate_carousel_infographics(
                     topic=topic,
                     slides=slides,
-                    style="modern",
+                    style=rich_style,
                     language="tr"
                 )
 
