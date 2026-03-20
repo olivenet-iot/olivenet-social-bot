@@ -343,6 +343,56 @@ def init_database():
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_ad_ad_id ON ad_campaigns(ad_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_ad_synced ON ad_campaigns(synced_at)')
 
+    # Content Opportunities tablosu - v2 içerik fırsatları havuzu
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS content_opportunities (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+            -- Kaynak
+            source_type TEXT NOT NULL,       -- rss, evergreen, calendar, manual
+            source_name TEXT,                -- Feed adı veya kategori
+            source_url TEXT,                 -- Orijinal URL (haber için)
+
+            -- İçerik
+            title TEXT NOT NULL,
+            summary TEXT,
+            original_language TEXT DEFAULT 'en',
+            tags TEXT,                       -- JSON array
+            full_text TEXT,                  -- Enriched full article
+
+            -- AI Analiz
+            olivenet_angle TEXT,
+            content_type_suggestion TEXT,    -- reels, carousel, post, voice_reels
+            hook_suggestion TEXT,
+
+            -- Skorlama
+            relevance_score REAL DEFAULT 0,
+            timeliness_score REAL DEFAULT 0,
+            virality_potential REAL DEFAULT 0,
+            combined_score REAL DEFAULT 0,
+
+            -- Durum
+            status TEXT DEFAULT 'discovered',  -- discovered, enriched, scored, ready, selected, producing, used, expired, dropped
+            selected_at TIMESTAMP,
+            used_at TIMESTAMP,
+            expires_at TIMESTAMP,
+            post_id INTEGER,
+
+            -- Dedup
+            title_hash TEXT,
+            url_hash TEXT,
+
+            UNIQUE(url_hash),
+            FOREIGN KEY (post_id) REFERENCES posts(id)
+        )
+    ''')
+
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_opp_status ON content_opportunities(status)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_opp_combined_score ON content_opportunities(combined_score)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_opp_source_type ON content_opportunities(source_type)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_opp_created ON content_opportunities(created_at)')
+
     # Story Boosts tablosu - Story promosyon takibi
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS story_boosts (
