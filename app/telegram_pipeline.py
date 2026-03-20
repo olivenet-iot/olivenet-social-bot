@@ -27,12 +27,18 @@ from app.database import (
 from app.config import settings
 from app.video_models import VIDEO_MODELS, get_model_config, get_model_durations, get_max_duration
 from app.video_styles import VIDEO_STYLES, STYLE_CATEGORIES, get_style_config, get_styles_by_category
+from app.database.crud import (
+    get_top_opportunities, get_opportunity, get_opportunity_stats,
+    get_agent_logs, update_opportunity
+)
 
 # Global değişkenler
 pipeline: ContentPipeline = None
 scheduler: ContentScheduler = None
 admin_chat_id: int = None
 pending_input: dict = {}  # Kullanıcıdan beklenen input
+brain_agent = None  # Set by main.py, used by /pause /resume /force
+feed_aggregator = None  # Set by main.py, used by /feeds
 
 
 # ============ AUTHORIZATION ============
@@ -2499,6 +2505,183 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
         print(f"❌ Beklenmeyen hata: {type(error).__name__}: {error}")
 
 
+# ============ V2 MONITORING COMMANDS ============
+
+async def cmd_pool(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Opportunity pool durumu"""
+    if not is_admin(update.effective_user.id):
+        await update.message.reply_text("⛔ Yetkiniz yok.")
+        return
+
+    opps = get_top_opportunities(limit=10, min_score=0)
+
+    if not opps:
+        await update.message.reply_text("📭 Havuzda fırsat yok.")
+        return
+
+    lines = ["📊 *Opportunity Pool* (Top 10)\n"]
+    for i, o in enumerate(opps, 1):
+        title = escape_markdown(str(o.get("title", "?"))[:40], version=2)
+        score = o.get("combined_score", 0)
+        source = escape_markdown(str(o.get("source_type", "?")), version=2)
+        status = escape_markdown(str(o.get("status", "?")), version=2)
+        lines.append(f"{i}\\. *{title}*\n   Score: {score:.0f} \\| {source} \\| {status}")
+
+    await update.message.reply_text("\n".join(lines), parse_mode="MarkdownV2")
+
+
+async def cmd_brain(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Brain Agent son kararları"""
+    global brain_agent
+
+    if not is_admin(update.effective_user.id):
+        await update.message.reply_text("⛔ Yetkiniz yok.")
+        return
+
+    # In-memory decisions (fastest)
+    if brain_agent and hasattr(brain_agent, "get_last_decisions"):
+        decisions = brain_agent.get_last_decisions(5)
+    else:
+        decisions = []
+
+    if not decisions:
+        # Fallback to DB logs
+        logs = get_agent_logs(agent_name="brain", limit=5)
+        if not logs:
+            await update.message.reply_text("🧠 Brain henüz karar almadı.")
+            return
+
+        lines = ["🧠 *Brain Agent* (DB Logs)\n"]
+        for log in logs:
+            action = escape_markdown(str(log.get("action", "?")), version=2)
+            ts = escape_markdown(str(log.get("timestamp", "?"))[:16], version=2)
+            output = log.get("output_data", "{}")
+            try:
+                import json as _json
+                data = _json.loads(output) if isinstance(output, str) else (output or {})
+                reason = escape_markdown(str(data.get("reason", ""))[:80], version=2)
+            except Exception:
+                reason = ""
+            lines.append(f"• `{action}` {ts}\n  {reason}")
+
+        await update.message.reply_text("\n".join(lines), parse_mode="MarkdownV2")
+        return
+
+    lines = ["🧠 *Brain Agent* (Son Kararlar)\n"]
+    for d in decisions:
+        action = escape_markdown(str(d.get("action", "?")), version=2)
+        reason = escape_markdown(str(d.get("reason", ""))[:80], version=2)
+        ts = escape_markdown(str(d.get("timestamp", "?"))[:16], version=2)
+        lines.append(f"• *{action}* {ts}\n  {reason}")
+
+    dry_run = brain_agent.is_dry_run if brain_agent else True
+    mode = "DRY\\-RUN" if dry_run else "LIVE"
+    lines.append(f"\nMod: {mode}")
+
+    await update.message.reply_text("\n".join(lines), parse_mode="MarkdownV2")
+
+
+async def cmd_feeds(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Feed ve havuz istatistikleri"""
+    if not is_admin(update.effective_user.id):
+        await update.message.reply_text("⛔ Yetkiniz yok.")
+        return
+
+    stats = get_opportunity_stats()
+
+    by_status = stats.get("by_status", {})
+    by_source = stats.get("by_source", {})
+
+    status_lines = "\n".join([f"  {k}: {v}" for k, v in by_status.items()]) or "  Veri yok"
+    source_lines = "\n".join([f"  {k}: {v}" for k, v in by_source.items()]) or "  Veri yok"
+
+    text = (
+        f"📡 *Feed & Pool Stats*\n\n"
+        f"*Aktif:* {stats.get('active_count', 0)}\n"
+        f"*Ort. Skor:* {stats.get('avg_score', 0)}\n"
+        f"*Max Skor:* {stats.get('max_score', 0)}\n\n"
+        f"*Status:*\n{status_lines}\n\n"
+        f"*Kaynak:*\n{source_lines}"
+    )
+
+    await update.message.reply_text(text, parse_mode="Markdown")
+
+
+async def cmd_pause(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Brain Agent'ı duraklat"""
+    global brain_agent
+
+    if not is_admin(update.effective_user.id):
+        await update.message.reply_text("⛔ Yetkiniz yok.")
+        return
+
+    if not brain_agent:
+        await update.message.reply_text("⚠️ Brain Agent aktif değil.")
+        return
+
+    brain_agent.state_manager.is_paused = True
+    await update.message.reply_text("⏸️ Brain Agent duraklatıldı.")
+
+
+async def cmd_resume(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Brain Agent'ı devam ettir"""
+    global brain_agent
+
+    if not is_admin(update.effective_user.id):
+        await update.message.reply_text("⛔ Yetkiniz yok.")
+        return
+
+    if not brain_agent:
+        await update.message.reply_text("⚠️ Brain Agent aktif değil.")
+        return
+
+    brain_agent.state_manager.is_paused = False
+    await update.message.reply_text("▶️ Brain Agent devam ediyor.")
+
+
+async def cmd_force(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Belirli bir opportunity'yi zorla üret: /force <opp_id> [content_type]"""
+    global brain_agent
+
+    if not is_admin(update.effective_user.id):
+        await update.message.reply_text("⛔ Yetkiniz yok.")
+        return
+
+    if not brain_agent:
+        await update.message.reply_text("⚠️ Brain Agent aktif değil.")
+        return
+
+    args = context.args or []
+    if not args:
+        await update.message.reply_text("Kullanım: /force <opp_id> [content_type]\nÖrnek: /force 42 reels")
+        return
+
+    try:
+        opp_id = int(args[0])
+    except ValueError:
+        await update.message.reply_text("❌ Geçersiz opportunity ID.")
+        return
+
+    content_type = args[1] if len(args) > 1 else "reels"
+
+    opp = get_opportunity(opp_id)
+    if not opp:
+        await update.message.reply_text(f"❌ Opportunity {opp_id} bulunamadı.")
+        return
+
+    await update.message.reply_text(
+        f"🚀 Force production başlatılıyor...\n"
+        f"ID: {opp_id}\nTip: {content_type}\nKonu: {opp.get('title', '?')[:50]}"
+    )
+
+    result = await brain_agent.force_produce(opp_id, content_type)
+
+    if result.get("error"):
+        await update.message.reply_text(f"❌ Hata: {result['error']}")
+    else:
+        await update.message.reply_text(f"✅ Production tetiklendi: {result.get('triggered', False)}")
+
+
 async def main():
     """Ana fonksiyon"""
     global pipeline, scheduler, admin_chat_id
@@ -2543,6 +2726,14 @@ async def main():
     app.add_handler(CommandHandler("schedule", cmd_schedule))
     app.add_handler(CommandHandler("sync", cmd_sync))
     app.add_handler(CommandHandler("prompts", cmd_prompts))
+
+    # Handler'lar - v2 Monitoring Komutları
+    app.add_handler(CommandHandler("pool", cmd_pool))
+    app.add_handler(CommandHandler("brain", cmd_brain))
+    app.add_handler(CommandHandler("feeds", cmd_feeds))
+    app.add_handler(CommandHandler("pause", cmd_pause))
+    app.add_handler(CommandHandler("resume", cmd_resume))
+    app.add_handler(CommandHandler("force", cmd_force))
 
     # Handler'lar - Callback ve Mesaj
     app.add_handler(CallbackQueryHandler(handle_callback))

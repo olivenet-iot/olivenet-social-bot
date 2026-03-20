@@ -219,7 +219,17 @@ Show natural gestures and expressions, NO actual speech.
         }
 
     async def run_daily_content(self, topic: str = None, manual_topic_mode: bool = False, visual_type: str = None) -> Dict[str, Any]:
-        """Günlük içerik pipeline'ı çalıştır"""
+        """Günlük içerik pipeline'ı çalıştır — v2 PostPipeline'a delege eder"""
+        from app.production.post_pipeline import PostPipeline
+        pp = PostPipeline(telegram_callback=self.telegram_callback)
+        pp.approval_event = self.approval_event
+        pp.approval_response = self.approval_response
+        pp.set_approval = self.set_approval
+        pp.wait_for_approval = self.wait_for_approval
+        return await pp.run(topic=topic, manual_topic_mode=manual_topic_mode, visual_type=visual_type)
+
+    async def _run_daily_content_original(self, topic: str = None, manual_topic_mode: bool = False, visual_type: str = None) -> Dict[str, Any]:
+        """Orijinal run_daily_content — yedek olarak tutuluyor"""
         self.log("Günlük içerik pipeline'ı başlatılıyor...")
         self.state = PipelineState.PLANNING
 
@@ -1131,21 +1141,18 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             return result
 
     async def run_reels_content(self, topic: str = None, force_model: str = None, manual_topic_mode: bool = False, visual_style: str = "cinematic_4k", viral_format: str = None, hook_type: str = None) -> Dict[str, Any]:
-        """
-        Instagram Reels içeriği üret ve yayınla
-        Sora 2 Pro → Sora 2 → Veo 3 fallback zinciri ile
+        """Instagram Reels — v2 ReelsPipeline'a delege eder"""
+        from app.production.reels_pipeline import ReelsPipeline
+        rp = ReelsPipeline(telegram_callback=self.telegram_callback)
+        rp.approval_event = self.approval_event
+        rp.approval_response = self.approval_response
+        rp.set_approval = self.set_approval
+        rp.wait_for_approval = self.wait_for_approval
+        return await rp.run(topic=topic, force_model=force_model, manual_topic_mode=manual_topic_mode,
+                            visual_style=visual_style, viral_format=viral_format, hook_type=hook_type)
 
-        Args:
-            topic: Konu (None ise Planner'dan alınır)
-            force_model: Model zorla ("sora-2", "sora-2-pro", "veo3")
-            manual_topic_mode: Manuel konu modu (planner atlanır)
-            visual_style: Görsel stil (cinematic_4k, anime, vb.)
-            viral_format: Planlanmış viral format (pov, myth_busting, etc.)
-            hook_type: Planlanmış hook tipi (statistic, question, etc.)
-
-        Returns:
-            Pipeline sonucu
-        """
+    async def _run_reels_content_original(self, topic: str = None, force_model: str = None, manual_topic_mode: bool = False, visual_style: str = "cinematic_4k", viral_format: str = None, hook_type: str = None) -> Dict[str, Any]:
+        """Orijinal run_reels_content — yedek"""
         mode_text = "Manuel Konu" if manual_topic_mode else "Otomatik"
         engagement_info = f" [Format: {viral_format}, Hook: {hook_type}]" if viral_format or hook_type else ""
         self.log(f"REELS MOD ({mode_text}): Pipeline başlatılıyor...{engagement_info}")
@@ -1392,8 +1399,27 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
         model_id: str = "sora-2",
         visual_style: str = "cinematic_4k"
     ) -> Dict[str, Any]:
+        """Sesli Reels — v2 VoiceReelsPipeline'a delege eder"""
+        from app.production.voice_reels_pipeline import VoiceReelsPipeline
+        vp = VoiceReelsPipeline(telegram_callback=self.telegram_callback)
+        vp.approval_event = self.approval_event
+        vp.approval_response = self.approval_response
+        vp.set_approval = self.set_approval
+        vp.wait_for_approval = self.wait_for_approval
+        return await vp.run(topic=topic, force_model=force_model, target_duration=target_duration,
+                            manual_topic_mode=manual_topic_mode, model_id=model_id, visual_style=visual_style)
+
+    async def _run_reels_voice_content_original(
+        self,
+        topic: str = None,
+        force_model: str = None,
+        target_duration: int = 15,
+        manual_topic_mode: bool = False,
+        model_id: str = "sora-2",
+        visual_style: str = "cinematic_4k"
+    ) -> Dict[str, Any]:
         """
-        Sesli Instagram Reels içeriği üret ve yayınla.
+        Orijinal sesli reels — yedek.
 
         ElevenLabs TTS + Video + FFmpeg merge pipeline.
         Multi-model desteği: Sora 2, Veo 2, Kling 2.1, Wan 2.1, Minimax
@@ -1880,8 +1906,24 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
         carousel_type: str = "html",
         manual_topic: str = None
     ) -> Dict[str, Any]:
+        """Carousel — v2 CarouselPipeline'a delege eder"""
+        from app.production.carousel_pipeline import CarouselPipeline
+        cp = CarouselPipeline(telegram_callback=self.telegram_callback)
+        cp.approval_event = self.approval_event
+        cp.approval_response = self.approval_response
+        cp.set_approval = self.set_approval
+        cp.wait_for_approval = self.wait_for_approval
+        return await cp.run(topic=topic, dry_run=dry_run, carousel_type=carousel_type, manual_topic=manual_topic)
+
+    async def _run_carousel_pipeline_original(
+        self,
+        topic: str = None,
+        dry_run: bool = False,
+        carousel_type: str = "html",
+        manual_topic: str = None
+    ) -> Dict[str, Any]:
         """
-        Instagram Carousel içerik üretim pipeline'ı.
+        Orijinal carousel — yedek.
 
         Akış:
         1. Konu seçimi (opsiyonel)
@@ -2612,8 +2654,29 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
         manual_topic_mode: bool = False,
         visual_style: str = "cinematic_4k"
     ) -> Dict[str, Any]:
+        """Long video — v2 LongVideoPipeline'a delege eder"""
+        from app.production.long_video_pipeline import LongVideoPipeline
+        lp = LongVideoPipeline(telegram_callback=self.telegram_callback)
+        lp.approval_event = self.approval_event
+        lp.approval_response = self.approval_response
+        lp.set_approval = self.set_approval
+        lp.wait_for_approval = self.wait_for_approval
+        return await lp.run(topic=topic, segment_count=segment_count, model_id=model_id,
+                            transition_type=transition_type, transition_duration=transition_duration,
+                            manual_topic_mode=manual_topic_mode, visual_style=visual_style)
+
+    async def _run_long_video_pipeline_original(
+        self,
+        topic: str = None,
+        segment_count: int = 2,
+        model_id: str = "kling-2.6-pro",
+        transition_type: str = "crossfade",
+        transition_duration: float = 0.5,
+        manual_topic_mode: bool = False,
+        visual_style: str = "cinematic_4k"
+    ) -> Dict[str, Any]:
         """
-        Multi-segment uzun video pipeline.
+        Orijinal long video — yedek.
 
         Birden fazla video segmenti üretip birleştirerek uzun videolar oluşturur.
         Segment süresi modele göre dinamik belirlenir.
@@ -3080,8 +3143,25 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
         visual_style: str = "cinematic_4k",
         model_id: str = "sora-2"
     ) -> Dict[str, Any]:
+        """Conversational Reels — v2 ConversationalPipeline'a delege eder"""
+        from app.production.conversational_pipeline import ConversationalPipeline
+        cvp = ConversationalPipeline(telegram_callback=self.telegram_callback)
+        cvp.approval_event = self.approval_event
+        cvp.approval_response = self.approval_response
+        cvp.set_approval = self.set_approval
+        cvp.wait_for_approval = self.wait_for_approval
+        return await cvp.run(topic=topic, manual_topic_mode=manual_topic_mode,
+                             visual_style=visual_style, model_id=model_id)
+
+    async def _run_conversational_reels_original(
+        self,
+        topic: str = None,
+        manual_topic_mode: bool = False,
+        visual_style: str = "cinematic_4k",
+        model_id: str = "sora-2"
+    ) -> Dict[str, Any]:
         """
-        Conversational Reels pipeline with multi-model support.
+        Orijinal conversational reels — yedek.
 
         Creates two-character dialog video (male problem, female solution)
         followed by B-roll segment with voiceover.
@@ -3650,7 +3730,13 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             return result
 
     async def publish_conversational_reels(self, post_id: int) -> Dict[str, Any]:
-        """Conversational Reels'i Instagram'a yayınla (Telegram onayı sonrası)"""
+        """Conversational Reels publish — v2 ConversationalPipeline'a delege eder"""
+        from app.production.conversational_pipeline import ConversationalPipeline
+        cvp = ConversationalPipeline(telegram_callback=self.telegram_callback)
+        return await cvp.publish(post_id=post_id)
+
+    async def _publish_conversational_reels_original(self, post_id: int) -> Dict[str, Any]:
+        """Orijinal publish — yedek"""
         from app.database.crud import get_post, update_post
 
         result = {

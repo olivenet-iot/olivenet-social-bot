@@ -46,6 +46,7 @@ class V2Scheduler:
 
         if self.brain:
             tasks.append(self._brain_loop())
+            tasks.append(self._analytics_loop())
 
         tasks.append(self._expiry_loop())
 
@@ -101,6 +102,25 @@ class V2Scheduler:
                 logger.error(f"Brain loop error: {e}\n{traceback.format_exc()}")
 
             await asyncio.sleep(BRAIN_CYCLE_MINUTES * 60)
+
+    async def _analytics_loop(self):
+        """Daily prediction accuracy check."""
+        logger.info("Analytics loop started (every 24h)")
+
+        # İlk çalıştırmada 24 saat bekle
+        await asyncio.sleep(86400)
+
+        while self._running:
+            try:
+                result = await self.brain.check_prediction_accuracy()
+                logger.info(
+                    f"Analytics check: {result.get('checked', 0)} posts, "
+                    f"avg_score={result.get('avg_actual_score', 0)}"
+                )
+            except Exception as e:
+                logger.error(f"Analytics loop error: {e}")
+
+            await asyncio.sleep(86400)  # Every 24h
 
     async def _expiry_loop(self):
         """Eski fırsatları temizleme döngüsü."""

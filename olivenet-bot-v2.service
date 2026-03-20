@@ -1,0 +1,17 @@
+[Unit]
+Description=Olivenet Social Bot v2
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/olivenet-social-bot
+ExecStart=/usr/bin/python3 /opt/olivenet-social-bot/app/main.py
+Restart=always
+RestartSec=10
+Environment=BRAIN_DRY_RUN=true
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-/opt/olivenet-social-bot/.env
+
+[Install]
+WantedBy=multi-user.target

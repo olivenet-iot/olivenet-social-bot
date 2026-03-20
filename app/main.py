@@ -74,11 +74,14 @@ async def main():
 
     tasks = []
 
-    # v1 Telegram bot
+    # v1 Telegram bot + v2 monitoring globals
     try:
+        import app.telegram_pipeline as telegram_pipeline_mod
+        telegram_pipeline_mod.brain_agent = brain
+        telegram_pipeline_mod.feed_aggregator = aggregator
         from app.telegram_pipeline import main as telegram_main
         tasks.append(telegram_main())
-        print("  -> v1 Telegram bot baslatildi")
+        print("  -> v1 Telegram bot baslatildi (v2 monitoring aktif)")
     except ImportError as e:
         print(f"  -> v1 Telegram bot atlanıyor: {e}")
 

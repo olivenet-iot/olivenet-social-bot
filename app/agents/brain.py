@@ -228,6 +228,17 @@ KARAR VER ve JSON formatında yanıt ver:
             logger.error(f"Brain decision error: {e}")
             return {"action": "wait", "reason": f"Error: {str(e)}", "error": str(e)}
 
+    # Content type -> (module_path, class_name) mapping
+    PIPELINE_MAP = {
+        "reels": ("app.production.reels_pipeline", "ReelsPipeline"),
+        "voice_reels": ("app.production.voice_reels_pipeline", "VoiceReelsPipeline"),
+        "news_reels": ("app.production.news_reels_pipeline", "NewsReelsPipeline"),
+        "carousel": ("app.production.carousel_pipeline", "CarouselPipeline"),
+        "post": ("app.production.post_pipeline", "PostPipeline"),
+        "long_video": ("app.production.long_video_pipeline", "LongVideoPipeline"),
+        "conversational": ("app.production.conversational_pipeline", "ConversationalPipeline"),
+    }
+
     async def trigger_production(self, opportunity: Dict, content_type: str) -> Dict:
         """Uygun production pipeline'ı tetikle."""
         if not opportunity:
@@ -245,15 +256,26 @@ KARAR VER ve JSON formatında yanıt ver:
         self.log(f"Triggering production: type={content_type}, opp={opp_id}, title={opportunity['title'][:50]}")
 
         try:
-            if content_type in ("news_reels", "voice_reels"):
-                from app.production.news_reels_pipeline import NewsReelsPipeline
-                pipeline = NewsReelsPipeline()
-                result = await pipeline.run(opportunity=opportunity, autonomous=True)
-            else:
-                # Diger tipler icin mevcut pipeline'i kullan (v1 uyumluluk)
-                self.log(f"Content type '{content_type}' henuz v2 pipeline'da yok, atlaniyor")
+            pipeline_info = self.PIPELINE_MAP.get(content_type)
+
+            if not pipeline_info:
+                self.log(f"Content type '{content_type}' pipeline bulunamadi")
                 update_opportunity(opp_id, status="ready")
-                result = {"success": False, "reason": f"Pipeline not yet implemented: {content_type}"}
+                result = {"success": False, "reason": f"Unknown content type: {content_type}"}
+            else:
+                import importlib
+                module_path, class_name = pipeline_info
+                module = importlib.import_module(module_path)
+                PipelineClass = getattr(module, class_name)
+                pipeline = PipelineClass()
+
+                # news_reels has opportunity-based interface
+                if content_type in ("news_reels",):
+                    result = await pipeline.run(opportunity=opportunity, autonomous=True)
+                else:
+                    # Other pipelines use topic-based interface
+                    topic = opportunity.get("title", "")
+                    result = await pipeline.run(topic=topic)
 
         except Exception as e:
             self.log(f"Production error: {e}")
@@ -292,6 +314,82 @@ KARAR VER ve JSON formatında yanıt ver:
     def get_last_decisions(self, limit: int = 5) -> List[Dict]:
         """Son N kararı döner."""
         return self._last_decisions[:limit]
+
+    async def check_prediction_accuracy(self) -> Dict[str, Any]:
+        """
+        Yayınlanmış içeriklerin tahmin doğruluğunu kontrol et.
+        Opportunity skorları vs gerçek performans karşılaştırması.
+        """
+        from app.database.crud import get_published_posts, get_opportunity_stats
+
+        self.log("Prediction accuracy check başlatılıyor...")
+
+        try:
+            # Son 7 gün yayınlanmış postları al
+            published = get_published_posts(days=7)
+            if not published:
+                self.log("Son 7 günde yayınlanmış post yok")
+                return {"checked": 0, "message": "No published posts"}
+
+            comparisons = []
+            for post in published:
+                post_id = post.get("id")
+                ig_engagement = post.get("ig_engagement_rate", 0) or 0
+                ig_saves = post.get("ig_saves", 0) or 0
+                ig_shares = post.get("ig_shares", 0) or 0
+
+                # Skip posts without metrics
+                if ig_engagement == 0 and ig_saves == 0:
+                    continue
+
+                # Performance skoru hesapla (basit weighted)
+                actual_score = (ig_engagement * 100) + (ig_saves * 0.5) + (ig_shares * 1.0)
+
+                comparisons.append({
+                    "post_id": post_id,
+                    "topic": post.get("topic", "")[:50],
+                    "actual_engagement": ig_engagement,
+                    "actual_saves": ig_saves,
+                    "actual_shares": ig_shares,
+                    "actual_score": round(actual_score, 1),
+                })
+
+            if not comparisons:
+                self.log("Metrik verisi olan post yok")
+                return {"checked": 0, "message": "No posts with metrics"}
+
+            # Log results
+            avg_score = sum(c["actual_score"] for c in comparisons) / len(comparisons)
+
+            log_agent_action(
+                agent_name="brain",
+                action="prediction_check",
+                input_data={"post_count": len(comparisons)},
+                output_data={
+                    "avg_actual_score": round(avg_score, 1),
+                    "sample_size": len(comparisons),
+                    "top_performer": max(comparisons, key=lambda x: x["actual_score"])
+                },
+                success=True
+            )
+
+            self.log(f"Prediction check: {len(comparisons)} post, avg_score={avg_score:.1f}")
+
+            return {
+                "checked": len(comparisons),
+                "avg_actual_score": round(avg_score, 1),
+                "comparisons": comparisons[:5]  # Top 5
+            }
+
+        except Exception as e:
+            self.log(f"Prediction check error: {e}")
+            log_agent_action(
+                agent_name="brain",
+                action="prediction_check",
+                success=False,
+                error_message=str(e)
+            )
+            return {"error": str(e)}
 
     @property
     def is_dry_run(self) -> bool:
