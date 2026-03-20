@@ -1899,8 +1899,9 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
         self,
         topic: str = None,
         dry_run: bool = False,
-        carousel_type: str = "html",
-        manual_topic: str = None
+        carousel_type: str = "nano_banana",
+        manual_topic: str = None,
+        **kwargs
     ) -> Dict[str, Any]:
         """Carousel — v2 CarouselPipeline'a delege eder"""
         from app.production.carousel_pipeline import CarouselPipeline
@@ -1909,7 +1910,8 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
         cp.approval_response = self.approval_response
         cp.set_approval = self.set_approval
         cp.wait_for_approval = self.wait_for_approval
-        return await cp.run(topic=topic, dry_run=dry_run, carousel_type=carousel_type, manual_topic=manual_topic)
+        return await cp.run(topic=topic, dry_run=dry_run, carousel_type=carousel_type,
+                            manual_topic=manual_topic, **kwargs)
 
     async def _run_carousel_pipeline_original(
         self,

@@ -50,6 +50,16 @@ VALID_MODELS = ["sora-2", "sora-2-pro", "veo-3.1", "kling-3.0-pro"]
 VALID_VISUAL_STYLES = ["cinematic_4k", "3d_render", "neon_cyberpunk", "anime", "minimalist"]
 VALID_HOOK_TYPES = ["question", "statistic", "bold_claim", "problem", "value", "fear", "before_after", "list", "comparison", "local"]
 
+CAROUSEL_STYLES = {
+    "tech_blue": {"palette": "deep blue, electric cyan, white", "mood": "professional, tech-forward"},
+    "energy_green": {"palette": "emerald, lime, dark gray", "mood": "sustainable, fresh, eco"},
+    "warm_industrial": {"palette": "orange, steel gray, warm white", "mood": "industrial, hands-on, practical"},
+    "dark_premium": {"palette": "black, gold, white", "mood": "premium, executive, high-end"},
+    "clean_minimal": {"palette": "white, light gray, single accent color", "mood": "minimal, data-focused, clean"},
+}
+
+CAROUSEL_LAYOUTS = ["data_heavy", "storytelling", "comparison", "step_by_step", "tips_list"]
+
 
 class BrainAgent(BaseAgent):
     """
@@ -138,9 +148,13 @@ class BrainAgent(BaseAgent):
                 decision["production_result"] = result
 
         elif decision.get("action") == "produce" and self._dry_run:
+            extra = ""
+            if decision.get("content_type") == "carousel":
+                extra = (f", carousel_style={decision.get('carousel_style')}, "
+                         f"layout={decision.get('carousel_layout')}, slides={decision.get('slide_count')}")
             self.log(f"[DRY-RUN] Would produce: opp={decision.get('opportunity_id')}, "
                      f"type={decision.get('content_type')}, model={decision.get('model_id')}, "
-                     f"style={decision.get('visual_style')}, reason={decision.get('reason')}")
+                     f"style={decision.get('visual_style')}, reason={decision.get('reason')}{extra}")
 
         # Event bus'a bildir
         if self.event_bus:
@@ -243,6 +257,16 @@ YARATICI PARAMETRELER:
 - hook_type: Sadece reels için. Seçenekler: {', '.join(VALID_HOOK_TYPES)}. Fırsatın hook önerisini dikkate al.
 - voice_mode: Sesli içerik mi? voice_reels/news_reels/conversational→true, diğerleri→false
 
+CAROUSEL PARAMETRELERİ (sadece content_type=carousel ise):
+- carousel_style: Renk paleti. Seçenekler: {', '.join(CAROUSEL_STYLES.keys())}
+  IoT/teknoloji haberi → tech_blue
+  Enerji/sürdürülebilirlik → energy_green
+  Endüstriyel/fabrika → warm_industrial
+  Genel profesyonel → dark_premium
+  Veri/istatistik ağırlıklı → clean_minimal
+- carousel_layout: Sunum tarzı. Seçenekler: {', '.join(CAROUSEL_LAYOUTS)}
+- slide_count: 4-8 arası (kısa haber: 4, detaylı analiz: 6-8)
+
 KARAR VER ve JSON formatında yanıt ver:
 {{
     "action": "produce" | "wait",
@@ -253,7 +277,10 @@ KARAR VER ve JSON formatında yanıt ver:
     "model_id": null | "<model ID>",
     "visual_style": null | "<stil>",
     "hook_type": null | "<hook tipi>",
-    "voice_mode": null | true | false
+    "voice_mode": null | true | false,
+    "carousel_style": null | "<style>",
+    "carousel_layout": null | "<layout>",
+    "slide_count": null | 4-8
 }}"""
 
         try:
@@ -276,6 +303,18 @@ KARAR VER ve JSON formatında yanıt ver:
                     result["hook_type"] = None
                 if result.get("voice_mode") is None:
                     result["voice_mode"] = content_type in ("voice_reels", "news_reels", "conversational")
+
+                # Carousel parameter defaults
+                if content_type == "carousel":
+                    if not result.get("carousel_style") or result.get("carousel_style") not in CAROUSEL_STYLES:
+                        result["carousel_style"] = "tech_blue"
+                    if not result.get("carousel_layout") or result.get("carousel_layout") not in CAROUSEL_LAYOUTS:
+                        result["carousel_layout"] = "storytelling"
+                    slide_count = result.get("slide_count")
+                    if not isinstance(slide_count, int) or slide_count < 4 or slide_count > 8:
+                        result["slide_count"] = 5
+                    else:
+                        result["slide_count"] = max(4, min(8, slide_count))
 
             return result
 
@@ -367,7 +406,17 @@ KARAR VER ve JSON formatında yanıt ver:
                         kwargs["visual_style"] = visual_style
                     result = await pipeline.run(**kwargs)
 
-                else:  # carousel, post — no video params
+                elif content_type == "carousel":
+                    kwargs = {
+                        "topic": opportunity.get("title", ""),
+                        "carousel_type": "nano_banana",
+                        "carousel_style": creative.get("carousel_style", "tech_blue"),
+                        "carousel_layout": creative.get("carousel_layout", "storytelling"),
+                        "slide_count": creative.get("slide_count", 5),
+                    }
+                    result = await pipeline.run(**kwargs)
+
+                else:  # post — no video/carousel params
                     result = await pipeline.run(topic=opportunity.get("title", ""))
 
         except Exception as e:
