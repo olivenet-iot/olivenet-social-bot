@@ -5,6 +5,7 @@
 - **Veritabanı:** SQLite
 - **Dosya:** `/opt/olivenet-social-bot/data/content.db`
 - **Modüller:** `app/database/models.py`, `app/database/crud.py`
+- **Tablo Sayısı:** 12
 
 ---
 
@@ -63,6 +64,12 @@ CREATE TABLE posts (
     orchestrator_notes TEXT,
     reviewer_feedback TEXT,
 
+    -- Video
+    video_model TEXT,
+    video_segment_count INTEGER DEFAULT 1,
+    total_video_duration REAL DEFAULT 0,
+    segment_prompts TEXT,
+
     -- Instagram Metrikleri (sync edilir)
     ig_reach INTEGER DEFAULT 0,
     ig_likes INTEGER DEFAULT 0,
@@ -75,6 +82,10 @@ CREATE TABLE posts (
     ig_total_watch_time INTEGER DEFAULT 0,
     ig_reach_followers INTEGER DEFAULT 0,
     ig_reach_non_followers INTEGER DEFAULT 0,
+    ig_watch_time_pct REAL DEFAULT 0,
+    ig_replays INTEGER DEFAULT 0,
+    ig_comment_rate REAL DEFAULT 0,
+    viral_score_v2 REAL DEFAULT 0,
     insights_updated_at TIMESTAMP
 );
 ```
@@ -141,6 +152,13 @@ CREATE TABLE content_calendar (
     topic_category TEXT,         -- egitici, tanitim, ipucu, haber
     topic_suggestion TEXT,
     visual_type_suggestion TEXT, -- post, reels, carousel
+    content_type TEXT DEFAULT 'post',
+    viral_format TEXT,
+    hook_type TEXT,
+    comment_cta_type TEXT,
+    save_trigger_type TEXT,
+    visual_style TEXT DEFAULT 'cinematic_4k',
+    strategy_reasoning TEXT,
 
     -- Durum
     status TEXT DEFAULT 'planned', -- planned, content_created, published
@@ -397,13 +415,124 @@ Her agent'ın işlem geçmişi.
 CREATE TABLE agent_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    agent_name TEXT,             -- orchestrator, planner, creator, reviewer, publisher
+    agent_name TEXT,             -- brain, orchestrator, planner, creator, reviewer, publisher
     action TEXT,
     input_data TEXT,             -- JSON
     output_data TEXT,            -- JSON
     success BOOLEAN,
     error_message TEXT
 );
+```
+
+---
+
+### 11. content_opportunities (v2 İçerik Fırsatları)
+
+Brain Agent'ın içerik havuzu. Feed'lerden toplanan ve skorlanan fırsatlar.
+
+```sql
+CREATE TABLE content_opportunities (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    -- Kaynak
+    source_type TEXT NOT NULL,       -- rss, evergreen, calendar, manual
+    source_name TEXT,                -- Feed adı (IoT Now, Hackaday, ...)
+    source_url TEXT,                 -- Orijinal URL (haber için)
+
+    -- İçerik
+    title TEXT NOT NULL,
+    summary TEXT,
+    original_language TEXT DEFAULT 'en',
+    tags TEXT,                       -- JSON array
+    full_text TEXT,                  -- Enriched full article
+
+    -- AI Analiz
+    olivenet_angle TEXT,             -- Olivenet perspektifi
+    content_type_suggestion TEXT,    -- reels, carousel, post, voice_reels
+    hook_suggestion TEXT,            -- Hook tipi önerisi
+
+    -- Skorlama
+    relevance_score REAL DEFAULT 0,
+    timeliness_score REAL DEFAULT 0,
+    virality_potential REAL DEFAULT 0,
+    combined_score REAL DEFAULT 0,   -- Toplam skor
+
+    -- Durum
+    status TEXT DEFAULT 'discovered',  -- discovered, enriched, scored, ready, selected, producing, used, expired, dropped
+    selected_at TIMESTAMP,
+    used_at TIMESTAMP,
+    expires_at TIMESTAMP,
+    post_id INTEGER,
+
+    -- Dedup
+    title_hash TEXT,
+    url_hash TEXT,
+
+    UNIQUE(url_hash),
+    FOREIGN KEY (post_id) REFERENCES posts(id)
+);
+
+CREATE INDEX idx_opp_status ON content_opportunities(status);
+CREATE INDEX idx_opp_combined_score ON content_opportunities(combined_score);
+CREATE INDEX idx_opp_source_type ON content_opportunities(source_type);
+```
+
+**Durum Geçişleri:**
+```
+discovered → enriched → scored → ready → selected → producing → used
+                                            ↓
+                                         expired (72h)
+                                            ↓
+                                         dropped
+```
+
+**Örnek Sorgu — En Yüksek Skorlu Hazır Fırsatlar:**
+```sql
+SELECT id, title, combined_score, content_type_suggestion, source_name
+FROM content_opportunities
+WHERE status = 'ready'
+ORDER BY combined_score DESC
+LIMIT 5;
+```
+
+**Örnek Sorgu — Kaynak Bazlı İstatistikler:**
+```sql
+SELECT source_name, COUNT(*) as total,
+       SUM(CASE WHEN status = 'used' THEN 1 ELSE 0 END) as used,
+       AVG(combined_score) as avg_score
+FROM content_opportunities
+GROUP BY source_name
+ORDER BY total DESC;
+```
+
+---
+
+### 12. story_boosts (Story Promosyon Takibi)
+
+Post sonrası otomatik Story boost verileri.
+
+```sql
+CREATE TABLE story_boosts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    post_id INTEGER NOT NULL,
+    instagram_post_id TEXT NOT NULL,
+    post_type TEXT,              -- reels, carousel, post
+    sequence_type TEXT NOT NULL, -- initial, reminder
+    scheduled_at TIMESTAMP,
+    executed_at TIMESTAMP,
+    status TEXT DEFAULT 'scheduled',  -- scheduled, executed, failed
+    publish_method TEXT,         -- api, telegram_fallback
+    story_id TEXT,
+    error_message TEXT,
+    telegram_sent BOOLEAN DEFAULT FALSE,
+
+    FOREIGN KEY (post_id) REFERENCES posts(id)
+);
+
+CREATE INDEX idx_story_boosts_post ON story_boosts(post_id);
+CREATE INDEX idx_story_boosts_status ON story_boosts(status);
 ```
 
 ---
@@ -427,9 +556,17 @@ CREATE TABLE agent_logs (
          │            │   │ prompt_history  │
          │            │   └─────────────────┘
          │            │
-         │            └───┌─────────────────┐
-         │                │  ad_campaigns   │
-         │                └─────────────────┘
+         │            ├───┌─────────────────┐
+         │            │   │  ad_campaigns   │
+         │            │   └─────────────────┘
+         │            │
+         │            ├───┌─────────────────┐
+         │            │   │  story_boosts   │
+         │            │   └─────────────────┘
+         │            │
+         │            └───┌─────────────────────────┐
+         │                │  content_opportunities  │
+         │                └─────────────────────────┘
          │
 ┌────────▼────────┐
 │ content_calendar│
@@ -490,6 +627,18 @@ ORDER BY week DESC
 LIMIT 4;
 ```
 
+### Brain Agent Kararları (Son 24 Saat)
+```sql
+SELECT timestamp, action,
+       json_extract(input_data, '$.hour') as hour,
+       json_extract(output_data, '$.action') as decision,
+       json_extract(output_data, '$.reason') as reason
+FROM agent_logs
+WHERE agent_name = 'brain' AND action = 'decide'
+  AND timestamp >= datetime('now', '-1 day')
+ORDER BY timestamp DESC;
+```
+
 ---
 
 ## Migration Notları
@@ -509,6 +658,6 @@ Sistem otomatik olarak eksik sütunları ekler.
 
 ## İlgili Dosyalar
 
-- `app/database/models.py` - Şema tanımları ve init
+- `app/database/models.py` - Şema tanımları ve init (12 tablo)
 - `app/database/crud.py` - CRUD operasyonları
 - `.claude/skills/database-patterns/` - Skill referansı

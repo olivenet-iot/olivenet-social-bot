@@ -36,13 +36,6 @@ TELEGRAM_ADMIN_CHAT_ID=your_admin_chat_id
 | `INSTAGRAM_USER_ID` | ✓ | Instagram User ID |
 | `INSTAGRAM_BUSINESS_ID` | - | Business Account ID |
 
-### Instagram Token Alma
-
-1. [Facebook Developer Console](https://developers.facebook.com/) → Uygulama oluştur
-2. Instagram Graph API ekle
-3. Graph API Explorer'da token oluştur
-4. Token'ı long-lived'a çevir (60 gün)
-
 ```bash
 INSTAGRAM_ACCESS_TOKEN=your_instagram_access_token
 INSTAGRAM_USER_ID=your_instagram_user_id
@@ -57,7 +50,7 @@ INSTAGRAM_BUSINESS_ID=your_instagram_business_id
 
 | Değişken | Zorunlu | Açıklama |
 |----------|---------|----------|
-| `OPENAI_API_KEY` | ✓ | OpenAI API key (Sora erişimi) |
+| `OPENAI_API_KEY` | ✓ | OpenAI API key (Sora 2 / Sora 2 Pro) |
 
 ```bash
 OPENAI_API_KEY=your_openai_api_key
@@ -67,20 +60,34 @@ OPENAI_API_KEY=your_openai_api_key
 
 | Değişken | Zorunlu | Açıklama |
 |----------|---------|----------|
-| `GEMINI_API_KEY` | ✓ | Google AI Studio API key |
+| `GEMINI_API_KEY` | ✓ | Google AI Studio API key (Veo + Nano Banana) |
 
 ```bash
 GEMINI_API_KEY=your_gemini_api_key
 ```
 
-### fal.ai (Kling AI)
+### Kling Direct API
 
 | Değişken | Zorunlu | Açıklama |
 |----------|---------|----------|
-| `FAL_API_KEY` | ✓ | fal.ai API key |
+| `KLING_ACCESS_KEY` | ✓ | Kling AI API access key |
+| `KLING_SECRET_KEY` | ✓ | Kling AI API secret key |
 
 ```bash
-FAL_API_KEY=your_fal_api_key
+KLING_ACCESS_KEY=your_kling_access_key
+KLING_SECRET_KEY=your_kling_secret_key
+```
+
+**Not:** JWT auth ile `api-singapore.klingai.com`'a bağlanır. Token 30 dk geçerli, otomatik yenilenir.
+
+### FAL.ai (Opsiyonel — sadece lip-sync)
+
+| Değişken | Zorunlu | Açıklama |
+|----------|---------|----------|
+| `FAL_API_KEY` | - | fal.ai API key (sadece lip-sync için, video üretimi artık Kling Direct API kullanıyor) |
+
+```bash
+FAL_API_KEY=your_fal_api_key  # Opsiyonel, sadece lip-sync
 ```
 
 ---
@@ -97,9 +104,9 @@ FAL_API_KEY=your_fal_api_key
 FLUX_API_KEY=your_flux_api_key
 ```
 
-### Gemini Image
+### Nano Banana (Gemini 3 Pro Image)
 
-Aynı `GEMINI_API_KEY` kullanılır.
+Aynı `GEMINI_API_KEY` kullanılır. İnfographic ve carousel slide üretimi için.
 
 ---
 
@@ -110,8 +117,12 @@ Aynı `GEMINI_API_KEY` kullanılır.
 | Değişken | Zorunlu | Varsayılan | Açıklama |
 |----------|---------|------------|----------|
 | `ELEVENLABS_API_KEY` | ✓ | - | API key |
-| `ELEVENLABS_VOICE_ID` | ✓ | - | Türkçe voice ID |
+| `ELEVENLABS_VOICE_ID` | ✓ | - | Varsayılan Türkçe voice ID |
 | `ELEVENLABS_MODEL` | - | `eleven_multilingual_v2` | Model |
+| `ELEVENLABS_VOICE_ID_FEMALE` | - | `EJGs6dWlD5VrB3llhBqB` | Kadın ses (conversational) |
+| `ELEVENLABS_VOICE_ID_NARRATOR` | - | `7VqWGAWwo2HMrylfKrcm` | Narrator ses (B-roll) |
+| `ELEVENLABS_VOICE_ID_CARTOON_MALE` | - | `DUnzBkwtjRWXPr6wRbmL` | Cartoon erkek |
+| `ELEVENLABS_VOICE_ID_CARTOON_FEMALE` | - | `xyqF3vGMQlPk3e7yA4DI` | Cartoon kadın |
 
 ```bash
 ELEVENLABS_API_KEY=your_elevenlabs_api_key
@@ -159,6 +170,63 @@ IMGBB_API_KEY=your_imgbb_api_key
 ```bash
 META_AD_ACCOUNT_ID=act_your_ad_account_id
 ```
+
+---
+
+## Brain Agent (v2)
+
+| Değişken | Zorunlu | Varsayılan | Açıklama |
+|----------|---------|------------|----------|
+| `BRAIN_DRY_RUN` | - | `true` | `true` = kararlar loglanır, üretim yapılmaz |
+| `BRAIN_CYCLE_MINUTES` | - | `120` | Brain karar döngüsü aralığı (dakika) |
+| `BRAIN_MAX_DAILY_POSTS` | - | `2` | Günlük max paylaşım sayısı |
+| `BRAIN_MIN_POST_INTERVAL_HOURS` | - | `4` | Paylaşımlar arası min süre (saat) |
+| `BRAIN_MIN_SCORE_PRODUCE` | - | `60` | Üretim için min fırsat skoru |
+
+```bash
+BRAIN_DRY_RUN=true
+BRAIN_CYCLE_MINUTES=120
+BRAIN_MAX_DAILY_POSTS=2
+BRAIN_MIN_POST_INTERVAL_HOURS=4
+BRAIN_MIN_SCORE_PRODUCE=60
+```
+
+---
+
+## Feed System (v2)
+
+| Değişken | Zorunlu | Varsayılan | Açıklama |
+|----------|---------|------------|----------|
+| `FEED_POLL_MINUTES` | - | `30` | Feed çekme aralığı (dakika) |
+| `EXPIRY_CHECK_HOURS` | - | `6` | Eski fırsat temizleme aralığı (saat) |
+
+```bash
+FEED_POLL_MINUTES=30
+EXPIRY_CHECK_HOURS=6
+```
+
+---
+
+## Subtitle Ayarları
+
+| Değişken | Varsayılan | Açıklama |
+|----------|------------|----------|
+| `SUBTITLE_ENABLED` | `false` | Otomatik altyazı üretimi |
+| `WHISPER_MODEL_SIZE` | `small` | Whisper model: tiny, base, small, medium, large |
+| `SUBTITLE_FONT` | `DejaVu Sans` | Altyazı fontu |
+| `SUBTITLE_FONT_SIZE` | `48` | Altyazı font boyutu (px) |
+| `SUBTITLE_MAX_CHARS` | `35` | Satır başına max karakter |
+| `SUBTITLE_MAX_LINES` | `2` | Max altyazı satırı |
+
+---
+
+## Story Boost Ayarları
+
+| Değişken | Varsayılan | Açıklama |
+|----------|------------|----------|
+| `STORY_BOOST_ENABLED` | `true` | Post sonrası otomatik Story boost |
+| `STORY_BOOST_REMINDER_DELAY` | `15` | Reminder story gecikmesi (dakika) |
+| `STORY_BOOST_TELEGRAM_FALLBACK` | `true` | API başarısız olursa Telegram bildirimi |
 
 ---
 
@@ -222,7 +290,6 @@ META_AD_ACCOUNT_ID=act_your_ad_account_id
 |------|----------|
 | `BASE_DIR` | `/opt/olivenet-social-bot` |
 | `context/` | AI context dosyaları |
-| `templates/` | HTML şablonları |
 | `outputs/` | Üretilen içerikler |
 | `logs/` | Uygulama logları |
 | `data/` | SQLite veritabanı |
@@ -246,7 +313,8 @@ INSTAGRAM_BUSINESS_ID=your_business_id
 # ============ VIDEO GENERATION ============
 OPENAI_API_KEY=your_openai_key
 GEMINI_API_KEY=your_gemini_key
-FAL_API_KEY=your_fal_key
+KLING_ACCESS_KEY=your_kling_access_key
+KLING_SECRET_KEY=your_kling_secret_key
 
 # ============ IMAGE GENERATION ============
 FLUX_API_KEY=your_flux_key
@@ -263,6 +331,20 @@ IMGBB_API_KEY=your_imgbb_key
 
 # ============ META ADS (Opsiyonel) ============
 META_AD_ACCOUNT_ID=act_xxxxx
+
+# ============ BRAIN AGENT (v2) ============
+BRAIN_DRY_RUN=true
+BRAIN_CYCLE_MINUTES=120
+BRAIN_MAX_DAILY_POSTS=2
+BRAIN_MIN_POST_INTERVAL_HOURS=4
+BRAIN_MIN_SCORE_PRODUCE=60
+
+# ============ FEED SYSTEM (v2) ============
+FEED_POLL_MINUTES=30
+EXPIRY_CHECK_HOURS=6
+
+# ============ OPSIYONEL ============
+FAL_API_KEY=your_fal_key  # Sadece lip-sync için
 ```
 
 ---
@@ -273,3 +355,4 @@ META_AD_ACCOUNT_ID=act_xxxxx
 - `.gitignore`'a `.env` ekli olduğundan emin olun
 - Production'da dosya izinlerini kısıtlayın: `chmod 600 .env`
 - Token'ları düzenli olarak yenileyin
+- Kling JWT token'ları otomatik yenilenir (30 dk)

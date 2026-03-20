@@ -9,9 +9,9 @@
 | Meta Ads | Meta | `meta_ads_helper.py` | Reklam metrikleri |
 | Sora | OpenAI | `sora_helper.py` | Video üretimi |
 | Veo 3.1 | Google | `veo_helper.py` | Video üretimi |
-| Kling AI | fal.ai | `fal_helper.py` | Video üretimi |
+| Kling 3.0 Pro | Kling Direct API | `kling_helper.py` | Video üretimi (JWT auth) |
 | FLUX.2 Pro | BFL/Replicate | `flux_helper.py` | Görsel üretimi |
-| Gemini | Google | `gemini_helper.py` | Görsel üretimi |
+| Nano Banana | Google Gemini 3 Pro | `nano_banana_helper.py` | İnfographic üretimi |
 | ElevenLabs | ElevenLabs | `elevenlabs_helper.py` | Türkçe TTS |
 | Cloudinary | Cloudinary | `cloudinary_helper.py` | Video CDN |
 | Telegram | Telegram | `telegram_pipeline.py` | Bot arayüzü |
@@ -39,19 +39,10 @@
 ### Fonksiyonlar
 
 ```python
-# Hesap bilgisi
 get_account_info() -> dict
-
-# Fotoğraf paylaş
 post_photo_to_instagram(image_url, caption) -> str  # post_id
-
-# Video/Reels paylaş
 post_video_to_instagram(video_url, caption) -> str  # post_id
-
-# Carousel paylaş (2-10 görsel)
 post_carousel_to_instagram(image_urls, caption) -> str  # post_id
-
-# Lokal video yükle
 post_reels_to_instagram(video_path, caption) -> str  # post_id
 ```
 
@@ -85,13 +76,8 @@ post_reels_to_instagram(video_path, caption) -> str  # post_id
 ### Fonksiyonlar
 
 ```python
-# Reels metrikleri
 get_instagram_reels_insights(media_id) -> dict
-
-# Media tipi tespit
 get_instagram_media_type(media_id) -> str  # VIDEO, IMAGE, CAROUSEL_ALBUM
-
-# Son medyaları al
 get_recent_media(limit=25) -> list
 ```
 
@@ -125,10 +111,10 @@ generate_video_sora(
 # Döner: {"success": bool, "video_path": str, "duration": int}
 ```
 
-### Prompt Kuralları
-- **NO TEXT** - Video içinde metin yok
-- **NO DIALOGUE** - Konuşma yok (voice_mode=True ise)
-- Sinematik ve görsel odaklı
+### Notlar
+- sora-2-pro: Native speech destekli, conversational reels için ideal
+- **NO TEXT** kuralı - video içinde metin yok
+- Sinematik ve görsel odaklı promptlar
 
 ---
 
@@ -137,7 +123,7 @@ generate_video_sora(
 ### Genel Bilgi
 - **SDK:** google-generativeai
 - **Dosya:** `app/veo_helper.py`
-- **Modeller:** veo-3.1-generate-preview, veo-3.1-fast-generate-preview, veo-2
+- **Model:** veo-3.1-generate-preview
 
 ### Parametreler
 
@@ -158,38 +144,66 @@ generate_video_veo3(
 # Döner: {"success": bool, "video_path": str, "file_size_mb": float}
 ```
 
+### Notlar
+- Native audio + lip-sync destekli
+- Doğa/açık alan sahneleri için güçlü
+
 ---
 
-## 5. Kling AI via fal.ai (Video)
+## 5. Kling 3.0 Pro (Direct API)
 
 ### Genel Bilgi
-- **Endpoint:** `https://queue.fal.run/`
-- **Dosya:** `app/fal_helper.py`
+- **Base URL:** `https://api-singapore.klingai.com`
+- **Auth:** JWT (HS256) — `KLING_ACCESS_KEY` / `KLING_SECRET_KEY`
+- **Dosya:** `app/kling_helper.py`
+- **Model:** kling-v3 (Kling 3.0 Pro)
 
-### Modeller
+### JWT Auth
 
-| Model ID | Model | Maks Süre | Audio |
-|----------|-------|-----------|-------|
-| `kling_standard` | Kling 2.5 Turbo Standard | 10s | - |
-| `kling_pro` | Kling 2.5 Turbo Pro | 10s | - |
-| `kling_master` | Kling 2.1 Master | 10s | - |
-| `kling_26_pro` | Kling 2.6 Pro | 10s | ✓ |
-| `wan_26` | Wan 2.6 | 15s | - |
-| `hailuo_standard` | Hailuo 02 Standard | 6s | - |
-| `hailuo_pro` | Hailuo 02 Pro | 6s | - |
+```python
+# Otomatik token yönetimi (30 dk expiry, 5 dk kala yenilenir)
+headers = {"alg": "HS256", "typ": "JWT"}
+payload = {"iss": access_key, "exp": now + 1800, "nbf": now - 5}
+token = jwt.encode(payload, secret_key, algorithm="HS256", headers=headers)
+```
+
+### Parametreler
+
+| Parametre | Değerler | Varsayılan |
+|-----------|----------|------------|
+| `duration` | 5, 10, 15 saniye | 5 |
+| `aspect_ratio` | 9:16, 16:9, 1:1 | 9:16 |
+| `model_name` | kling-v3 | kling-v3 |
+| `mode` | pro | pro |
+| `generate_audio` | true/false | None |
+| `cfg_scale` | 0.0-1.0 | 0.5 |
 
 ### Fonksiyon
 
 ```python
-FalVideoGenerator.generate_video(
+from app.kling_helper import KlingHelper
+
+kling = KlingHelper()
+result = await kling.generate_video(
     prompt: str,
-    model: str = "kling_pro",
     duration: int = 5,
     aspect_ratio: str = "9:16",
-    image_url: str = None,        # Image-to-video
-    generate_audio: bool = None   # Sadece Kling 2.6
+    model_name: str = "kling-v3",
+    mode: str = "pro",
+    negative_prompt: str = "blur, distort, low quality",
+    cfg_scale: float = 0.5,
+    generate_audio: Optional[bool] = None
 ) -> dict
+# Döner: {"success": bool, "video_path": str, "video_id": str}
 ```
+
+### Notlar
+- Hızlı üretim (2-3 dakika)
+- 15 saniyeye kadar video
+- Native audio destekli (ambient ses)
+- Fizik tabanlı hareket simülasyonu
+- Endüstriyel ve gerçekçi sahneler için ideal
+- `config.py`'de `fal_api_key` alanı hala mevcut (lip-sync için opsiyonel/legacy)
 
 ---
 
@@ -222,7 +236,38 @@ generate_image_flux(
 
 ---
 
-## 7. ElevenLabs TTS (Sesli Reels)
+## 7. Nano Banana (Gemini 3 Pro Image — İnfographic)
+
+### Genel Bilgi
+- **Model:** gemini-3-pro-image-preview
+- **Dosya:** `app/nano_banana_helper.py`
+- **Amaç:** HTML template'lerin yerini alan AI infographic üretimi
+- **Text Accuracy:** %94
+
+### Özellikler
+- Olivenet marka renkleri ile infographic üretimi
+- Carousel slide üretimi
+- Logo overlay
+- Google Search grounding (gerçek zamanlı veri)
+
+### Fonksiyonlar
+
+```python
+# Tekli infographic
+result = await generate_infographic(topic, post_text)
+# Döner: {"success": bool, "image_path": str}
+
+# Carousel slide'ları
+slides = await generate_carousel_slides(topic, slide_data, count=5)
+# Döner: [{"success": bool, "image_path": str}, ...]
+
+# Logo overlay
+add_logo_overlay(image_path, position="bottom_left", logo_scale=0.12)
+```
+
+---
+
+## 8. ElevenLabs TTS (Sesli Reels)
 
 ### Genel Bilgi
 - **Endpoint:** `https://api.elevenlabs.io/v1/text-to-speech/{voice_id}`
@@ -238,6 +283,16 @@ generate_image_flux(
 | `style` | 0-1 | 0.0 |
 | `speed` | 0.5-2.0 | 1.0 |
 
+### Voice ID'ler
+
+| Voice | ID | Kullanım |
+|-------|-----|----------|
+| Default (erkek) | `ELEVENLABS_VOICE_ID` | Standard voice reels |
+| Kadın | `ELEVENLABS_VOICE_ID_FEMALE` | Conversational reels |
+| Narrator | `ELEVENLABS_VOICE_ID_NARRATOR` | B-roll voiceover |
+| Cartoon erkek | `ELEVENLABS_VOICE_ID_CARTOON_MALE` | Animasyon |
+| Cartoon kadın | `ELEVENLABS_VOICE_ID_CARTOON_FEMALE` | Animasyon |
+
 ### Fonksiyon
 
 ```python
@@ -251,21 +306,9 @@ ElevenLabsHelper.generate_speech(
 # Döner: {"success": bool, "audio_path": str, "duration_seconds": float}
 ```
 
-### Türkçe Pronunciation Fixes
-```python
-PRONUNCIATION_FIXES = {
-    "Olivenet": "Olivnet",
-    "IoT": "ay o ti",
-    "API": "ey pi ay",
-    "vs.": "karşı",
-    "vb.": "ve benzeri",
-    # ...
-}
-```
-
 ---
 
-## 8. Cloudinary (Video CDN)
+## 9. Cloudinary (Video CDN)
 
 ### Genel Bilgi
 - **Dosya:** `app/cloudinary_helper.py`
@@ -274,15 +317,10 @@ PRONUNCIATION_FIXES = {
 ### Fonksiyonlar
 
 ```python
-# Video yükle
-upload_video_to_cloudinary(
-    video_path: str,
-    folder: str = "olivenet-reels"
-) -> dict
+upload_video_to_cloudinary(video_path, folder="olivenet-reels") -> dict
 # Döner: {"success": bool, "url": str, "public_id": str, "duration": float}
 
-# Video sil
-delete_from_cloudinary(public_id: str) -> bool
+delete_from_cloudinary(public_id) -> bool
 ```
 
 ### Workflow
@@ -292,71 +330,46 @@ Local Video → FFmpeg Convert → Cloudinary Upload → CDN URL → Instagram A
 
 ---
 
-## 9. Meta Ads API
+## 10. Meta Ads API
 
 ### Genel Bilgi
 - **Versiyon:** v21.0
 - **Endpoint:** `https://graph.facebook.com/v21.0/{ad_account_id}/insights`
 - **Dosya:** `app/meta_ads_helper.py`
 
-### Metrikler
-
-| Kategori | Metrikler |
-|----------|-----------|
-| Temel | impressions, reach, clicks, spend |
-| Maliyet | cpc, cpm, cost_per_follow, cost_per_save |
-| Video | video_25_pct, video_50_pct, video_75_pct, video_100_pct |
-| Aksiyonlar | likes, comments, saves, shares, follows |
-
 ### Fonksiyonlar
 
 ```python
-# Hesap bilgisi
 get_ad_account_info() -> dict
-
-# Kampanya performansı
-get_campaign_insights(
-    date_start: str,
-    date_stop: str,
-    level: str = "campaign"  # campaign, adset, ad
-) -> list
+get_campaign_insights(date_start, date_stop, level="campaign") -> list
 ```
 
 ---
 
-## 10. Telegram Bot API
+## 11. Telegram Bot API
 
 ### Genel Bilgi
 - **Library:** python-telegram-bot
 - **Dosya:** `app/telegram_pipeline.py`
 
-### Komutlar
+### Komutlar (14)
 
 | Komut | Açıklama |
 |-------|----------|
 | `/start` | Bot başlat |
 | `/status` | Pipeline durumu |
+| `/manual` | Manuel içerik oluştur |
+| `/stats` | İstatistikler |
 | `/next` | Sonraki içerik |
 | `/schedule` | Haftalık program |
 | `/sync` | Metrikleri senkronize et |
-| `/stats` | İstatistikler |
-| `/manual` | Manuel içerik oluştur |
-
-### Callback Handlers
-
-```python
-# Onay butonları
-handle_approval_callback(update, context)
-
-# Konu seçimi
-handle_topic_approval(update, context)
-
-# İçerik onayı
-handle_content_approval(update, context)
-
-# Görsel onayı
-handle_visual_approval(update, context)
-```
+| `/prompts` | Prompt istatistikleri |
+| `/pool` | İçerik fırsat havuzu |
+| `/brain` | Brain Agent kararları |
+| `/feeds` | Feed aggregator durumu |
+| `/pause` | Sistemi duraklat |
+| `/resume` | Sistemi devam ettir |
+| `/force` | Fırsatı hemen üret |
 
 ---
 
@@ -367,7 +380,7 @@ handle_visual_approval(update, context)
 | Instagram | 200/saat | 60s |
 | Sora | - | 300s (5 dk) |
 | Veo | - | 300s (5 dk) |
-| Kling/fal.ai | - | 300s |
+| Kling Direct | - | 300s |
 | ElevenLabs | - | 120s |
 | FLUX | - | 120s |
 
@@ -378,8 +391,8 @@ handle_visual_approval(update, context)
 Video üretiminde hata durumunda:
 
 ```
-1. Sora 2 başarısız → Veo 3.1 dene
-2. Veo 3.1 başarısız → Kling Pro dene
+1. Kling 3.0 Pro başarısız → Veo 3.1 dene
+2. Veo 3.1 başarısız → Sora 2 dene
 3. Hepsi başarısız → Hata bildir
 ```
 
