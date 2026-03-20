@@ -1,5 +1,5 @@
 """
-fal.ai Video Generation Helper - Kling AI entegrasyonu
+fal.ai Video Generation Helper - Kling 3.0 Pro entegrasyonu
 
 Text-to-video veya image-to-video destekli.
 """
@@ -26,31 +26,6 @@ class FalVideoGenerator:
     # text-to-video: v2.5-turbo (standard/pro), v2.1 (master)
     # image-to-video: v2.1 (tüm modeller)
     MODELS = {
-        "kling_standard": {
-            "text_to_video": "fal-ai/kling-video/v2.5-turbo/standard/text-to-video",
-            "image_to_video": "fal-ai/kling-video/v2.1/standard/image-to-video",
-            "name": "Kling 2.5 Standard",
-            "max_duration": 10
-        },
-        "kling_pro": {
-            "text_to_video": "fal-ai/kling-video/v2.5-turbo/pro/text-to-video",
-            "image_to_video": "fal-ai/kling-video/v2.1/pro/image-to-video",
-            "name": "Kling 2.5 Pro",
-            "max_duration": 10
-        },
-        "kling_master": {
-            "text_to_video": "fal-ai/kling-video/v2.1/master/text-to-video",
-            "image_to_video": "fal-ai/kling-video/v2.1/master/image-to-video",
-            "name": "Kling 2.1 Master",
-            "max_duration": 10
-        },
-        "kling_26_pro": {
-            "text_to_video": "fal-ai/kling-video/v2.6/pro/text-to-video",
-            "image_to_video": "fal-ai/kling-video/v2.6/pro/image-to-video",
-            "name": "Kling 2.6 Pro",
-            "max_duration": 10,
-            "has_audio": True
-        },
         "kling_v3_pro": {
             "text_to_video": "fal-ai/kling-video/v3/pro/text-to-video",
             "image_to_video": "fal-ai/kling-video/v3/pro/image-to-video",
@@ -58,23 +33,6 @@ class FalVideoGenerator:
             "max_duration": 15,
             "has_audio": True
         },
-        # Minimax Hailuo 02 modelleri
-        "hailuo_standard": {
-            "text_to_video": "fal-ai/minimax/hailuo-2.3/standard/text-to-video",
-            "name": "Hailuo 02 Standard",
-            "max_duration": 6
-        },
-        "hailuo_pro": {
-            "text_to_video": "fal-ai/minimax/hailuo-2.3/pro/text-to-video",
-            "name": "Hailuo 02 Pro",
-            "max_duration": 6
-        },
-        # Wan 2.6
-        "wan_26": {
-            "text_to_video": "wan/v2.6/text-to-video",
-            "name": "Wan 2.6",
-            "max_duration": 15
-        }
     }
 
     # FAL API base URL
@@ -83,7 +41,7 @@ class FalVideoGenerator:
     @staticmethod
     async def generate_video(
         prompt: str,
-        model: str = "kling_pro",
+        model: str = "kling_v3_pro",
         duration: int = 5,
         aspect_ratio: str = "9:16",
         image_url: Optional[str] = None,
@@ -94,7 +52,7 @@ class FalVideoGenerator:
 
         Args:
             prompt: Video icerigi icin metin aciklamasi
-            model: kling_standard, kling_pro, kling_master, kling_26_pro, hailuo_standard, hailuo_pro veya wan_26
+            model: kling_v3_pro
             duration: Video suresi (5 veya 10 saniye)
             aspect_ratio: Video orani ("9:16" dikey, "16:9" yatay, "1:1" kare)
             image_url: Opsiyonel - image-to-video icin kaynak gorsel URL
@@ -120,12 +78,7 @@ class FalVideoGenerator:
         # Duration kontrolu
         duration = min(duration, model_config["max_duration"])
 
-        # Wan 2.6 sadece "5", "10", "15" kabul eder
-        if model == "wan_26":
-            wan_duration_map = {5: "5", 10: "10", 12: "15", 15: "15"}
-            duration_str = wan_duration_map.get(duration, "15")
-        else:
-            duration_str = str(duration)
+        duration_str = str(duration)
 
         # Endpoint secimi (text-to-video veya image-to-video)
         if image_url:
@@ -282,7 +235,7 @@ class FalVideoGenerator:
 # Convenience function
 async def generate_kling_video(
     prompt: str,
-    model: str = "kling_pro",
+    model: str = "kling_v3_pro",
     duration: int = 5,
     aspect_ratio: str = "9:16"
 ) -> Dict[str, Any]:
@@ -291,7 +244,7 @@ async def generate_kling_video(
 
     Args:
         prompt: Video prompt'u
-        model: kling_standard, kling_pro, kling_master
+        model: kling_v3_pro
         duration: 5 veya 10 saniye
         aspect_ratio: 9:16 (dikey), 16:9 (yatay), 1:1 (kare)
 

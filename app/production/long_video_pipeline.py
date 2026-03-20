@@ -29,7 +29,7 @@ class LongVideoPipeline(BasePipeline):
         self,
         topic: str = None,
         segment_count: int = 2,
-        model_id: str = "kling-2.6-pro",
+        model_id: str = "kling-3.0-pro",
         transition_type: str = "crossfade",
         transition_duration: float = 0.5,
         manual_topic_mode: bool = False,
@@ -56,7 +56,7 @@ class LongVideoPipeline(BasePipeline):
         Args:
             topic: Konu (None ise Planner'dan alınır)
             segment_count: Segment sayısı (2-6 arası, default 2)
-            model_id: Video model ID (kling-2.6-pro, sora-2, veo-2, wan-2.1)
+            model_id: Video model ID (kling-3.0-pro, sora-2, sora-2-pro, veo-3.1)
             transition_type: Geçiş tipi (crossfade, cut)
             transition_duration: Crossfade süresi (0.5s default)
             manual_topic_mode: True ise topic Creator ile işlenir

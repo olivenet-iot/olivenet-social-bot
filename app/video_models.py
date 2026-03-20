@@ -4,10 +4,9 @@ Multi-model voice reels support for Olivenet Social Bot
 
 Models:
 - sora-2: OpenAI Sora 2 (sora_helper.py)
-- veo-2: Google Veo 2 (veo_helper.py)
-- kling-2.1: Kuaishou Kling 2.1 (fal_helper.py)
-- wan-2.1: Alibaba Wan 2.1 (fal_helper.py)
-- minimax: Hailuo/Minimax (fal_helper.py)
+- sora-2-pro: OpenAI Sora 2 Pro (sora_helper.py)
+- veo-3.1: Google Veo 3.1 (veo_helper.py)
+- kling-3.0-pro: Kuaishou Kling 3.0 Pro (fal_helper.py)
 """
 
 from typing import Dict, List, Optional
@@ -42,20 +41,6 @@ VIDEO_MODELS: Dict[str, dict] = {
         "supports_speech": True,
         "conversational_only": True
     },
-    "veo-2": {
-        "name": "Veo 2",
-        "provider": "google",
-        "emoji": "🎥",
-        "durations": [5, 8],
-        "default_duration": 8,
-        "max_duration": 8,
-        "aspect_ratio": "9:16",
-        "prompt_key": "video_prompt_veo",
-        "description": "Hızlı ve tutarlı",
-        "helper_module": "veo_helper",
-        "helper_function": "generate_video_veo",
-        "model_id": "veo-2"
-    },
     "veo-3.1": {
         "name": "Veo 3.1",
         "provider": "google",
@@ -72,36 +57,6 @@ VIDEO_MODELS: Dict[str, dict] = {
         "has_native_audio": True,
         "supports_speech": True
     },
-    "kling-2.5-pro": {
-        "name": "Kling 2.5 Pro",
-        "provider": "fal",
-        "emoji": "🎬",
-        "durations": [5, 10],
-        "default_duration": 10,
-        "max_duration": 10,
-        "aspect_ratio": "9:16",
-        "prompt_key": "video_prompt_kling",
-        "description": "Hızlı üretim, hareketli sahneler",
-        "helper_module": "fal_helper",
-        "fal_model": "kling_pro",
-        "has_native_audio": False,
-        "disable_audio_for_voice": False
-    },
-    "kling-2.6-pro": {
-        "name": "Kling 2.6 Pro",
-        "provider": "fal",
-        "emoji": "🎥",
-        "durations": [5, 10],
-        "default_duration": 10,
-        "max_duration": 10,
-        "aspect_ratio": "9:16",
-        "prompt_key": "video_prompt_kling",
-        "description": "Cinematic 1080p kalite ⭐",
-        "helper_module": "fal_helper",
-        "fal_model": "kling_26_pro",
-        "has_native_audio": True,
-        "disable_audio_for_voice": True  # TTS voiceover için native audio kapat
-    },
     "kling-3.0-pro": {
         "name": "Kling 3.0 Pro",
         "provider": "fal",
@@ -117,32 +72,6 @@ VIDEO_MODELS: Dict[str, dict] = {
         "has_native_audio": True,
         "disable_audio_for_voice": True
     },
-    "wan-2.1": {
-        "name": "Wan 2.1",
-        "provider": "fal",
-        "emoji": "🌊",
-        "durations": [5, 10, 15],
-        "default_duration": 15,
-        "max_duration": 15,
-        "aspect_ratio": "9:16",
-        "prompt_key": "video_prompt_wan",
-        "description": "15s uzun video!",
-        "helper_module": "fal_helper",
-        "fal_model": "wan_26"
-    },
-    "minimax": {
-        "name": "Minimax",
-        "provider": "fal",
-        "emoji": "🎯",
-        "durations": [5],
-        "default_duration": 5,
-        "max_duration": 5,
-        "aspect_ratio": "9:16",
-        "prompt_key": "video_prompt_hailuo",
-        "description": "Hızlı ve ekonomik",
-        "helper_module": "fal_helper",
-        "fal_model": "hailuo_pro"
-    }
 }
 
 
@@ -151,11 +80,11 @@ def get_model_config(model_id: str) -> dict:
     Get model configuration by ID.
 
     Args:
-        model_id: Model identifier (e.g., "sora-2", "wan-2.1")
+        model_id: Model identifier (e.g., "sora-2", "kling-3.0-pro")
                   Also accepts fal internal names (e.g., "kling_v3_pro")
 
     Returns:
-        Model configuration dict. Falls back to veo-2 if not found.
+        Model configuration dict. Falls back to veo-3.1 if not found.
     """
     # Direct key lookup
     if model_id in VIDEO_MODELS:
@@ -167,7 +96,7 @@ def get_model_config(model_id: str) -> dict:
             return config
 
     # Fallback
-    return VIDEO_MODELS["veo-2"]
+    return VIDEO_MODELS["veo-3.1"]
 
 
 def get_available_models() -> List[str]:
@@ -199,10 +128,10 @@ def get_max_duration(model_id: str) -> int:
     Get maximum supported duration for a model.
 
     Args:
-        model_id: Model identifier (e.g., "veo-2", "kling-2.6-pro")
+        model_id: Model identifier (e.g., "veo-3.1", "kling-3.0-pro")
 
     Returns:
-        Maximum duration in seconds (e.g., Veo=8, Kling=10, Sora=12, Wan=15)
+        Maximum duration in seconds (e.g., Veo=8, Kling=15, Sora=12)
     """
     config = get_model_config(model_id)
     return config.get("max_duration", 10)

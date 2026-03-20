@@ -37,17 +37,17 @@ OPTIMAL_HOURS = [10, 14, 19]
 
 # Brain'in varsayılan model tercihleri
 MODEL_DEFAULTS = {
-    "news_reels": "kling-2.5-pro",
-    "voice_reels": "sora-2",
-    "reels": "kling-2.5-pro",
-    "long_video": "kling-2.6-pro",
-    "conversational": "sora-2",
+    "news_reels": "kling-3.0-pro",
+    "voice_reels": "sora-2-pro",
+    "reels": "kling-3.0-pro",
+    "long_video": "kling-3.0-pro",
+    "conversational": "sora-2-pro",
     "carousel": None,
     "post": None,
 }
 
-VALID_MODELS = ["sora-2", "sora-2-pro", "veo-2", "veo-3.1", "kling-2.5-pro", "kling-2.6-pro", "kling-3.0-pro", "wan-2.1", "minimax"]
-VALID_VISUAL_STYLES = ["cinematic_4k", "documentary", "pov", "aerial", "anime", "cartoon_3d"]
+VALID_MODELS = ["sora-2", "sora-2-pro", "veo-3.1", "kling-3.0-pro"]
+VALID_VISUAL_STYLES = ["cinematic_4k", "3d_render", "neon_cyberpunk", "anime", "minimalist"]
 VALID_HOOK_TYPES = ["question", "statistic", "bold_claim", "problem", "value", "fear", "before_after", "list", "comparison", "local"]
 
 
@@ -219,9 +219,27 @@ KURALLAR:
 7. Min skor: {MIN_SCORE_TO_PRODUCE}
 
 YARATICI PARAMETRELER:
-- model_id: Video model seçimi. Tercih sırası: news_reels→kling-2.5-pro, reels→kling-2.5-pro, voice_reels→sora-2
+- model_id: Video model seçimi. İçeriğe göre aktif seçim yap.
+  MODEL SEÇİMİ REHBERİ:
+  - kling-3.0-pro: Hızlı üretim (2-3 dk), 15s'e kadar, ambient ses destekli. Endüstriyel, gerçekçi sahneler için ideal. fal.ai üzerinden.
+  - sora-2: Yüksek sinematik kalite, 12s max, yavaş (5-8 dk). Yaratıcı ve artistik sahneler için. Sesli reels'te iyi sonuç verir.
+  - sora-2-pro: Sora 2'nin premium versiyonu, native speech destekli. Conversational ve voice reels için en iyi seçim.
+  - veo-3.1: Google'ın modeli, 8s max, native speech destekli. Hızlı ve kaliteli, doğa/açık alan sahneleri için güçlü.
+
+  Modeli içeriğe göre seç:
+  - Haber bazlı acil içerik → kling-3.0-pro (hızlı)
+  - Sinematik showcase → sora-2 veya veo-3.1
+  - Sesli anlatım → sora-2-pro
+  - Conversational diyalog → sora-2-pro
+  - Teknik demo → kling-3.0-pro veya veo-3.1
   Mevcut modeller: {', '.join(VALID_MODELS)}
 - visual_style: Görsel stil. Seçenekler: {', '.join(VALID_VISUAL_STYLES)}. Varsayılan: cinematic_4k
+  Stil rehberi:
+  - Haber bazlı içerik → cinematic_4k
+  - Teknik/ürün odaklı → 3d_render
+  - Eğitici/dikkat çekici → anime
+  - Futuristik/trend → neon_cyberpunk
+  - İnfografik tarzı/clean → minimalist
 - hook_type: Sadece reels için. Seçenekler: {', '.join(VALID_HOOK_TYPES)}. Fırsatın hook önerisini dikkate al.
 - voice_mode: Sesli içerik mi? voice_reels/news_reels/conversational→true, diğerleri→false
 
