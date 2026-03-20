@@ -6,7 +6,7 @@ Models:
 - sora-2: OpenAI Sora 2 (sora_helper.py)
 - sora-2-pro: OpenAI Sora 2 Pro (sora_helper.py)
 - veo-3.1: Google Veo 3.1 (veo_helper.py)
-- kling-3.0-pro: Kuaishou Kling 3.0 Pro (fal_helper.py)
+- kling-3.0-pro: Kuaishou Kling 3.0 Pro (kling_helper.py)
 """
 
 from typing import Dict, List, Optional
@@ -59,7 +59,7 @@ VIDEO_MODELS: Dict[str, dict] = {
     },
     "kling-3.0-pro": {
         "name": "Kling 3.0 Pro",
-        "provider": "fal",
+        "provider": "kling",
         "emoji": "🔮",
         "durations": [5, 10, 15],
         "default_duration": 10,
@@ -67,8 +67,8 @@ VIDEO_MODELS: Dict[str, dict] = {
         "aspect_ratio": "9:16",
         "prompt_key": "video_prompt_kling3",
         "description": "Sinematik yönetmenlik, 15s, fizik tabanlı hareket ⭐",
-        "helper_module": "fal_helper",
-        "fal_model": "kling_v3_pro",
+        "helper_module": "kling_helper",
+        "kling_model": "kling-v3",
         "has_native_audio": True,
         "disable_audio_for_voice": True
     },
@@ -90,9 +90,9 @@ def get_model_config(model_id: str) -> dict:
     if model_id in VIDEO_MODELS:
         return VIDEO_MODELS[model_id]
 
-    # Reverse lookup by fal_model name (kling_v3_pro → kling-3.0-pro)
+    # Reverse lookup by kling_model name (kling-v3 → kling-3.0-pro)
     for key, config in VIDEO_MODELS.items():
-        if config.get("fal_model") == model_id:
+        if config.get("kling_model") == model_id:
             return config
 
     # Fallback

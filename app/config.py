@@ -116,8 +116,12 @@ class Settings(BaseSettings):
     # FLUX Settings
     flux_api_key: str = Field(default="", description="FLUX API key")
 
-    # FAL.ai Settings (Kling video generation)
-    fal_api_key: str = Field(default="", description="FAL API key for Kling video generation")
+    # Kling AI Direct API Settings
+    kling_access_key: str = Field(default="", description="Kling API access key")
+    kling_secret_key: str = Field(default="", description="Kling API secret key")
+
+    # FAL.ai Settings (lip-sync only)
+    fal_api_key: str = Field(default="", description="FAL API key for lip-sync")
 
     # ElevenLabs TTS Settings
     elevenlabs_api_key: str = Field(default="", description="ElevenLabs API key for TTS")

@@ -243,7 +243,7 @@ async def generate_video_smart(
         "sora2": "sora-2",
         "sora2-pro": "sora-2-pro",
         "veo": "veo3",
-        # Multi-model voice reels ID'leri (video_models.py → fal_helper.py)
+        # Multi-model voice reels ID'leri (video_models.py → kling_helper.py)
         "kling-3.0-pro": "kling_v3_pro",
     }
     if model in model_aliases:
@@ -252,24 +252,16 @@ async def generate_video_smart(
     print(f"[VIDEO] 🎯 Complexity: {complexity.get('complexity')}")
     print(f"[VIDEO] Model: {model}")
 
-    # Kling modelleri icin fal.ai kullan
+    # Kling modelleri icin Kling Direct API kullan
     if model and model.startswith("kling"):
-        print(f"[VIDEO] → Kling AI ({model}) kullaniliyor...")
+        print(f"[VIDEO] → Kling AI Direct API ({model}) kullaniliyor...")
         try:
-            from app.fal_helper import FalVideoGenerator
-            # Voice mode'da native audio KAPATILIR (TTS voiceover eklenecek)
-            # Kling 2.6 için normalde audio aktif, ama voice_mode'da kapalı
-            if voice_mode:
-                generate_audio = False  # TTS voiceover için native audio kapat
-                print(f"[VIDEO] → Voice mode: Native audio KAPALI")
-            else:
-                generate_audio = True if model == "kling_v3_pro" else None
-            result = await FalVideoGenerator.generate_video(
+            from app.kling_helper import KlingHelper
+            kling = KlingHelper()
+            result = await kling.generate_video(
                 prompt=prompt,
-                model=model,
-                duration=min(duration, 15 if model in ("kling_v3_pro",) else 10),
+                duration=min(duration, 15),
                 aspect_ratio="9:16",
-                generate_audio=generate_audio
             )
             if result.get("success"):
                 return result
