@@ -15,6 +15,12 @@ os.chdir('/opt/olivenet-social-bot')
 from dotenv import load_dotenv
 load_dotenv()
 
+os.makedirs("logs", exist_ok=True)
+
+import logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(name)s %(message)s')
+logging.getLogger("httpx").setLevel(logging.WARNING)
+
 
 async def main():
     """Olivenet Social Bot v2 başlatıcı."""
