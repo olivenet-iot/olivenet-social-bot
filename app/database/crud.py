@@ -2074,3 +2074,242 @@ def get_story_boost_stats(days: int = 7) -> Dict[str, Any]:
             stats[row["status"]] = row["cnt"]
 
     return stats
+
+
+# ============ CONTENT OPPORTUNITIES (v2) ============
+
+def create_opportunity(
+    source_type: str,
+    title: str,
+    source_name: str = None,
+    source_url: str = None,
+    summary: str = None,
+    original_language: str = "en",
+    tags: list = None,
+    title_hash: str = None,
+    url_hash: str = None,
+    expires_at: str = None
+) -> Optional[int]:
+    """Yeni içerik fırsatı oluştur. Duplicate varsa None döner."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    # Hash'leri oluştur
+    if not title_hash and title:
+        title_hash = hashlib.sha256(title.lower().strip().encode()).hexdigest()[:32]
+    if not url_hash and source_url:
+        url_hash = hashlib.sha256(source_url.strip().encode()).hexdigest()[:32]
+
+    try:
+        cursor.execute('''
+            INSERT INTO content_opportunities (
+                source_type, source_name, source_url, title, summary,
+                original_language, tags, title_hash, url_hash, expires_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            source_type, source_name, source_url, title, summary,
+            original_language, json.dumps(tags or []),
+            title_hash, url_hash, expires_at
+        ))
+        conn.commit()
+        opp_id = cursor.lastrowid
+        conn.close()
+        return opp_id
+    except Exception:
+        conn.close()
+        return None
+
+
+def update_opportunity(opp_id: int, **kwargs) -> bool:
+    """İçerik fırsatını güncelle"""
+    if not kwargs:
+        return False
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    # tags listesini JSON'a çevir
+    if "tags" in kwargs and isinstance(kwargs["tags"], list):
+        kwargs["tags"] = json.dumps(kwargs["tags"])
+
+    set_clause = ", ".join(f"{k} = ?" for k in kwargs)
+    values = list(kwargs.values())
+    values.append(opp_id)
+
+    try:
+        cursor.execute(f"UPDATE content_opportunities SET {set_clause} WHERE id = ?", values)
+        conn.commit()
+        updated = cursor.rowcount > 0
+        conn.close()
+        return updated
+    except Exception:
+        conn.close()
+        return False
+
+
+def get_opportunity(opp_id: int) -> Optional[Dict]:
+    """Tek bir fırsat getir"""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM content_opportunities WHERE id = ?", (opp_id,))
+    row = cursor.fetchone()
+    conn.close()
+
+    if row:
+        result = dict(row)
+        if result.get("tags"):
+            try:
+                result["tags"] = json.loads(result["tags"])
+            except (json.JSONDecodeError, TypeError):
+                result["tags"] = []
+        return result
+    return None
+
+
+def get_opportunities_by_status(status: str, limit: int = 20) -> List[Dict]:
+    """Duruma göre fırsatları getir"""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        SELECT * FROM content_opportunities
+        WHERE status = ?
+        ORDER BY combined_score DESC, created_at DESC
+        LIMIT ?
+    ''', (status, limit))
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    results = []
+    for row in rows:
+        d = dict(row)
+        if d.get("tags"):
+            try:
+                d["tags"] = json.loads(d["tags"])
+            except (json.JSONDecodeError, TypeError):
+                d["tags"] = []
+        results.append(d)
+    return results
+
+
+def get_top_opportunities(limit: int = 5, min_score: float = 50.0) -> List[Dict]:
+    """En yüksek skorlu hazır fırsatları getir"""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        SELECT * FROM content_opportunities
+        WHERE status IN ('ready', 'scored')
+        AND combined_score >= ?
+        AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
+        ORDER BY combined_score DESC
+        LIMIT ?
+    ''', (min_score, limit))
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    results = []
+    for row in rows:
+        d = dict(row)
+        if d.get("tags"):
+            try:
+                d["tags"] = json.loads(d["tags"])
+            except (json.JSONDecodeError, TypeError):
+                d["tags"] = []
+        results.append(d)
+    return results
+
+
+def check_duplicate_opportunity(url_hash: str = None, title_hash: str = None) -> bool:
+    """Duplicate fırsat kontrolü"""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    if url_hash:
+        cursor.execute(
+            "SELECT COUNT(*) FROM content_opportunities WHERE url_hash = ?",
+            (url_hash,)
+        )
+        if cursor.fetchone()[0] > 0:
+            conn.close()
+            return True
+
+    if title_hash:
+        cursor.execute(
+            "SELECT COUNT(*) FROM content_opportunities WHERE title_hash = ?",
+            (title_hash,)
+        )
+        if cursor.fetchone()[0] > 0:
+            conn.close()
+            return True
+
+    conn.close()
+    return False
+
+
+def expire_old_opportunities(max_age_hours: int = 72) -> int:
+    """Eski fırsatları expire et"""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cutoff = datetime.utcnow() - timedelta(hours=max_age_hours)
+
+    cursor.execute('''
+        UPDATE content_opportunities
+        SET status = 'expired'
+        WHERE status IN ('discovered', 'enriched', 'scored', 'ready')
+        AND source_type = 'rss'
+        AND created_at < ?
+    ''', (cutoff,))
+
+    count = cursor.rowcount
+    conn.commit()
+    conn.close()
+    return count
+
+
+def get_opportunity_stats() -> Dict[str, Any]:
+    """Fırsat havuzu istatistikleri"""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    # Status bazında sayılar
+    cursor.execute('''
+        SELECT status, COUNT(*) as cnt
+        FROM content_opportunities
+        GROUP BY status
+    ''')
+    status_counts = {row["status"]: row["cnt"] for row in cursor.fetchall()}
+
+    # Kaynak bazında sayılar
+    cursor.execute('''
+        SELECT source_type, COUNT(*) as cnt
+        FROM content_opportunities
+        WHERE status NOT IN ('expired', 'dropped', 'used')
+        GROUP BY source_type
+    ''')
+    source_counts = {row["source_type"]: row["cnt"] for row in cursor.fetchall()}
+
+    # Ortalama skorlar (aktif fırsatlar)
+    cursor.execute('''
+        SELECT
+            AVG(combined_score) as avg_score,
+            MAX(combined_score) as max_score,
+            COUNT(*) as active_count
+        FROM content_opportunities
+        WHERE status IN ('ready', 'scored')
+    ''')
+    score_row = cursor.fetchone()
+
+    conn.close()
+
+    return {
+        "by_status": status_counts,
+        "by_source": source_counts,
+        "avg_score": round(score_row["avg_score"] or 0, 1),
+        "max_score": round(score_row["max_score"] or 0, 1),
+        "active_count": score_row["active_count"] or 0
+    }

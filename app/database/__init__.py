@@ -29,7 +29,12 @@ from .crud import (
     # Prompt Tracking
     get_prompt_hash, save_prompt, check_duplicate_prompt,
     get_recent_prompts, update_prompt_performance,
-    get_top_performing_prompts, get_prompt_style_stats
+    get_top_performing_prompts, get_prompt_style_stats,
+    # Content Opportunities (v2)
+    create_opportunity, update_opportunity, get_opportunity,
+    get_opportunities_by_status, get_top_opportunities,
+    check_duplicate_opportunity, expire_old_opportunities,
+    get_opportunity_stats
 )
 
 # Database'i initialize et
