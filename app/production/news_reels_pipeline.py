@@ -6,7 +6,7 @@ sesli video reels'e çevirir.
 
 Pipeline akışı:
 1. Haber -> TTS script (Creator)
-2. Script -> Ses (ElevenLabs)
+2. Script -> Ses (OpenAI TTS)
 3. Haber -> Video prompt (Creator)
 4. Prompt -> Video (Sora/Kling/Veo)
 5. Video + Ses -> Birleşik video (FFmpeg)

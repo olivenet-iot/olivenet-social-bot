@@ -449,7 +449,7 @@ def init_database():
         # Prompt tracking
         "ALTER TABLE posts ADD COLUMN video_prompt TEXT",
         "ALTER TABLE posts ADD COLUMN prompt_style TEXT",
-        # Voice Reels (ElevenLabs TTS)
+        # Voice Reels (TTS)
         "ALTER TABLE posts ADD COLUMN speech_script TEXT",
         "ALTER TABLE posts ADD COLUMN audio_path TEXT",
         "ALTER TABLE posts ADD COLUMN voice_id TEXT",

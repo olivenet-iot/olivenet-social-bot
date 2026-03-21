@@ -62,7 +62,7 @@ Show natural gestures and expressions, NO actual speech.
            - Sora 2: Native Turkish speech (12s)
            - Other models: TTS + Video + Lipsync API
         4. B-roll video generation (8-12s)
-        5. B-roll voiceover generation (ElevenLabs narrator)
+        5. B-roll voiceover generation (OpenAI TTS narrator)
         6. B-roll merge (FFmpeg)
         7. Concat conversation + B-roll
         8. Whisper transcription + subtitles

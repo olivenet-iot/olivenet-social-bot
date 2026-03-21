@@ -1,7 +1,7 @@
 """
 Voice Reels Pipeline - Sesli Instagram Reels icerigi uret ve yayinla.
 
-ElevenLabs TTS + Video + FFmpeg merge pipeline.
+OpenAI TTS + Video + FFmpeg merge pipeline.
 ContentPipeline.run_reels_voice_content() metodundan extract edilmistir.
 """
 
@@ -34,14 +34,14 @@ class VoiceReelsPipeline(BasePipeline):
         """
         Sesli Instagram Reels içeriği üret ve yayınla.
 
-        ElevenLabs TTS + Video + FFmpeg merge pipeline.
+        OpenAI TTS + Video + FFmpeg merge pipeline.
         Multi-model desteği: Sora 2, Sora 2 Pro, Veo 3.1, Kling 3.0 Pro
 
         Pipeline Akışı:
         1. Konu seçimi (Planner) veya manuel konu işleme (Creator)
         2. Caption üretimi (Creator)
         3. Speech script üretimi (Creator)
-        4. TTS ses üretimi (ElevenLabs)
+        4. TTS ses üretimi (OpenAI TTS)
         5. Video prompt üretimi (Creator)
         6. Video üretimi (model_id'ye göre)
         7. Audio-video birleştirme (FFmpeg)
@@ -183,7 +183,7 @@ class VoiceReelsPipeline(BasePipeline):
             voice_fallback = False
 
             try:
-                from app.openai_tts_helper import generate_speech_with_retry, ElevenLabsError, QuotaExceededError
+                from app.openai_tts_helper import generate_speech_with_retry, OpenAITTSError, QuotaExceededError
 
                 tts_result = await generate_speech_with_retry(
                     text=speech_script,
@@ -216,7 +216,7 @@ class VoiceReelsPipeline(BasePipeline):
 
                     if tts_result.get("quota_exceeded"):
                         await self.notify_telegram(
-                            message=f"⚠️ *ElevenLabs Kota Aşıldı*\n\nSessiz video ile devam ediliyor...",
+                            message=f"⚠️ *TTS Kota Aşıldı*\n\nSessiz video ile devam ediliyor...",
                             data={},
                             buttons=[]
                         )

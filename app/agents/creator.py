@@ -2414,8 +2414,8 @@ Sonuç ve CTA. Takip et, kaydet veya düşündürücü soru.
         """
         Instagram Reels için Türkçe voiceover scripti üret.
 
-        ElevenLabs TTS ile seslendirilecek metin oluşturur.
-        Süre bazlı kelime hedefi ile çalışır (~1.9 kelime/saniye - ElevenLabs ölçümü).
+        OpenAI TTS ile seslendirilecek metin oluşturur.
+        Süre bazlı kelime hedefi ile çalışır (~1.9 kelime/saniye - Türkçe TTS ölçümü).
 
         Args:
             input_data: {

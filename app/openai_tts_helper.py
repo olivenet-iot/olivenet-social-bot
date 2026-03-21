@@ -2,7 +2,7 @@
 OpenAI TTS Helper - Türkçe Sesli Reels için Text-to-Speech
 
 OpenAI gpt-4o-mini-tts modeli kullanarak Türkçe voiceover üretimi.
-ElevenLabs'ın drop-in replacement'ı — aynı return format.
+OpenAI gpt-4o-mini-tts ile Türkçe voiceover üretimi.
 """
 
 import os
@@ -81,14 +81,14 @@ class TTSQuotaExceededError(OpenAITTSError):
     pass
 
 
-# Backward-compat aliases (callers import these names from elevenlabs_helper)
-ElevenLabsError = OpenAITTSError
+# Short aliases
+TTSError = OpenAITTSError
 RateLimitError = TTSRateLimitError
 QuotaExceededError = TTSQuotaExceededError
 
 
 class OpenAITTSHelper:
-    """OpenAI TTS API wrapper — ElevenLabsHelper drop-in replacement"""
+    """OpenAI TTS API wrapper"""
 
     @staticmethod
     def _get_api_key() -> str:
@@ -274,8 +274,6 @@ class OpenAITTSHelper:
             }
 
 
-# Backward-compat alias
-ElevenLabsHelper = OpenAITTSHelper
 
 
 async def generate_speech_with_retry(

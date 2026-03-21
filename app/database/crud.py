@@ -83,7 +83,7 @@ def update_post(post_id: int, **kwargs) -> bool:
         'reviewer_feedback', 'revision_count', 'post_text_ig', 'post_text_fb',
         # Hook & A/B tracking
         'hook_type', 'hook_text', 'tone', 'ab_test_id', 'is_ab_winner',
-        # Voice Reels (ElevenLabs TTS)
+        # Voice Reels (TTS)
         'speech_script', 'audio_path', 'voice_id', 'audio_duration', 'voice_mode',
         # Topic category
         'topic_category',

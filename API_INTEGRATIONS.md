@@ -12,7 +12,7 @@
 | Kling 3.0 Pro | Kling Direct API | `kling_helper.py` | Video üretimi (JWT auth) |
 | FLUX.2 Pro | BFL/Replicate | `flux_helper.py` | Görsel üretimi |
 | Nano Banana | fal.ai (fal-ai/nano-banana-pro) | `nano_banana_helper.py` | İnfographic üretimi |
-| ElevenLabs | ElevenLabs | `elevenlabs_helper.py` | Türkçe TTS |
+| OpenAI TTS | OpenAI | `openai_tts_helper.py` | Türkçe TTS (gpt-4o-mini-tts) |
 | Cloudinary | Cloudinary | `cloudinary_helper.py` | Video CDN |
 | Telegram | Telegram | `telegram_pipeline.py` | Bot arayüzü |
 
@@ -309,10 +309,6 @@ result = await generate_dialog_audio(
 # Döner: {"success": bool, "audio_path": str, "total_duration": float, "audio_segments": list}
 ```
 
-### ElevenLabs (Yedek)
-- **Dosya:** `app/elevenlabs_helper.py` (backup olarak saklanıyor)
-- **Model:** eleven_multilingual_v2
-
 ---
 
 ## 9. Cloudinary (Video CDN)
@@ -388,7 +384,7 @@ get_campaign_insights(date_start, date_stop, level="campaign") -> list
 | Sora | - | 300s (5 dk) |
 | Veo | - | 300s (5 dk) |
 | Kling Direct | - | 300s |
-| ElevenLabs | - | 120s |
+| OpenAI TTS | - | 60s |
 | FLUX | - | 120s |
 
 ---

@@ -33,7 +33,7 @@ result = await kling.generate_video(
 ```
 
 ## nano_banana_helper.py
-Gemini 3 Pro Image ile infographic/carousel uretimi (HTML template'lerin yerini aldi).
+fal-ai/nano-banana-pro (via fal.ai) ile infographic/carousel uretimi (HTML template'lerin yerini aldi).
 
 ```python
 from app.nano_banana_helper import (
@@ -163,12 +163,14 @@ generate_video_veo3(prompt, aspect_ratio="9:16", duration_seconds=8) -> Dict
 generate_video_with_retry(prompt, max_retries=2) -> Dict
 ```
 
-## elevenlabs_helper.py
-ElevenLabs TTS (Turkce seslendirme).
+## openai_tts_helper.py
+OpenAI TTS (Turkce seslendirme, gpt-4o-mini-tts).
 
 ```python
-ElevenLabsHelper.generate_speech(text, voice_id=None, speed=1.0) -> Dict
+generate_speech_with_retry(text, voice_id=None, max_retries=3) -> Dict
 # Returns: {success, audio_path, duration_seconds}
+generate_dialog_audio(dialog_lines, male_voice_id=None, female_voice_id=None) -> Dict
+# Returns: {success, audio_path, total_duration, audio_segments}
 ```
 
 ## claude_helper.py
@@ -226,7 +228,7 @@ settings.database_path
 | insights_helper.py | app/insights_helper.py |
 | sora_helper.py | app/sora_helper.py |
 | veo_helper.py | app/veo_helper.py |
-| elevenlabs_helper.py | app/elevenlabs_helper.py |
+| openai_tts_helper.py | app/openai_tts_helper.py |
 | claude_helper.py | app/claude_helper.py |
 | renderer.py | app/renderer.py |
 | config.py | app/config.py |
@@ -234,4 +236,4 @@ settings.database_path
 ## Silinen Helper'lar (v2'de yok)
 
 - ~~fal_helper.py~~ → Kling: `kling_helper.py` (Direct API)
-- ~~gemini_helper.py~~ → Gorsel: `nano_banana_helper.py` (Gemini 3 Pro Image)
+- ~~gemini_helper.py~~ → Gorsel: `nano_banana_helper.py` (fal-ai/nano-banana-pro)

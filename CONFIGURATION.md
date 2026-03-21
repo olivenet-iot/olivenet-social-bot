@@ -127,14 +127,6 @@ FLUX_API_KEY=your_flux_api_key
 
 Mevcut sesler: alloy, ash, ballad, coral, echo, fable, onyx, nova, sage, shimmer, verse, marin, cedar
 
-### ElevenLabs (Yedek/Backup)
-
-| Değişken | Zorunlu | Varsayılan | Açıklama |
-|----------|---------|------------|----------|
-| `ELEVENLABS_API_KEY` | - | - | API key |
-| `ELEVENLABS_VOICE_ID` | - | - | Varsayılan Türkçe voice ID |
-| `ELEVENLABS_MODEL` | - | `eleven_multilingual_v2` | Model |
-
 ---
 
 ## CDN
@@ -325,8 +317,7 @@ KLING_SECRET_KEY=your_kling_secret_key
 FLUX_API_KEY=your_flux_key
 
 # ============ TTS ============
-ELEVENLABS_API_KEY=your_elevenlabs_key
-ELEVENLABS_VOICE_ID=your_voice_id
+# OPENAI_API_KEY yukarıda tanımlı — ek TTS key gerekmez
 
 # ============ CDN ============
 CLOUDINARY_CLOUD_NAME=your_cloud_name

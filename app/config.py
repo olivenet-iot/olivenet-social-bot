@@ -123,23 +123,7 @@ class Settings(BaseSettings):
     # FAL.ai Settings (lip-sync and infographic generation)
     fal_api_key: str = Field(default="", description="FAL API key for lip-sync and infographic generation")
 
-    # ElevenLabs TTS Settings
-    elevenlabs_api_key: str = Field(default="", description="ElevenLabs API key for TTS")
-    elevenlabs_voice_id: str = Field(default="", description="Default Turkish voice ID")
-    elevenlabs_model: str = Field(default="eleven_multilingual_v2", description="TTS model")
-    tts_stability: float = Field(default=0.5, description="Voice stability (0.0-1.0)")
-    tts_similarity_boost: float = Field(default=0.75, description="Voice similarity boost (0.0-1.0)")
-    tts_speed: float = Field(default=1.0, description="Speech speed (0.5-2.0)")
-
-    # ElevenLabs Conversational Reels Settings
-    elevenlabs_voice_id_female: str = Field(default="EJGs6dWlD5VrB3llhBqB", description="Female Turkish voice ID for conversational reels")
-    elevenlabs_voice_id_narrator: str = Field(default="7VqWGAWwo2HMrylfKrcm", description="Narrator voice ID for B-roll voiceover")
-
-    # ElevenLabs Cartoon/Animation Voice IDs
-    elevenlabs_voice_id_cartoon_male: str = Field(default="DUnzBkwtjRWXPr6wRbmL", description="Cartoon male voice (Mark - fun, cheerful)")
-    elevenlabs_voice_id_cartoon_female: str = Field(default="xyqF3vGMQlPk3e7yA4DI", description="Cartoon female voice (Ahu - cheerful, inviting)")
-
-    # OpenAI TTS Settings (ElevenLabs replacement)
+    # OpenAI TTS Settings
     openai_tts_model: str = Field(default="gpt-4o-mini-tts", description="OpenAI TTS model")
     openai_tts_voice_male: str = Field(default="onyx", description="OpenAI TTS default/male voice")
     openai_tts_voice_female: str = Field(default="nova", description="OpenAI TTS female voice")

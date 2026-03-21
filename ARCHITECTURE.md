@@ -56,7 +56,7 @@ Olivenet Social Bot v2, 3 katmanlı otonom içerik üretim sistemidir: Kaynaklar
 │                           │                                       │
 │  ┌────────────────────────┼─────────────────────────────────┐    │
 │  │ AI Services: Sora │ Veo │ Kling │ FLUX │ Nano Banana     │    │
-│  │              ElevenLabs │ Cloudinary │ Instagram API      │    │
+│  │              OpenAI TTS │ Cloudinary │ Instagram API      │    │
 │  └──────────────────────────────────────────────────────────┘    │
 └──────────────────────────────────────────────────────────────────┘
 
@@ -121,13 +121,13 @@ Olivenet Social Bot v2, 3 katmanlı otonom içerik üretim sistemidir: Kaynaklar
 │   ├── config.py                     # Konfigürasyon yönetimi
 │   ├── telegram_pipeline.py          # Telegram bot (14 komut)
 │   ├── kling_helper.py               # Kling Direct API (JWT auth)
-│   ├── nano_banana_helper.py         # Gemini 3 Pro Image infographic
+│   ├── nano_banana_helper.py         # fal.ai nano-banana-pro infographic
 │   ├── video_models.py               # 4 video model konfigürasyonu
 │   ├── video_styles.py               # 10 görsel stil
 │   ├── sora_helper.py                # OpenAI Sora video
 │   ├── veo_helper.py                 # Google Veo video
 │   ├── flux_helper.py                # FLUX.2 Pro görsel
-│   ├── elevenlabs_helper.py          # ElevenLabs TTS
+│   ├── openai_tts_helper.py          # OpenAI TTS
 │   ├── cloudinary_helper.py          # Video CDN
 │   ├── instagram_helper.py           # Instagram Graph API
 │   ├── insights_helper.py            # Instagram Insights
@@ -378,8 +378,8 @@ async def main():
 | **HTTP** | httpx (async) |
 | **AI** | Claude Code CLI, OpenAI, Google Gemini |
 | **Video** | Sora 2/Pro, Veo 3.1, Kling 3.0 Pro (Direct API) |
-| **Görsel** | FLUX.2 Pro, Nano Banana (Gemini 3 Pro Image) |
-| **TTS** | ElevenLabs (Türkçe) |
+| **Görsel** | FLUX.2 Pro, Nano Banana (fal-ai/nano-banana-pro) |
+| **TTS** | OpenAI TTS (Türkçe, gpt-4o-mini-tts) |
 | **CDN** | Cloudinary, imgbb |
 | **Render** | Playwright (HTML→PNG, carousel slide) |
 
