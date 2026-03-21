@@ -20,12 +20,8 @@ from app.database.crud import (
 
 logger = get_logger("brain")
 
-# Haftalık hedefler
-WEEKLY_TARGETS = {
-    "reels": 7,
-    "carousel": 2,
-    "post": 3,
-}
+# İçerik tonu seçenekleri
+VALID_CONTENT_TONES = ["news_commentary", "educational", "showcase", "thought_leadership"]
 
 # Günlük limitler
 MAX_DAILY_POSTS = int(os.getenv("BRAIN_MAX_DAILY_POSTS", "2"))
@@ -202,6 +198,13 @@ class BrainAgent(BaseAgent):
         recent = state.get("recent_topics_14d", [])
         recent_text = ", ".join(recent[:10]) if recent else "Yok"
 
+        # Son 24 saatte seçilen fırsatlar (tekrar seçimi önle)
+        recently_selected = pool.get("recently_selected", [])
+        recently_selected_text = "\n".join([
+            f"  #{r['id']}: {r['title']}"
+            for r in recently_selected
+        ]) or "  Yok"
+
         prompt = f"""Sen Olivenet Social Bot'un stratejik beynisin. Otonom içerik üretim kararları veriyorsun.
 
 MEVCUT DURUM:
@@ -212,13 +215,19 @@ MEVCUT DURUM:
 HAFTALIK İLERLEME:
 {json.dumps(weekly, indent=2, default=str)}
 
-HAFTALIK HEDEFLER:
-- Reels: {WEEKLY_TARGETS['reels']}/hafta
-- Carousel: {WEEKLY_TARGETS['carousel']}/hafta
-- Post: {WEEKLY_TARGETS['post']}/hafta
+HAFTALIK REHBER (hedef değil, rehber — sen karar ver):
+- Haftada toplam 8-14 içerik üret (duruma göre ayarla)
+- Çeşitlilik önemli: tek formata takılma
+- Haber yoğun haftalarda news_reels ve carousel ağırlıklı ol
+- Haber az ise evergreen reels ve post'lara ağırlık ver
+- Performans verisine göre adapte ol: hangi format daha iyi engagement alıyorsa ona yönel
+- Her gün en az 1, en fazla 3 içerik
 
 HAZIR FIRSATLAR (Top 5):
 {opp_text}
+
+SON 24 SAATTE SEÇİLEN FIRSATLAR (tekrar seçme):
+{recently_selected_text}
 
 SON 14 GÜNDE KULLANILAN KONULAR:
 {recent_text}
@@ -231,6 +240,18 @@ KURALLAR:
 5. Haftalık mix: ~%50 haber bazlı, ~%25 uzmanlık, ~%25 eğitici
 6. Optimal saatler: {OPTIMAL_HOURS}
 7. Min skor: {MIN_SCORE_TO_PRODUCE}
+
+İÇERİK TONU (zorunlu — content_tone alanını MUTLAKA doldur):
+- "news_commentary": Haber bazlı. Kaynağı referans ver, ne olduğunu anlat, Olivenet perspektifinden yorumla. ASLA pazarlama tonu kullanma.
+  Örnek: "AT&T, Cisco ve NVIDIA edge computing için güçlerini birleştirdi. Bu, endüstriyel IoT sektörü için önemli bir sinyal..."
+- "educational": Eğitici. Bir konuyu öğret, teknik detay ver. Bilgi paylaşımı tonu.
+  Örnek: "Edge AI nedir? Veriyi buluta göndermeden yerinde işlemek demek. İşte 4 temel avantajı..."
+- "showcase": Olivenet'in yaptığı işleri göster. Sadece gerçek projeler ve deneyimler.
+  Örnek: "KKTC'de sera otomasyonu projemizden bir kesit. LoRaWAN sensörlerle nem ve sıcaklığı izliyoruz."
+- "thought_leadership": Sektör yorumu, trend analizi. Kişisel görüş ve vizyon.
+  Örnek: "Endüstriyel IoT'nin geleceği edge'de. İşte neden böyle düşünüyorum..."
+KURAL: source='rss' olan fırsatlar için content_tone MUTLAKA 'news_commentary' olmalı.
+Evergreen fırsatlar için 'educational' veya 'showcase' kullan.
 
 YARATICI PARAMETRELER:
 - model_id: Video model seçimi. İçeriğe göre aktif seçim yap.
@@ -273,6 +294,8 @@ KARAR VER ve JSON formatında yanıt ver:
     "reason": "Kararın sebebi (Türkçe, 1-2 cümle)",
     "opportunity_id": null | <fırsat ID>,
     "content_type": null | "reels" | "voice_reels" | "news_reels" | "carousel" | "post",
+    "content_tone": null | "news_commentary" | "educational" | "showcase" | "thought_leadership",
+    "weekly_strategy_note": "Bu hafta neden bu formatı seçtim (1 cümle)",
     "urgency": "low" | "medium" | "high",
     "model_id": null | "<model ID>",
     "visual_style": null | "<stil>",
@@ -316,6 +339,15 @@ KARAR VER ve JSON formatında yanıt ver:
                     else:
                         result["slide_count"] = max(4, min(8, slide_count))
 
+                # Content tone validation
+                tone = result.get("content_tone")
+                if not tone or tone not in VALID_CONTENT_TONES:
+                    opp = get_opportunity(result.get("opportunity_id"))
+                    if opp and opp.get("source_type") == "rss":
+                        result["content_tone"] = "news_commentary"
+                    else:
+                        result["content_tone"] = "educational"
+
             return result
 
         except json.JSONDecodeError:
@@ -354,6 +386,7 @@ KARAR VER ve JSON formatında yanıt ver:
         model_id = creative.get("model_id")
         visual_style = creative.get("visual_style", "cinematic_4k")
         hook_type = creative.get("hook_type")
+        content_tone = creative.get("content_tone", "educational")
 
         self.log(f"Triggering production: type={content_type}, opp={opp_id}, "
                  f"model={model_id}, style={visual_style}, title={opportunity['title'][:50]}")
@@ -373,7 +406,7 @@ KARAR VER ve JSON formatında yanıt ver:
                 pipeline = PipelineClass()
 
                 if content_type == "news_reels":
-                    kwargs = {"opportunity": opportunity, "autonomous": True}
+                    kwargs = {"opportunity": opportunity, "autonomous": True, "content_tone": content_tone}
                     if model_id:
                         kwargs["model_id"] = model_id
                     if visual_style:
@@ -381,7 +414,7 @@ KARAR VER ve JSON formatında yanıt ver:
                     result = await pipeline.run(**kwargs)
 
                 elif content_type == "reels":
-                    kwargs = {"topic": opportunity.get("title", "")}
+                    kwargs = {"topic": opportunity.get("title", ""), "opportunity": opportunity, "content_tone": content_tone}
                     if model_id:
                         kwargs["force_model"] = model_id  # ReelsPipeline uses force_model
                     if visual_style:
@@ -391,7 +424,7 @@ KARAR VER ve JSON formatında yanıt ver:
                     result = await pipeline.run(**kwargs)
 
                 elif content_type == "voice_reels":
-                    kwargs = {"topic": opportunity.get("title", "")}
+                    kwargs = {"topic": opportunity.get("title", ""), "opportunity": opportunity, "content_tone": content_tone}
                     if model_id:
                         kwargs["model_id"] = model_id
                     if visual_style:
@@ -399,7 +432,7 @@ KARAR VER ve JSON formatında yanıt ver:
                     result = await pipeline.run(**kwargs)
 
                 elif content_type in ("long_video", "conversational"):
-                    kwargs = {"topic": opportunity.get("title", "")}
+                    kwargs = {"topic": opportunity.get("title", ""), "opportunity": opportunity, "content_tone": content_tone}
                     if model_id:
                         kwargs["model_id"] = model_id
                     if visual_style:
@@ -409,6 +442,8 @@ KARAR VER ve JSON formatında yanıt ver:
                 elif content_type == "carousel":
                     kwargs = {
                         "topic": opportunity.get("title", ""),
+                        "opportunity": opportunity,
+                        "content_tone": content_tone,
                         "carousel_type": "nano_banana",
                         "carousel_style": creative.get("carousel_style", "tech_blue"),
                         "carousel_layout": creative.get("carousel_layout", "storytelling"),
@@ -417,7 +452,7 @@ KARAR VER ve JSON formatında yanıt ver:
                     result = await pipeline.run(**kwargs)
 
                 else:  # post — no video/carousel params
-                    result = await pipeline.run(topic=opportunity.get("title", ""))
+                    result = await pipeline.run(topic=opportunity.get("title", ""), opportunity=opportunity, content_tone=content_tone)
 
         except Exception as e:
             self.log(f"Production error: {e}")

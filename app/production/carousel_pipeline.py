@@ -20,7 +20,8 @@ class CarouselPipeline(BasePipeline):
         super().__init__("carousel", telegram_callback)
 
     async def run(self, topic=None, dry_run=False, carousel_type="nano_banana", manual_topic=None,
-                  carousel_style="tech_blue", carousel_layout="storytelling", slide_count=5) -> Dict[str, Any]:
+                  carousel_style="tech_blue", carousel_layout="storytelling", slide_count=5,
+                  opportunity=None, content_tone="educational") -> Dict[str, Any]:
         """
         Instagram Carousel içerik üretim pipeline'ı.
 
@@ -78,7 +79,9 @@ class CarouselPipeline(BasePipeline):
                 "action": "create_carousel_content",
                 "topic": topic,
                 "slide_count": slide_count,
-                "category": "egitici"
+                "category": "egitici",
+                "content_tone": content_tone,
+                "news_context": self._build_news_context(opportunity) if opportunity else None,
             })
 
             if not carousel_content.get("success"):

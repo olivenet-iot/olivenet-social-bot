@@ -1243,6 +1243,8 @@ Sadece JSON döndür.
         hooks = input_data.get("suggested_hooks", [])
         visual_type = input_data.get("visual_type", "flux")
         original_user_brief = input_data.get("original_user_brief")
+        content_tone = input_data.get("content_tone", "educational")
+        news_context = input_data.get("news_context")
 
         # Orijinal kullanıcı açıklaması varsa prompt'a eklenecek bölüm
         original_brief_section = ""
@@ -1262,6 +1264,24 @@ Sadece JSON döndür.
 7. Genel bilgi verme, kullanıcının SPESİFİK anlatımını ve bakış açısını özetle
 8. Caption kısaltılsa bile kullanıcının benzersiz bakış açısı ve farklılaştırıcı noktaları korunmalı"""
 
+        # News context section
+        news_context_section = ""
+        if news_context:
+            news_context_section = f"""
+
+### HABER/FIRSAT BAĞLAMI
+{news_context}
+Bu bağlamı post'a entegre et — kaynak bilgisini ve detayları kullan."""
+
+        # Tone-specific post guidance
+        tone_guidance = {
+            "news_commentary": "Haber yorumu yaz. Kaynağı belirt, ne olduğunu anlat, Olivenet perspektifinden yorumla. Pazarlama tonu YASAK.",
+            "educational": "Eğitici ve bilgilendirici ton. Saf bilgi ver, satış dili YASAK.",
+            "showcase": "Olivenet'in gerçek deneyiminden anlat. Birinci çoğul şahıs, samimi ton.",
+            "thought_leadership": "Kişisel sektör yorumu ve analizi. Güçlü tez sun, verilerle destekle."
+        }
+        post_tone_instruction = tone_guidance.get(content_tone, tone_guidance["educational"])
+
         company_profile = self.load_context("company-profile.md")
         content_strategy = self.load_context("content-strategy.md")
 
@@ -1275,20 +1295,21 @@ Sadece JSON döndür.
 {content_strategy}
 
 ### Post Detayları
-- Konu: {topic}{original_brief_section}
+- Konu: {topic}{original_brief_section}{news_context_section}
 - Kategori: {category}
 - Görsel tipi: {visual_type}
+- İçerik Tonu: {content_tone}
 
 ### Önerilen Hook'lar
 {json.dumps(hooks, ensure_ascii=False)}
 
 ---
 
-Yukarıdaki bilgilere dayanarak etkili bir Facebook post metni yaz.
+{post_tone_instruction}
 
 KURALLAR:
 1. İlk cümle (hook) merak uyandırıcı teknik bilgi veya sektörel istatistik olmalı
-2. Eğitici ve bilgilendirici ton (satış dili YASAK)
+2. {post_tone_instruction}
 3. Emoji kullanımı dengeli (3-5 emoji)
 4. Saf bilgi ver, satış dili YASAK
 5. Hashtag'ler en sonda olmalı
@@ -1356,6 +1377,8 @@ Sadece JSON döndür.
         category = input_data.get("category", "egitici")
         visual_type = input_data.get("visual_type", "flux")
         original_user_brief = input_data.get("original_user_brief")
+        content_tone = input_data.get("content_tone", "educational")
+        news_context = input_data.get("news_context")
 
         # Orijinal kullanıcı açıklaması varsa prompt'a eklenecek bölüm
         original_brief_section = ""
@@ -1411,12 +1434,69 @@ Sadece JSON döndür.
             is_data_heavy="istatistik" in (topic or "").lower() or "veri" in (topic or "").lower() or "%" in (topic or "")
         )
 
+        # Tone-specific instructions
+        TONE_INSTRUCTIONS = {
+            "news_commentary": """### İÇERİK TONU: HABER YORUMU
+- Haber kaynağını belirt (kim, ne yaptı). Ne olduğunu anlat. Olivenet perspektifinden yorumla.
+- 150-200 KELİME. Pazarlama tonu YASAK.
+- Kaynak bilgisini doğal şekilde metne entegre et (örn: "AT&T, Cisco ve NVIDIA edge computing için güçlerini birleştirdi.")
+- Faktöel ve analitik ol — bu bir haber yorumu, reklam DEĞİL.
+
+**HOOK:** Haberin en dikkat çekici detayıyla başla.
+**ANA İÇERİK:** Ne oldu? Neden önemli? Sektöre etkisi ne?
+**KAPANIŞ:** Olivenet perspektifinden kısa yorum veya düşündürücü soru.
+**ÖRNEK İYİ:** "AT&T, Cisco ve NVIDIA edge computing için güçlerini birleştirdi. Bu, endüstriyel IoT sektörü için önemli bir sinyal. Veri merkezlerinden uca doğru kayma hızlanıyor..."
+**ÖRNEK KÖTÜ:** "Edge computing devrimi başlıyor! 🚀 Olivenet ile bu trendi yakalayın!"
+""",
+            "educational": """### İÇERİK TONU: EĞİTİCİ
+- Konuyu öğretici tonda anlat. Teknik detay ver ama anlaşılır tut.
+- 120-180 KELİME. Bilgi paylaşımı odaklı, satış dili yok.
+
+**HOOK:** Teknik bilgi, istatistik veya merak uyandıran gerçek ile başla.
+**ANA İÇERİK:** Ne, neden, nasıl — somut rakam veya pratik bilgi.
+**KAPANIŞ:** Düşündürücü soru VEYA pratik ipucu ile bitir.
+**ÖRNEK İYİ:** "Edge AI nedir? Veriyi buluta göndermeden yerinde işlemek demek. İşte 4 temel avantajı..."
+**ÖRNEK KÖTÜ:** "AI devrimi! Olivenet ile geleceğe hazırlanın! 📌 Kaydet!"
+""",
+            "showcase": """### İÇERİK TONU: SHOWCASE (PROJE GÖSTERİMİ)
+- Olivenet'in gerçek deneyiminden anlat. Samimi ve mütevazı ton. Birinci tekil/çoğul şahıs.
+- 100-150 KELİME. Gerçek proje detayları.
+
+**HOOK:** Projenin en dikkat çekici sonucu veya detayıyla başla.
+**ANA İÇERİK:** Ne yaptık, nasıl çözdük, ne sonuç aldık.
+**KAPANIŞ:** Öğrenilen ders veya pratik tavsiye.
+**ÖRNEK İYİ:** "KKTC'de sera otomasyonu projemizden bir kesit. LoRaWAN sensörlerle nem ve sıcaklığı izliyoruz."
+**ÖRNEK KÖTÜ:** "Olivenet ile seranızı akıllı hale getirin! Hemen iletişime geçin!"
+""",
+            "thought_leadership": """### İÇERİK TONU: DÜŞÜNCE LİDERLİĞİ
+- Kişisel yorum ve sektör analizi. Düşündürücü ton. Güçlü tez, kanıtla destekle.
+- 150-200 KELİME.
+
+**HOOK:** Güçlü bir iddia veya sektör gözlemiyle başla.
+**ANA İÇERİK:** Tezini destekle — veriler, trendler, deneyimler.
+**KAPANIŞ:** Provoke edici soru veya gelecek öngörüsü.
+**ÖRNEK İYİ:** "Endüstriyel IoT'nin geleceği edge'de. İşte neden böyle düşünüyorum..."
+**ÖRNEK KÖTÜ:** "IoT trendi kaçırılmaz! 🔥 Olivenet bu trendin öncüsü!"
+"""
+        }
+
+        tone_instruction = TONE_INSTRUCTIONS.get(content_tone, TONE_INSTRUCTIONS["educational"])
+
+        # News context section (if opportunity has rich context)
+        news_context_section = ""
+        if news_context:
+            news_context_section = f"""
+
+### HABER/FIRSAT BAĞLAMI
+{news_context}
+Bu bağlamı caption'a entegre et — kaynak bilgisini ve detayları kullan."""
+
         # Instagram içeriği (kısa)
         ig_prompt = f"""
-## GÖREV: Instagram Post Yaz (Eğitici Mikro-Blog Formatı)
+## GÖREV: Instagram Post Yaz
 
 ### Konu
-{topic}{original_brief_section}
+{topic}{original_brief_section}{news_context_section}
 
 ### Kategori
 {category}
@@ -1428,49 +1508,16 @@ Sadece JSON döndür.
 {hook_hint}
 
 ### INSTAGRAM FORMATI (ÇOK ÖNEMLİ!)
-- 100-150 KELİME (eğitici içerik detaylı olmalı, kısa tutma)
-- Bu bir EĞİTİCİ İÇERİK, reklam DEĞİL.
 - MARKDOWN KULLANMA: **bold**, *italic*, `code` YASAK (Instagram desteklemiyor)
 - Vurgu için BÜYÜK HARF veya emoji kullan
 - 8-12 hashtag (ZORUNLU: #Olivenet #KKTC #IoT + 5-9 sektörel/genel)
 
-### İÇERİK YAKLAŞIMI
-
-**HOOK (ilk cümle):**
-- Teknik bilgi, istatistik veya merak uyandıran gerçek ile başla
-- Yukarıdaki öncelikli hook tiplerinden birini kullan
-
-**ANA İÇERİK (2-3 cümle):**
-- Saf bilgi ver: ne, neden, nasıl
-- Somut rakam veya pratik bilgi içermeli
-- 2-3 kısa madde tercih edilir
-
-**KAPANIŞ:**
-- Düşündürücü soru VEYA pratik ipucu ile bitir
-- Satış dili, agresif CTA, "Kaydet!", "Takip et!" YASAK
-
-**HASHTAG:**
-- 8-12 adet, en sonda
+{tone_instruction}
 
 ### YASAK YAKLAŞIMLAR
 - "📌 Kaydet!", "🔖 Yer imi ekle!", "Takip et!" gibi agresif CTA'lar
 - "Bizi arayın", "info@olivenet.io", "İletişime geçin" gibi satış dili
 - Problem → Çözüm → "Biz yaparız" reklam yapısı
-
-### DOĞRU TON
-- İYİ: "Sera sıcaklığı gece 2°C düşerse, meyve verimi %30 azalır. Akıllı sensörler bu farkı gerçek zamanlı yakalar."
-- KÖTÜ: "Seranız tehlikede! Olivenet IoT ile 7/24 koruma. Hemen kaydet! 📌"
-- İYİ: "Toprak nemini saatte bir ölçmek, haftalık ölçüme göre %40 daha az su harcar."
-- KÖTÜ: "Su tasarrufu istiyorsan bize ulaş! 💧 Kaydet ve takip et!"
-
-### ÖRNEK FORMAT
-🌱 [Teknik bilgi veya istatistik hook]
-
-[2-3 kısa bilgi maddesi]
-
-[Düşündürücü soru veya pratik ipucu]
-
-#Olivenet #KKTC #IoT #AkıllıTarım ...
 
 Sadece post metnini yaz, başka açıklama ekleme.
 """
@@ -2398,6 +2445,8 @@ Sonuç ve CTA. Takip et, kaydet veya düşündürücü soru.
         tone = input_data.get("tone", "friendly")  # Samimi ton varsayılan
         post_id = input_data.get("post_id")
         original_user_brief = input_data.get("original_user_brief")
+        content_tone = input_data.get("content_tone", "educational")
+        news_context = input_data.get("news_context")
 
         # Pipeline'dan gelen target_words'u kullan (varsa)
         target_words = input_data.get("target_words")
@@ -2463,11 +2512,44 @@ Bölümler arasında doğal geçiş olmalı ama her bölüm video segmentiyle se
 6. Spesifik teknik terimleri koru — genel terimlerle DEĞİŞTİRME
 7. Genel bilgi verme, kullanıcının SPESİFİK anlatımını ve bakış açısını özetle"""
 
+        # Content tone specific speech instructions
+        SPEECH_TONE_INSTRUCTIONS = {
+            "news_commentary": """### İÇERİK TONU: HABER YORUMU
+- Haber kaynağını sesli olarak belirt (örn: "A-T and T, Cisco ve NVIDIA yeni bir iş birliği duyurdu.")
+- Faktöel anlatım — ne oldu, neden önemli, sektöre etkisi.
+- Pazarlama tonu YASAK. Haber spikeri gibi bilgilendirici ol.
+- Olivenet perspektifinden kısa yorum ekle (son bölümde).""",
+            "educational": """### İÇERİK TONU: EĞİTİCİ
+- Öğretici ton: "biliyor muydun?", "işte nasıl çalışıyor" gibi yaklaşımlar.
+- Somut örnekler ve rakamlarla anlat.
+- Satış tonu yok, saf bilgi paylaşımı.""",
+            "showcase": """### İÇERİK TONU: PROJE GÖSTERİMİ
+- Birinci çoğul şahıs: "biz yaptık", "projemizde", "deneyimimizde".
+- Samimi ve mütevazı. Gerçek proje detayları.
+- Ne yaptık, nasıl çözdük, ne sonuç aldık.""",
+            "thought_leadership": """### İÇERİK TONU: DÜŞÜNCE LİDERLİĞİ
+- "Bence", "gözlemlediğim kadarıyla" gibi kişisel perspektif.
+- Güçlü tez, verilerle destekle.
+- Provoke edici ve düşündürücü ol."""
+        }
+        speech_tone_instruction = SPEECH_TONE_INSTRUCTIONS.get(content_tone, SPEECH_TONE_INSTRUCTIONS["educational"])
+
+        # News context for speech
+        news_context_section = ""
+        if news_context:
+            news_context_section = f"""
+
+### HABER/FIRSAT BAĞLAMI
+{news_context}
+Bu bağlamı script'e entegre et — kaynak ve detayları doğal konuşma diliyle aktar."""
+
         prompt = f"""
 ## GÖREV: Instagram Reels Voiceover Scripti Yaz
 
 ### Konu
-{topic}{original_brief_section}
+{topic}{original_brief_section}{news_context_section}
+
+{speech_tone_instruction}
 
 ### Hedefler
 - Süre: {target_duration} saniye
@@ -2678,6 +2760,8 @@ Sadece uzatılmış scripti döndür, başka bir şey ekleme.
         topic = input_data.get("topic", "")
         slide_count = input_data.get("slide_count", 5)
         category = input_data.get("category", "egitici")
+        content_tone = input_data.get("content_tone", "educational")
+        news_context = input_data.get("news_context")
 
         # Slide sayısı sınırlaması
         slide_count = max(3, min(slide_count, 7))
@@ -2703,12 +2787,14 @@ Sadece uzatılmış scripti döndür, başka bir şey ekleme.
 - Konu: {topic}
 - Slide sayısı: {slide_count}
 - Kategori: {category}
+- İçerik Tonu: {content_tone}
+{f"### HABER/FIRSAT BAĞLAMI" + chr(10) + news_context + chr(10) + "Bu bağlamı carousel içeriğine entegre et." if news_context else ""}
 
 ---
 
 ## TALİMATLAR
 
-Eğitici ve görsel açıdan tutarlı bir carousel oluştur.
+{"HABER YORUMU carousel'i oluştur. Kaynak bilgisini slide'lara entegre et, faktöel ve analitik ol. Pazarlama tonu YASAK." if content_tone == "news_commentary" else "PROJE GÖSTERİM carousel'i oluştur. Olivenet'in gerçek deneyiminden anlat, birinci çoğul şahıs." if content_tone == "showcase" else "DÜŞÜNCE LİDERLİĞİ carousel'i oluştur. Güçlü tez sun, verilerle destekle." if content_tone == "thought_leadership" else "Eğitici ve görsel açıdan tutarlı bir carousel oluştur."}
 
 ### Slide Yapısı ve Tipleri:
 1. **Slide 1 (cover)**: Dikkat çekici kısa başlık + merak uyandıran soru/istatistik
