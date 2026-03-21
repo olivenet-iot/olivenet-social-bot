@@ -51,7 +51,7 @@ if result["success"]:
 ## Reels Pipeline Akisi
 
 ```
-1. Veo/Sora -> video.mp4 (yerel dosya)
+1. Sora/Kling -> video.mp4 (yerel dosya)
 2. upload_video_to_cloudinary() -> public URL
 3. Instagram API -> create container with URL
 4. Instagram API -> publish container

@@ -58,7 +58,7 @@ class LongVideoPipeline(BasePipeline):
         Args:
             topic: Konu (None ise Planner'dan alınır)
             segment_count: Segment sayısı (2-6 arası, default 2)
-            model_id: Video model ID (kling-3.0-pro, sora-2, sora-2-pro, veo-3.1)
+            model_id: Video model ID (kling-3.0-pro, sora-2, sora-2-pro)
             transition_type: Geçiş tipi (crossfade, cut)
             transition_duration: Crossfade süresi (0.5s default)
             manual_topic_mode: True ise topic Creator ile işlenir

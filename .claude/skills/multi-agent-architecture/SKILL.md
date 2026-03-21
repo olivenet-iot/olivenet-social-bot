@@ -89,7 +89,7 @@ brain.is_dry_run  # True = kararlar loglanir, uretim yapilmaz
 4. Uygun production pipeline tetiklenir
 
 ### Brain Creative Parameters
-- `model_id`: sora-2, sora-2-pro, veo-3.1, kling-3.0-pro
+- `model_id`: sora-2, sora-2-pro, kling-3.0-pro
 - `visual_style`: cinematic_4k, 3d_render, neon_cyberpunk, anime, minimalist
 - `hook_type`: question, statistic, bold_claim, problem, value, fear, before_after, list, comparison, local
 - `carousel_style`: tech_blue, energy_green, warm_industrial, dark_premium, clean_minimal

@@ -42,7 +42,7 @@ MODEL_DEFAULTS = {
     "post": None,
 }
 
-VALID_MODELS = ["sora-2", "sora-2-pro", "veo-3.1", "kling-3.0-pro"]
+VALID_MODELS = ["sora-2", "sora-2-pro", "kling-3.0-pro"]
 VALID_VISUAL_STYLES = ["cinematic_4k", "3d_render", "neon_cyberpunk", "anime", "minimalist"]
 VALID_HOOK_TYPES = ["question", "statistic", "bold_claim", "problem", "value", "fear", "before_after", "list", "comparison", "local"]
 
@@ -259,14 +259,13 @@ YARATICI PARAMETRELER:
   - kling-3.0-pro: Hızlı üretim (2-3 dk), 15s'e kadar, ambient ses destekli. Endüstriyel, gerçekçi sahneler için ideal. Kling Direct API.
   - sora-2: Yüksek sinematik kalite, 12s max, yavaş (5-8 dk). Yaratıcı ve artistik sahneler için. Sesli reels'te iyi sonuç verir.
   - sora-2-pro: Sora 2'nin premium versiyonu, native speech destekli. Conversational ve voice reels için en iyi seçim.
-  - veo-3.1: Google'ın modeli, 8s max, native speech destekli. Hızlı ve kaliteli, doğa/açık alan sahneleri için güçlü.
 
   Modeli içeriğe göre seç:
   - Haber bazlı acil içerik → kling-3.0-pro (hızlı)
-  - Sinematik showcase → sora-2 veya veo-3.1
+  - Sinematik showcase → sora-2
   - Sesli anlatım → sora-2-pro
   - Conversational diyalog → sora-2-pro
-  - Teknik demo → kling-3.0-pro veya veo-3.1
+  - Teknik demo → kling-3.0-pro
   Mevcut modeller: {', '.join(VALID_MODELS)}
 - visual_style: Görsel stil. Seçenekler: {', '.join(VALID_VISUAL_STYLES)}. Varsayılan: cinematic_4k
   Stil rehberi:

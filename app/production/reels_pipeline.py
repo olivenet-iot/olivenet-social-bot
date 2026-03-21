@@ -20,11 +20,11 @@ class ReelsPipeline(BasePipeline):
     async def run(self, topic=None, force_model=None, manual_topic_mode=False, visual_style="cinematic_4k", viral_format=None, hook_type=None, opportunity=None, content_tone="educational") -> Dict[str, Any]:
         """
         Instagram Reels içeriği üret ve yayınla
-        Sora 2 Pro → Sora 2 → Veo 3 fallback zinciri ile
+        Sora 2 Pro → Sora 2 → Kling 3.0 fallback zinciri ile
 
         Args:
             topic: Konu (None ise Planner'dan alınır)
-            force_model: Model zorla ("sora-2", "sora-2-pro", "veo3")
+            force_model: Model zorla ("sora-2", "sora-2-pro", "kling_v3_pro")
             manual_topic_mode: Manuel konu modu (planner atlanır)
             visual_style: Görsel stil (cinematic_4k, anime, vb.)
             viral_format: Planlanmış viral format (pov, myth_busting, etc.)
@@ -125,12 +125,10 @@ class ReelsPipeline(BasePipeline):
                     if model == "kling_v3_pro":
                         return prompt_result.get("video_prompt_kling3") or prompt_result.get("video_prompt_kling", "")
                     return prompt_result.get("video_prompt_kling") or prompt_result.get("video_prompt_sora", "")
-                elif model and (model == "veo3" or model.startswith("veo")):
-                    return prompt_result.get("video_prompt_veo") or prompt_result.get("video_prompt_sora", "")
                 else:  # Sora veya default
-                    return prompt_result.get("video_prompt_sora") or prompt_result.get("video_prompt_veo", "")
+                    return prompt_result.get("video_prompt_sora") or prompt_result.get("video_prompt_kling3", "")
 
-            recommended_model = reels_prompt_result.get("recommended_model", "veo3")
+            recommended_model = reels_prompt_result.get("recommended_model", "kling_v3_pro")
             # force_model varsa onu kullan, yoksa recommended_model
             model_to_use = force_model or recommended_model
             video_prompt = get_video_prompt_for_model(reels_prompt_result, model_to_use)

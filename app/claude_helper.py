@@ -735,7 +735,7 @@ HTML icinde {{{{logo}}}} placeholder'i kullan.
 
 async def generate_video_prompt(post_text: str, topic: str) -> str:
     """
-    Claude Code ile Veo 3 için profesyonel video prompt'u üret.
+    Claude Code ile profesyonel video prompt'u üret.
 
     Args:
         post_text: Türkçe post metni
@@ -747,14 +747,14 @@ async def generate_video_prompt(post_text: str, topic: str) -> str:
     short_post = post_text[:400] if len(post_text) > 400 else post_text
 
     prompt = f"""
-## GÖREV: Veo 3 Video Prompt Mühendisliği
+## GÖREV: Video Prompt Mühendisliği
 
 Post metni (Türkçe): {short_post}
 Konu: {topic}
 
-Sen bir profesyonel video prompt mühendisisin. Google Veo 3 için mükemmel bir video prompt'u yazacaksın.
+Sen bir profesyonel video prompt mühendisisin. Mükemmel bir video prompt'u yazacaksın.
 
-### VEO 3 PROMPT KURALLARI:
+### VIDEO PROMPT KURALLARI:
 
 1. **DİL**: Mutlaka İNGİLİZCE yaz
 

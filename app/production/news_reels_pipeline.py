@@ -8,7 +8,7 @@ Pipeline akışı:
 1. Haber -> TTS script (Creator)
 2. Script -> Ses (OpenAI TTS)
 3. Haber -> Video prompt (Creator)
-4. Prompt -> Video (Sora/Kling/Veo)
+4. Prompt -> Video (Sora/Kling)
 5. Video + Ses -> Birleşik video (FFmpeg)
 6. Altyazı (opsiyonel, Whisper)
 7. Caption yazımı (Creator)
@@ -51,7 +51,7 @@ class NewsReelsPipeline(BasePipeline):
 
         Args:
             opportunity: content_opportunities tablosundan gelen dict
-            model_id: Video model (sora-2, kling-3.0-pro, veo-3)
+            model_id: Video model (sora-2, kling-3.0-pro)
             target_duration: Hedef video süresi (saniye)
             visual_style: Video görsel stili
             autonomous: True ise Telegram onayı beklemez
@@ -195,8 +195,7 @@ class NewsReelsPipeline(BasePipeline):
             video_prompt = (
                 reels_prompt_result.get(prompt_key) or
                 reels_prompt_result.get("video_prompt_sora") or
-                reels_prompt_result.get("video_prompt_wan") or
-                reels_prompt_result.get("video_prompt_veo", "")
+                reels_prompt_result.get("video_prompt_wan", "")
             )
 
             if not video_prompt or not video_prompt.strip():

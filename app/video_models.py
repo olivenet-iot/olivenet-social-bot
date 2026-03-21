@@ -5,7 +5,6 @@ Multi-model voice reels support for Olivenet Social Bot
 Models:
 - sora-2: OpenAI Sora 2 (sora_helper.py)
 - sora-2-pro: OpenAI Sora 2 Pro (sora_helper.py)
-- veo-3.1: Google Veo 3.1 (veo_helper.py)
 - kling-3.0-pro: Kuaishou Kling 3.0 Pro (kling_helper.py)
 """
 
@@ -41,22 +40,6 @@ VIDEO_MODELS: Dict[str, dict] = {
         "supports_speech": True,
         "conversational_only": True
     },
-    "veo-3.1": {
-        "name": "Veo 3.1",
-        "provider": "google",
-        "emoji": "🎬",
-        "durations": [4, 6, 8],
-        "default_duration": 8,
-        "max_duration": 8,
-        "aspect_ratio": "9:16",
-        "prompt_key": "video_prompt_veo",
-        "description": "Native audio + lip-sync (en iyi kalite)",
-        "helper_module": "veo_helper",
-        "helper_function": "generate_video_veo",
-        "model_id": "veo-3.1-generate-preview",
-        "has_native_audio": True,
-        "supports_speech": True
-    },
     "kling-3.0-pro": {
         "name": "Kling 3.0 Pro",
         "provider": "kling",
@@ -84,7 +67,7 @@ def get_model_config(model_id: str) -> dict:
                   Also accepts fal internal names (e.g., "kling_v3_pro")
 
     Returns:
-        Model configuration dict. Falls back to veo-3.1 if not found.
+        Model configuration dict. Falls back to kling-3.0-pro if not found.
     """
     # Direct key lookup
     if model_id in VIDEO_MODELS:
@@ -96,7 +79,7 @@ def get_model_config(model_id: str) -> dict:
             return config
 
     # Fallback
-    return VIDEO_MODELS["veo-3.1"]
+    return VIDEO_MODELS["kling-3.0-pro"]
 
 
 def get_available_models() -> List[str]:
@@ -128,10 +111,10 @@ def get_max_duration(model_id: str) -> int:
     Get maximum supported duration for a model.
 
     Args:
-        model_id: Model identifier (e.g., "veo-3.1", "kling-3.0-pro")
+        model_id: Model identifier (e.g., "kling-3.0-pro", "sora-2")
 
     Returns:
-        Maximum duration in seconds (e.g., Veo=8, Kling=15, Sora=12)
+        Maximum duration in seconds (e.g., Kling=15, Sora=12)
     """
     config = get_model_config(model_id)
     return config.get("max_duration", 10)
@@ -148,7 +131,7 @@ def get_prompt_key(model_id: str) -> str:
         Prompt key (e.g., "video_prompt_sora", "video_prompt_wan")
     """
     config = get_model_config(model_id)
-    return config.get("prompt_key", "video_prompt_veo")
+    return config.get("prompt_key", "video_prompt_sora")
 
 
 def validate_duration(model_id: str, duration: int) -> int:

@@ -14,7 +14,7 @@ AI destekli Instagram icerik otomasyonu. v2 mimaride Brain Agent, Feed System ve
 - **Feed System** - 10 RSS feed ile icerik firsati toplama, skorlama ve havuz yonetimi
 - **Multi-Agent Sistem** - 8 uzman agent (Brain, Orchestrator, Planner, Creator, Reviewer, Publisher, Analytics + BaseAgent)
 - **7 Production Pipeline** - post, reels, carousel, voice_reels, long_video, news_reels, conversational
-- **Video Uretimi** - Sora 2, Sora 2 Pro, Veo 3.1, Kling 3.0 Pro (Direct API)
+- **Video Uretimi** - Sora 2, Sora 2 Pro, Kling 3.0 Pro (fal.ai)
 - **Gorsel Uretimi** - FLUX.2 Pro (fotorealistik), Nano Banana (fal-ai/nano-banana-pro infographic)
 - **Sesli Reels** - OpenAI TTS (gpt-4o-mini-tts) ile Turkce seslendirme
 - **Otomatik Altyazi** - Whisper ile word-level timing
@@ -76,8 +76,8 @@ Detayli kurulum: [QUICKSTART.md](QUICKSTART.md)
     │                      │                  │
 ┌───▼────┐          ┌──────▼──────┐    ┌──────▼──────┐
 │ AGENTS │          │ AI SERVICES │    │   PUBLISH   │
-│ Creator│          │ Sora/Veo/   │    │ Instagram   │
-│Reviewer│          │ Kling/FLUX  │    │  Graph API  │
+│ Creator│          │ Sora/Kling/ │    │ Instagram   │
+│Reviewer│          │ FLUX/TTS    │    │  Graph API  │
 │Planner │          │ OpenAI TTS  │    └─────────────┘
 └────────┘          └─────────────┘
 
@@ -100,14 +100,13 @@ Detayli kurulum: [QUICKSTART.md](QUICKSTART.md)
 
 ---
 
-## Video Modelleri (4 model)
+## Video Modelleri (3 model)
 
 | Model | Provider | Sure | Ozellikler |
 |-------|----------|------|------------|
 | sora-2 | OpenAI | 4/8/12s | En yuksek kalite, gercekci |
 | sora-2-pro | OpenAI | 4/8/12s | Native speech, conversational only |
-| veo-3.1 | Google | 4/6/8s | Native audio + lip-sync |
-| kling-3.0-pro | Kling Direct API | 5/10/15s | Sinematik, fizik tabanli, native audio |
+| kling-3.0-pro | fal.ai | 5/10/15s | Sinematik, fizik tabanli, native audio |
 
 ---
 
@@ -177,8 +176,7 @@ Detayli kurulum: [QUICKSTART.md](QUICKSTART.md)
 |-----|------|-------|
 | Instagram Graph | Post yayinlama, insights | `instagram_helper.py` |
 | OpenAI Sora | Video uretimi | `sora_helper.py` |
-| Google Veo | Video uretimi | `veo_helper.py` |
-| Kling Direct API | Video uretimi (JWT auth) | `kling_helper.py` |
+| Kling (fal.ai) | Video uretimi | `kling_helper.py` |
 | FLUX.2 Pro | Gorsel uretimi | `flux_helper.py` |
 | Nano Banana | Infographic uretimi (fal-ai/nano-banana-pro) | `nano_banana_helper.py` |
 | OpenAI TTS | Turkce TTS (gpt-4o-mini-tts) | `openai_tts_helper.py` |
@@ -247,9 +245,6 @@ INSTAGRAM_USER_ID=...
 
 # Video
 OPENAI_API_KEY=...          # Sora
-GEMINI_API_KEY=...          # Veo
-KLING_ACCESS_KEY=...        # Kling Direct API
-KLING_SECRET_KEY=...        # Kling Direct API
 
 # Gorsel
 FLUX_API_KEY=...
@@ -284,7 +279,7 @@ Proje `.claude/skills/` altinda 11 optimize edilmis skill icerir:
 
 | Skill | Aciklama |
 |-------|----------|
-| `video-generation` | Sora/Veo/Kling Direct API model secimi |
+| `video-generation` | Sora/Kling model secimi |
 | `instagram-api` | Graph API v21.0 referansi |
 | `database-patterns` | SQLite CRUD ornekleri (12 tablo) |
 | `multi-agent-architecture` | v2 mimari, Brain Agent, pipeline akislari |

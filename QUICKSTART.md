@@ -60,9 +60,6 @@ INSTAGRAM_USER_ID=your_user_id
 
 # Video (En az biri)
 OPENAI_API_KEY=your_key          # Sora
-GEMINI_API_KEY=your_key          # Veo + Nano Banana
-KLING_ACCESS_KEY=your_key        # Kling Direct API
-KLING_SECRET_KEY=your_key        # Kling Direct API
 
 # Görsel
 FLUX_API_KEY=your_key

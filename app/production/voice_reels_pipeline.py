@@ -35,7 +35,7 @@ class VoiceReelsPipeline(BasePipeline):
         Sesli Instagram Reels içeriği üret ve yayınla.
 
         OpenAI TTS + Video + FFmpeg merge pipeline.
-        Multi-model desteği: Sora 2, Sora 2 Pro, Veo 3.1, Kling 3.0 Pro
+        Multi-model desteği: Sora 2, Sora 2 Pro, Kling 3.0 Pro
 
         Pipeline Akışı:
         1. Konu seçimi (Planner) veya manuel konu işleme (Creator)
@@ -53,7 +53,7 @@ class VoiceReelsPipeline(BasePipeline):
             force_model: Video modeli zorla (backward compat, deprecated)
             target_duration: Hedef süre (modele göre max sınır uygulanır)
             manual_topic_mode: True ise topic Creator ile profesyonelleştirilir
-            model_id: Video model ID (sora-2, sora-2-pro, veo-3.1, kling-3.0-pro)
+            model_id: Video model ID (sora-2, sora-2-pro, kling-3.0-pro)
             visual_style: Görsel stil (cinematic_4k, anime, vb.)
 
         Returns:
@@ -273,8 +273,7 @@ class VoiceReelsPipeline(BasePipeline):
             if not video_prompt:
                 video_prompt = (
                     reels_prompt_result.get("video_prompt_sora") or
-                    reels_prompt_result.get("video_prompt_wan") or
-                    reels_prompt_result.get("video_prompt_veo", "")
+                    reels_prompt_result.get("video_prompt_wan", "")
                 )
 
             complexity = reels_prompt_result.get("complexity", "medium")

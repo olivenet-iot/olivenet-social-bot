@@ -11,7 +11,7 @@ description: Common errors and fixes. Use when debugging or troubleshooting.
 |-------|-------|-----|
 | Telegram Parse Error | Markdown chars | `escape_markdown()` veya `parse_mode=None` |
 | Instagram Rate Limit | Too many calls | 0.3s delay ekle |
-| Video Timeout | Sora/Veo slow | `generate_video_smart()` kullan |
+| Video Timeout | Sora/Kling slow | `generate_video_smart()` kullan |
 | Container FINISHED timeout | IG processing | max_attempts=30, sleep=10s |
 | None.upper() | Missing null check | `(value or "").upper()` |
 | JSON decode error | Invalid response | `_clean_json_response()` |
@@ -53,10 +53,10 @@ else:
 ## Video Generation Fallback
 
 ```python
-# Sora fail → Veo fallback
+# Kling fail → Sora fallback
 result = await generate_video_smart(prompt, topic)
 if not result["success"] and result.get("fallback"):
-    result = await generate_video_veo3(prompt)
+    result = await generate_video_sora(prompt)
 ```
 
 ## JSON Cleanup

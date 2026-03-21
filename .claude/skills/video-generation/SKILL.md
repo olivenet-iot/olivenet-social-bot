@@ -1,6 +1,6 @@
 ---
 name: video-generation
-description: AI video generation with Sora, Veo, and Kling via fal.ai. Use when creating Reels, video prompts, or handling video generation workflows.
+description: AI video generation with Sora and Kling via fal.ai. Use when creating Reels, video prompts, or handling video generation workflows.
 ---
 
 # AI Video Generation
@@ -11,7 +11,6 @@ description: AI video generation with Sora, Veo, and Kling via fal.ai. Use when 
 |-------|----------|----------|----------|
 | sora-2 | OpenAI | 4/8/12s | Yüksek kalite, gerçekçi |
 | sora-2-pro | OpenAI | 4/8/12s | Native speech, conversational only |
-| veo-3.1 | Google | 4/6/8s | Native audio + lip-sync |
 | kling-3.0-pro | fal.ai | 5/10/15s | Sinematik, fizik tabanlı, native audio |
 
 ## Model Selection (Brain Agent)
@@ -21,16 +20,16 @@ Brain Agent otomatik model secimi yapar. Manuel secim icin:
 ```python
 from app.video_models import get_model_config, get_available_models, validate_duration
 
-models = get_available_models()  # ["sora-2", "sora-2-pro", "veo-3.1", "kling-3.0-pro"]
+models = get_available_models()  # ["sora-2", "sora-2-pro", "kling-3.0-pro"]
 config = get_model_config("kling-3.0-pro")
 duration = validate_duration("kling-3.0-pro", 15)  # -> 15
 
 # Model secim rehberi:
 # Haber bazlı acil icerik → kling-3.0-pro (hızlı, 2-3 dk)
-# Sinematik showcase → sora-2 veya veo-3.1
+# Sinematik showcase → sora-2
 # Sesli anlatım → sora-2-pro
 # Conversational diyalog → sora-2-pro
-# Teknik demo → kling-3.0-pro veya veo-3.1
+# Teknik demo → kling-3.0-pro
 ```
 
 ## Video Style System
@@ -52,10 +51,6 @@ style = get_style_config("cinematic_4k")
 # Sora (OpenAI)
 from app.sora_helper import generate_video_sora
 result = await generate_video_sora(prompt, model="sora-2", size="720x1280", duration=12)
-
-# Veo (Google)
-from app.veo_helper import generate_video_veo3
-result = await generate_video_veo3(prompt, aspect_ratio="9:16", duration_seconds=8)
 
 # Kling (via fal.ai)
 from app.kling_helper import KlingHelper
@@ -90,7 +85,6 @@ result = await kling.generate_video(
 
 ```bash
 OPENAI_API_KEY=...          # Sora
-GEMINI_API_KEY=...          # Veo
 FAL_API_KEY=...             # Kling video, infographics, lip-sync
 ```
 
@@ -101,7 +95,7 @@ FAL_API_KEY=...             # Kling video, infographics, lip-sync
 {"success": True, "video_path": "/path/to.mp4", "model_used": "kling-3.0-pro"}
 
 # Error with fallback
-{"success": False, "error": "...", "fallback": "veo3"}
+{"success": False, "error": "...", "fallback": "sora"}
 ```
 
 ## Best Practices
@@ -125,9 +119,8 @@ FAL_API_KEY=...             # Kling video, infographics, lip-sync
 
 ## Deep Links
 
-- `app/video_models.py` - Model configs (4 model)
+- `app/video_models.py` - Model configs (3 model)
 - `app/video_styles.py` - 10 görsel stil
 - `app/sora_helper.py` - Sora + smart selection
-- `app/veo_helper.py` - Veo generation
 - `app/kling_helper.py` - Kling via fal.ai
 - `context/reels-prompts.md` - Prompt examples

@@ -72,7 +72,7 @@ Show natural gestures and expressions, NO actual speech.
             topic: Topic (None uses Planner suggestion)
             manual_topic_mode: Process topic through Creator if True
             visual_style: Görsel stil (cinematic_4k, anime, vb.)
-            model_id: Video model (sora-2, sora-2-pro, veo-3.1, kling-3.0-pro)
+            model_id: Video model (sora-2, sora-2-pro, kling-3.0-pro)
 
         Returns:
             Pipeline result dict
@@ -128,12 +128,9 @@ Show natural gestures and expressions, NO actual speech.
             model_config = get_model_config(model_id)
             max_duration = model_config.get("max_duration", 12)
 
-            native_speech_models = ["sora-2", "sora-2-pro", "veo-3.1"]
+            native_speech_models = ["sora-2", "sora-2-pro"]
             if model_id in native_speech_models:
-                if model_id in ["sora-2", "sora-2-pro"]:
-                    target_duration = min(12, max_duration)  # Sora API max 12s
-                else:
-                    target_duration = min(8, max_duration)  # Veo = 8s
+                target_duration = min(12, max_duration)  # Sora API max 12s
             else:
                 target_duration = 12  # TTS+Lipsync için sabit
 
@@ -183,29 +180,20 @@ Show natural gestures and expressions, NO actual speech.
             self.state = PipelineState.CREATING_VISUAL
 
             if model_id in native_speech_models:
-                # ===== NATIVE SPEECH MODELS (Sora 2, Veo 3.1) =====
+                # ===== NATIVE SPEECH MODELS (Sora 2, Sora 2 Pro) =====
                 self.log(f"[CONV REELS] Native speech modu ({model_id})")
 
-                if model_id in ["sora-2", "sora-2-pro"]:
-                    from app.sora_helper import generate_video_sora
-                    from app.video_models import get_model_config
-                    sora_config = get_model_config(model_id)
-                    sora_duration = sora_config.get("default_duration", 12)
+                from app.sora_helper import generate_video_sora
+                from app.video_models import get_model_config
+                sora_config = get_model_config(model_id)
+                sora_duration = sora_config.get("default_duration", 12)
 
-                    conversation_result = await generate_video_sora(
-                        prompt=video_prompt,
-                        duration=sora_duration,
-                        size="720x1280",
-                        model=model_id
-                    )
-                elif model_id == "veo-3.1":  # veo-3.1
-                    from app.veo_helper import generate_video_veo
-                    conversation_result = await generate_video_veo(
-                        prompt=video_prompt,
-                        duration_seconds=8,
-                        aspect_ratio="9:16",
-                        model="veo-3.1-generate-preview"
-                    )
+                conversation_result = await generate_video_sora(
+                    prompt=video_prompt,
+                    duration=sora_duration,
+                    size="720x1280",
+                    model=model_id
+                )
 
                 if not conversation_result.get("success"):
                     raise Exception(f"Conversation video hatası: {conversation_result.get('error')}")

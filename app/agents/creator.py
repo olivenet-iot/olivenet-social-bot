@@ -464,7 +464,6 @@ VIRAL_CONTENT_FORMATS = {
         "recommended_models": ["sora-2", "kling_v3_pro"],
         "model_notes": {
             "sora": "First-person POV, handheld camera shake, phone screen reveal, dramatic lighting shift",
-            "veo": "[00:00-00:02] POV perspective, phone notification. [00:02-00:04] Reaction reveal. [00:04-00:06] Solution shown",
             "kling": "POV handheld shot, first person view, phone notification, dramatic reveal, cinematic"
         },
         "ai_limitations": "Avoid showing hands holding phone - focus on screen/environment reaction"
@@ -484,10 +483,9 @@ VIRAL_CONTENT_FORMATS = {
         "camera_movement": "static_then_dolly",
         "shot_type": "before_after_transition",
         "transition_style": "wipe_or_cut",
-        "recommended_models": ["veo3", "sora-2"],
+        "recommended_models": ["sora-2", "kling_v3_pro"],
         "model_notes": {
             "sora": "Two-part video: First half shows wrong way with red/frustrated tint, hard cut to right way with green/satisfied tint",
-            "veo": "[00:00-00:03] Wrong approach scene, frustrated mood, red tint. [00:03-00:06] Same scene correct approach, satisfied, green tint",
             "kling": "Before-after comparison, frustrated to satisfied transition, color shift from red to green, mood change"
         },
         "ai_limitations": "AI cannot do true split-screen - use sequential before/after with color grading instead"
@@ -507,10 +505,9 @@ VIRAL_CONTENT_FORMATS = {
         "camera_movement": "slow_push_in",
         "shot_type": "reveal_close_up",
         "transition_style": "blur_to_sharp",
-        "recommended_models": ["veo3", "sora-2", "kling_v3_pro"],
+        "recommended_models": ["sora-2", "kling_v3_pro"],
         "model_notes": {
             "sora": "Mystery reveal: blurred/obscured background slowly sharpens to show hidden detail, dramatic lighting builds",
-            "veo": "[00:00-00:02] Obscured/blurred view, mystery. [00:02-00:04] Camera pushes in, focus reveals. [00:04-00:06] Clear detail shot, discovery",
             "kling": "Slow zoom reveal, blur to sharp focus, mystery lighting, discovery moment, dramatic reveal"
         },
         "ai_limitations": "Works well with most models - avoid text overlays, use visual mystery instead"
@@ -530,10 +527,9 @@ VIRAL_CONTENT_FORMATS = {
         "camera_movement": "slow_dramatic_push",
         "shot_type": "warning_reveal",
         "transition_style": "ominous_slow",
-        "recommended_models": ["sora-2", "veo3", "kling_v3_pro"],
+        "recommended_models": ["sora-2", "kling_v3_pro"],
         "model_notes": {
             "sora": "Warning atmosphere: red-tinted lighting gradually builds, slow ominous push to concerning detail, dramatic tension",
-            "veo": "[00:00-00:02] Normal scene, calm. [00:02-00:04] Red tint grows, warning mood builds. [00:04-00:06] Problem revealed, dramatic",
             "kling": "Slow push to problem area, red warning lighting gradually increasing, ominous reveal, dramatic tension"
         },
         "ai_limitations": "Use red color grading and ominous mood lighting - avoid red flag emoji/symbol rendering"
@@ -556,7 +552,6 @@ VIRAL_CONTENT_FORMATS = {
         "recommended_models": ["kling_v3_pro", "sora-2"],
         "model_notes": {
             "sora": "Timelapse-style progress montage: morning light setup, midday work intensity, evening golden hour results celebration",
-            "veo": "[00:00-00:03] Challenge start, determined mood. [00:03-00:05] Mid-progress montage, effort. [00:05-00:08] Final result reveal, celebration",
             "kling": "Fast-paced montage, time passing through lighting changes, progress shots, energetic dynamic movement"
         },
         "ai_limitations": "Best with longer duration models (Wan 15s) - single shot models need time compression visual cues"
@@ -576,10 +571,9 @@ VIRAL_CONTENT_FORMATS = {
         "camera_movement": "dramatic_zoom",
         "shot_type": "impact_reveal",
         "transition_style": "slam_zoom",
-        "recommended_models": ["sora-2", "veo3"],
+        "recommended_models": ["sora-2", "kling_v3_pro"],
         "model_notes": {
             "sora": "Visual QUANTITY representation: show MANY sensors/devices/items to imply large number, dramatic zoom to scale",
-            "veo": "[00:00-00:02] Wide shot showing massive scale/quantity. [00:02-00:04] Dramatic zoom to detail. [00:04-00:06] Impact close-up",
             "kling": "Dramatic zoom to visual quantity display, scale reveal through many items, impact lighting, impressive scope"
         },
         "ai_limitations": "AI CANNOT render numbers/text - show VISUAL QUANTITY instead (many items, scale comparison, before/after size)"
@@ -599,10 +593,9 @@ VIRAL_CONTENT_FORMATS = {
         "camera_movement": "static_comparison",
         "shot_type": "contrast_reveal",
         "transition_style": "cross_dissolve",
-        "recommended_models": ["veo3", "sora-2"],
+        "recommended_models": ["sora-2", "kling_v3_pro"],
         "model_notes": {
             "sora": "Visual contrast: expectation scene (complex, expensive-looking, intimidating) dissolves to reality (simple, accessible, friendly)",
-            "veo": "[00:00-00:03] Myth visualization - intimidating, complex. [00:03-00:06] Dissolve transition to reality - approachable, simple",
             "kling": "Expectation to reality visual transition, mood shift from intimidating to friendly, contrast reveal, dissolve"
         },
         "ai_limitations": "Use visual metaphors for myth/reality contrast - avoid X marks, checkmarks, or text rendering"
@@ -625,7 +618,6 @@ VIRAL_CONTENT_FORMATS = {
         "recommended_models": ["kling_v3_pro"],
         "model_notes": {
             "sora": "Day progression through lighting: dawn pink light morning routine, bright midday work, golden hour evening review",
-            "veo": "[00:00-00:03] Morning scene, dawn light, start of day. [00:03-00:05] Midday activity, bright. [00:05-00:08] Evening wind-down, golden hour",
             "kling": "Day montage, lighting shifts dramatically from dawn pink to midday bright to dusk golden, routine activities flow"
         },
         "ai_limitations": "Wan 15s is IDEAL for this format - captures full day progression through multi-shot, others need lighting cues"
@@ -690,7 +682,7 @@ class CreatorAgent(BaseAgent):
         """
         Check if text should be avoided in this visual type.
 
-        AI-generated visuals (FLUX, Veo, Sora, Gemini) cannot reliably render text.
+        AI-generated visuals (FLUX, Sora, Kling) cannot reliably render text.
         HTML-rendered visuals (infographic, carousel) can include text.
         """
         # HTML render = text OK, AI generation = avoid text
@@ -1640,7 +1632,7 @@ Marka renkleri: olive green (#4a7c4a), sky blue (#38bdf8)
         elif visual_type == "video":
             prompt_guide = ""
             model_instructions = f"""
-Veo 3 video için İngilizce prompt yaz.
+Video için İngilizce prompt yaz.
 Kamera hareketi + Sahne + Işık + Renk paleti + Atmosfer
 5 saniyelik video için uygun, tek sahne.
 {no_text_suffix}"""
@@ -1776,7 +1768,7 @@ Sadece JSON döndür.
     async def create_reels_prompt(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Instagram Reels için profesyonel video prompt üret
-        Sora 2 ve Veo 3 formatlarını destekler
+        Sora 2 ve Kling 3.0 formatlarını destekler
         """
         self.log("Reels video prompt'u oluşturuluyor...")
 
@@ -1943,8 +1935,6 @@ Bu Reels için önerilen viral format: **{viral_format['format_name']}**
 
 **SORA prompt için:** {model_notes.get('sora', 'Use cinematic approach with detailed scene description')}
 
-**VEO prompt için:** {model_notes.get('veo', 'Use timestamp [00:00-00:02] format with audio cues')}
-
 **KLING prompt için:** {model_notes.get('kling', 'Keep under 200 chars, comma-separated, simple structure')}
 
 
@@ -1983,11 +1973,10 @@ Tüm video prompt'larının BAŞINA şu stil prefix'ini ekle: "{style_prefix}"
 ```json
 {{
     "video_prompt_sora": "SORA 2 formatında detaylı İngilizce prompt (sahne + cinematography + lighting + actions + sound)",
-    "video_prompt_veo": "VEO 3 timestamp formatında İngilizce prompt ([00:00-00:02] format)",
     "video_prompt_kling": "KLING formatında kısa İngilizce prompt (Subject + Movement + Scene + Camera + Lighting + Atmosphere, virgülle ayrılmış, max 200 karakter)",
     "video_prompt_kling3": "KLING 3.0 formatında sinematik İngilizce prompt (sahne yönetmenliği tarzı, explicit kamera + hareket talimatları, zaman içinde gelişim, 300-600 karakter)",
     "complexity": "low|medium|high",
-    "recommended_model": "veo3|sora-2|sora-2-pro|kling_v3_pro",
+    "recommended_model": "sora-2|sora-2-pro|kling_v3_pro",
     "recommended_duration": 5,
     "hook_description": "İlk 2 saniyede ne görünecek (Türkçe)",
     "caption_ig": "Instagram Reels caption (Türkçe, 80-120 kelime, eğitici mikro-blog: teknik bilgi hook + 3-5 bilgi maddesi + düşündürücü kapanış, Olivenet minimal, satış dili ve agresif CTA YASAK, emoji'li, hashtag'ler dahil)",
@@ -1998,7 +1987,7 @@ Tüm video prompt'larının BAŞINA şu stil prefix'ini ekle: "{style_prefix}"
 ```
 
 ### ÖNEMLİ KURALLAR:
-1. video_prompt_sora, video_prompt_veo, video_prompt_kling, video_prompt_kling3, video_prompt_hailuo ve video_prompt_wan İNGİLİZCE olmalı
+1. video_prompt_sora, video_prompt_kling, video_prompt_kling3 İNGİLİZCE olmalı
 2. 9:16 dikey format belirt (720x1280)
 3. Süre 5-6 saniye hedefle (Kling için 10 saniyeye kadar olabilir)
 4. İlk 2 saniye HOOK olmalı - dikkat çekici
@@ -2028,7 +2017,7 @@ Tüm video prompt'larının BAŞINA şu stil prefix'ini ekle: "{style_prefix}"
 - Örnek: "A sleek IoT sensor module mounted on industrial machinery pulses with sky blue diagnostic light. Camera holds a medium shot, then slowly orbits 180 degrees around the device. As it orbits, holographic data streams emerge from the sensor, flowing upward like aurora waves. The camera settles into a close-up as warning indicators shift from amber to green. Photorealistic 3D render, Octane quality, volumetric lighting, olive green and sky blue palette."
 
 ### COMPLEXITY KURALLARI:
-- LOW: Tek sahne, statik/basit hareket → veo3 veya kling_v3_pro
+- LOW: Tek sahne, statik/basit hareket → kling_v3_pro
 - MEDIUM: Kamera takibi, 2-3 element → sora-2 veya kling_v3_pro
 - HIGH: Dönüşüm, kompleks hareket → sora-2-pro
 - CINEMATIC: Sahne yönetmenliği gerektiren, kamera + obje hareketi + fizik → kling_v3_pro
@@ -2063,7 +2052,7 @@ Sadece JSON döndür, başka açıklama ekleme.
                 result = json.loads(self._clean_json_response(response))
 
                 # Video prompt var mı kontrol et
-                video_prompt = result.get("video_prompt_sora") or result.get("video_prompt_veo") or result.get("video_prompt_wan", "")
+                video_prompt = result.get("video_prompt_sora") or result.get("video_prompt_kling3") or result.get("video_prompt_kling", "")
 
                 if video_prompt and video_prompt.strip():
                     self.log(f"[REELS PROMPT] Basarili! Video prompt: {len(video_prompt)} chars")
@@ -2099,7 +2088,7 @@ Sadece JSON döndür, başka açıklama ekleme.
             update_post(post_id, visual_prompt=video_prompt)
 
         complexity = result.get("complexity", "medium")
-        model = result.get("recommended_model", "veo3")
+        model = result.get("recommended_model", "kling_v3_pro")
 
         self.log(f"Reels prompt oluşturuldu")
         self.log(f"   Complexity: {complexity}")
