@@ -258,7 +258,9 @@ class NewsReelsPipeline(BasePipeline):
                     creator=self.creator,
                     post_text=post_text,
                     topic=title,
-                    is_autonomous=True
+                    is_autonomous=True,
+                    content_tone=content_tone,
+                    news_context=news_context
                 )
 
                 if gate_result["passed"]:

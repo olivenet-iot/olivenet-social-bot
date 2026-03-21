@@ -35,7 +35,9 @@ class QualityGate:
         reviewer,
         post_text: str,
         topic: str,
-        is_autonomous: bool = False
+        is_autonomous: bool = False,
+        content_tone: str = None,
+        news_context: str = None
     ) -> Dict[str, Any]:
         """
         İçeriği review et ve sonuç döner.
@@ -51,11 +53,17 @@ class QualityGate:
         """
         threshold = self.autonomous_min if is_autonomous else self.min_score
 
-        review_result = await reviewer.execute({
+        review_input = {
             "action": "review_post",
             "post_text": post_text,
             "topic": topic
-        })
+        }
+        if content_tone:
+            review_input["content_tone"] = content_tone
+        if news_context:
+            review_input["news_context"] = news_context
+
+        review_result = await reviewer.execute(review_input)
 
         score = review_result.get("total_score", 0)
         decision = review_result.get("decision", "reject")
@@ -83,7 +91,9 @@ class QualityGate:
         creator,
         post_text: str,
         topic: str,
-        is_autonomous: bool = False
+        is_autonomous: bool = False,
+        content_tone: str = None,
+        news_context: str = None
     ) -> Dict[str, Any]:
         """
         Review + otomatik revision döngüsü.
@@ -92,7 +102,10 @@ class QualityGate:
         current_text = post_text
 
         for attempt in range(self.max_revisions + 1):
-            result = await self.check(reviewer, current_text, topic, is_autonomous)
+            result = await self.check(
+                reviewer, current_text, topic, is_autonomous,
+                content_tone=content_tone, news_context=news_context
+            )
 
             if result["passed"]:
                 result["post_text"] = current_text
@@ -102,12 +115,18 @@ class QualityGate:
             if attempt < self.max_revisions and result["can_revise"]:
                 logger.info(f"Revising (attempt {attempt + 1}): {result['feedback'][:80]}")
 
-                revise_result = await creator.execute({
+                revise_input = {
                     "action": "revise_post",
                     "original_text": current_text,
                     "feedback": result["feedback"],
                     "topic": topic
-                })
+                }
+                if content_tone:
+                    revise_input["content_tone"] = content_tone
+                if news_context:
+                    revise_input["news_context"] = news_context
+
+                revise_result = await creator.execute(revise_input)
                 current_text = revise_result.get("revised_text", current_text)
             else:
                 break

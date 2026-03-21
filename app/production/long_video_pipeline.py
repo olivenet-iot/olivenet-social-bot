@@ -433,7 +433,8 @@ class LongVideoPipeline(BasePipeline):
                 "post_id": post_id,
                 "content_type": "reels",
                 "caption": caption,
-                "video_path": final_video_path
+                "video_path": final_video_path,
+                "content_tone": content_tone
             })
 
             score = review_result.get("score", 7)

@@ -370,7 +370,9 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                         "action": "review_post",
                         "post_text": content_result.get("post_text"),
                         "topic": topic_result.get("topic"),
-                        "post_id": content_result.get("post_id")
+                        "post_id": content_result.get("post_id"),
+                        "content_tone": content_tone,
+                        "news_context": self._build_news_context(opportunity) if opportunity else None
                     })
 
                     self.current_data["review"] = review_result

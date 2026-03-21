@@ -435,7 +435,8 @@ class VoiceReelsPipeline(BasePipeline):
                 "action": "review_post",
                 "post_text": content_result.get("post_text_ig", ""),
                 "topic": topic,
-                "post_id": content_result.get("post_id")
+                "post_id": content_result.get("post_id"),
+                "content_tone": content_tone
             })
 
             score = review_result.get("total_score", 0)

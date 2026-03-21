@@ -191,9 +191,55 @@ Sadece JSON döndür.
         post_text = input_data.get("post_text", "")
         topic = input_data.get("topic", "")
         post_id = input_data.get("post_id")
+        content_tone = input_data.get("content_tone")
 
         company_profile = self.load_context("company-profile.md")
         content_strategy = self.load_context("content-strategy.md")
+
+        # Tone-specific review guidance
+        TONE_REVIEW_GUIDANCE = {
+            "news_commentary": """
+### İÇERİK TONU: HABER YORUMU
+Bu post bir HABER ANALİZİ olarak yazılmıştır — pazarlama postu DEĞİLDİR.
+Değerlendirme kriterleri buna göre ayarlanmalıdır:
+- Hook: Haber başlığı veya çarpıcı bir istatistik ile açılmalı
+- Değer: Sektörel farkındalık ve bilgi paylaşımı yeterlidir, ürün tanıtımı GEREKMEZ
+- Marka Uyumu: Olivenet'in sektörel otorite sesini yansıtmalı, SATIŞ DİLİ OLMAMALI
+- CTA: Yorum/tartışma daveti yeterlidir, "DM atın" gibi satış CTA'sı GEREKMEZ
+- Netlik: Haber kaynağı belirtilmiş mi? Olivenet perspektifi eklenmiş mi?
+NOT: Bu tür içeriğin LinkedIn tonunda olması NORMALDIR ve OLUMLU değerlendirilmelidir.""",
+
+            "educational": """
+### İÇERİK TONU: EĞİTİCİ
+Bu post bir EĞİTİM İÇERİĞİ olarak yazılmıştır.
+- Hook: Soru veya merak uyandırıcı ifade
+- Değer: Öğretici bilgi, teknik detay
+- Marka Uyumu: Bilgi paylaşımı tonu, satış dili yok
+- CTA: "Kaydet" veya "Arkadaşını etiketle" gibi organik CTA yeterli
+- Netlik: Teknik terimler açıklanmış mı?""",
+
+            "showcase": """
+### İÇERİK TONU: SHOWCASE
+Bu post Olivenet'in GERÇEK DENEYİMİNİ anlatmaktadır.
+- Hook: Proje detayı veya sonuç ile açılmalı
+- Değer: Gerçek uygulama örneği gösterilmeli
+- Marka Uyumu: Samimi, mütevazı, birinci şahıs
+- CTA: Soru veya merak uyandırma yeterli
+- Netlik: Proje detayları somut mu?""",
+
+            "thought_leadership": """
+### İÇERİK TONU: DÜŞÜNCE LİDERLİĞİ
+Bu post bir SEKTÖR ANALİZİ olarak yazılmıştır.
+- Hook: Güçlü bir tez veya provokatif soru
+- Değer: Özgün bakış açısı, trend analizi
+- Marka Uyumu: Kişisel/profesyonel görüş tonu
+- CTA: Tartışma daveti yeterli
+- Netlik: Argüman desteklenmiş mi?"""
+        }
+
+        tone_guidance_section = ""
+        if content_tone and content_tone in TONE_REVIEW_GUIDANCE:
+            tone_guidance_section = TONE_REVIEW_GUIDANCE[content_tone]
 
         prompt = f"""
 ## GÖREV: Post Kalite Kontrolü
@@ -208,21 +254,26 @@ Sadece JSON döndür.
 Konu: {topic}
 
 {post_text}
+{tone_guidance_section}
 
 ---
 
 Bu post'u aşağıdaki kriterlere göre değerlendir (1-10 puan):
 
 1. **Hook Etkisi** (hook_score): İlk cümle dikkat çekiyor mu?
-2. **Değer Önerisi** (value_score): Okuyucuya ne fayda sağlıyor?
-3. **Marka Uyumu** (brand_score): Şirket tonu ve kimliğine uyuyor mu?
+2. **Değer Önerisi** (value_score): Okuyucuya ne fayda sağlıyor? (İçerik tonuna göre değerlendir)
+3. **Marka Uyumu** (brand_score): İçerik tonuna uygun mu? (Her ton farklı değerlendirilir)
 4. **Netlik** (clarity_score): Mesaj anlaşılır mı?
-5. **CTA** (cta_score): Aksiyon çağrısı etkili mi?
+5. **CTA** (cta_score): İçerik tonuna uygun aksiyon çağrısı var mı?
 
 Toplam Puan Hesaplama:
-- 7+ = ONAYLA (approve)
-- 5-7 = REVİZYON İSTE (revise)
-- <5 = REDDET (reject)
+total_score = (hook_score × 0.25) + (value_score × 0.25) + (brand_score × 0.20) + (clarity_score × 0.20) + (cta_score × 0.10)
+NOT: CTA ağırlığı düşük çünkü her içerik türü güçlü CTA gerektirmez.
+
+Karar:
+- total_score 7+ = ONAYLA (approve)
+- total_score 5-7 = REVİZYON İSTE (revise)
+- total_score <5 = REDDET (reject)
 
 ÇIKTI FORMATI (JSON):
 ```json

@@ -127,7 +127,9 @@ class BasePipeline(ABC):
         post_text: str,
         topic: str,
         min_score: float = 7.0,
-        max_revisions: int = 2
+        max_revisions: int = 2,
+        content_tone: str = None,
+        news_context: str = None
     ) -> Dict[str, Any]:
         """
         Ortak review + revision döngüsü.
@@ -136,11 +138,17 @@ class BasePipeline(ABC):
         self.state = PipelineState.REVIEWING
 
         for attempt in range(max_revisions + 1):
-            review_result = await self.reviewer.execute({
+            review_input = {
                 "action": "review_post",
                 "post_text": post_text,
                 "topic": topic
-            })
+            }
+            if content_tone:
+                review_input["content_tone"] = content_tone
+            if news_context:
+                review_input["news_context"] = news_context
+
+            review_result = await self.reviewer.execute(review_input)
 
             score = review_result.get("total_score", 0)
             decision = review_result.get("decision", "reject")
@@ -159,12 +167,18 @@ class BasePipeline(ABC):
                 feedback = review_result.get("feedback", "")
                 self.log(f"Revising post (feedback: {feedback[:100]}...)")
 
-                revise_result = await self.creator.execute({
+                revise_input = {
                     "action": "revise_post",
                     "original_text": post_text,
                     "feedback": feedback,
                     "topic": topic
-                })
+                }
+                if content_tone:
+                    revise_input["content_tone"] = content_tone
+                if news_context:
+                    revise_input["news_context"] = news_context
+
+                revise_result = await self.creator.execute(revise_input)
                 post_text = revise_result.get("revised_text", post_text)
             else:
                 break

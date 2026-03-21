@@ -295,7 +295,9 @@ class CarouselPipeline(BasePipeline):
                     "post_text": carousel_content.get("caption", ""),
                     "content_type": "carousel",
                     "slide_count": len(image_urls),
-                    "topic": topic
+                    "topic": topic,
+                    "content_tone": content_tone,
+                    "news_context": self._build_news_context(opportunity) if opportunity else None
                 })
 
                 score = review_result.get("total_score", 7)

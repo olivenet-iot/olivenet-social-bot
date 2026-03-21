@@ -102,6 +102,23 @@
 - Şirket değerleri
 - Kilometre taşları
 
+### 8. Haber Yorumu / Sektör Analizi
+**Amaç:** Sektördeki önemli gelişmeleri Olivenet perspektifinden yorumlamak
+**Sıklık:** Haftada 1-2 (RSS/haber kaynaklarından)
+**Format:** Tek görsel veya video reels
+**Ton:** Profesyonel, faktöel, analitik — LinkedIn tonu normaldir ve Instagram'da da çalışır
+**Örnekler:**
+- Sektördeki yeni iş birlikleri ve anlaşmalar
+- Teknoloji trendleri ve gelişmeler
+- Rakip/partner şirket haberleri
+- Regülasyon ve standart değişiklikleri
+
+**Kurallar:**
+- Haber kaynağını belirt, objektif ol
+- Olivenet'in bu gelişmeyle ilişkisini kısa ve mütevazı şekilde ekle
+- Satış dili YASAK — bilgilendirme ve otorite inşası odaklı
+- "Ne oldu? Neden önemli? Sektöre etkisi ne?" yapısını takip et
+
 ---
 
 ## Konu Kategorileri ve Öneriler
