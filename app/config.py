@@ -120,8 +120,8 @@ class Settings(BaseSettings):
     kling_access_key: str = Field(default="", description="Kling API access key")
     kling_secret_key: str = Field(default="", description="Kling API secret key")
 
-    # FAL.ai Settings (lip-sync and infographic generation)
-    fal_api_key: str = Field(default="", description="FAL API key for lip-sync and infographic generation")
+    # FAL.ai Settings (video generation, infographics, lip-sync)
+    fal_api_key: str = Field(default="", description="FAL API key for video, infographic, and lip-sync generation")
 
     # OpenAI TTS Settings
     openai_tts_model: str = Field(default="gpt-4o-mini-tts", description="OpenAI TTS model")

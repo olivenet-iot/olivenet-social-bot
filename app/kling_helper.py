@@ -1,17 +1,15 @@
 """
-Kling AI Direct API Helper - Text-to-Video Generation
-Kuaishou Kling 3.0 Pro via direct API (replaces fal.ai middleman)
+Kling AI Video Helper - Text-to-Video Generation via fal.ai
+Kuaishou Kling 3.0 Pro via fal.ai queue API (pay-as-you-go)
 
-Base URL: https://api-singapore.klingai.com
-Auth: JWT (HS256) with access_key/secret_key
+Endpoint: fal-ai/kling-video/v3/pro/text-to-video
+Auth: Key {FAL_API_KEY}
 """
 import os
-import time
 import logging
 import httpx
 import asyncio
 import uuid
-import jwt
 from typing import Dict, Any, Optional
 from datetime import datetime
 
@@ -19,45 +17,16 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
+FAL_API_KEY = settings.fal_api_key or os.getenv("FAL_API_KEY", "")
+FAL_BASE_URL = "https://queue.fal.run"
+FAL_ENDPOINT = "fal-ai/kling-video/v3/pro/text-to-video"
+
 
 class KlingHelper:
-    """Direct Kling AI API integration for video generation."""
-
-    BASE_URL = "https://api-singapore.klingai.com"
-
-    # TODO: multi_prompt support for multi-shot (up to 6 shots, 3-15s)
+    """Kling AI video generation via fal.ai queue API."""
 
     def __init__(self):
-        self.access_key = settings.kling_access_key or os.getenv("KLING_ACCESS_KEY", "")
-        self.secret_key = settings.kling_secret_key or os.getenv("KLING_SECRET_KEY", "")
-        self._token: Optional[str] = None
-        self._token_expires: float = 0
-
-    def _generate_jwt(self) -> str:
-        """Generate JWT token with auto-renewal (30 min expiry, renew at 5 min remaining)."""
-        now = time.time()
-
-        # Return cached token if still valid (> 5 min remaining)
-        if self._token and (self._token_expires - now) > 300:
-            return self._token
-
-        if not self.access_key or not self.secret_key:
-            raise ValueError(
-                "KLING_ACCESS_KEY ve KLING_SECRET_KEY tanimli degil! "
-                ".env dosyasina ekleyin."
-            )
-
-        headers = {"alg": "HS256", "typ": "JWT"}
-        payload = {
-            "iss": self.access_key,
-            "exp": int(now) + 1800,  # 30 min
-            "nbf": int(now) - 5,
-        }
-
-        self._token = jwt.encode(payload, self.secret_key, algorithm="HS256", headers=headers)
-        self._token_expires = now + 1800
-        logger.debug("JWT token generated, expires in 30 min")
-        return self._token
+        self.api_key = FAL_API_KEY
 
     async def generate_video(
         self,
@@ -71,68 +40,50 @@ class KlingHelper:
         generate_audio: Optional[bool] = None,
     ) -> Dict[str, Any]:
         """
-        Generate video via Kling Direct API.
+        Generate video via Kling 3.0 Pro on fal.ai.
 
         Args:
             prompt: Video description (max 2500 chars)
             duration: 5 or 10 seconds
             aspect_ratio: "9:16", "16:9", or "1:1"
-            model_name: "kling-v3" (Kling 3.0)
-            mode: "pro" or "std"
+            model_name: Kept for interface compat (encoded in fal.ai endpoint)
+            mode: Kept for interface compat (encoded in fal.ai endpoint)
             negative_prompt: What to avoid
             cfg_scale: Guidance scale (0-1)
-            generate_audio: Ignored for direct API (kept for interface compat)
+            generate_audio: True/False for native audio, None = fal.ai default (True)
 
         Returns:
             {"success": bool, "video_url": str, "video_path": str, "duration": int, ...}
         """
-        logger.info(f"Kling Direct API video uretimi: {model_name}/{mode}, {duration}s, {aspect_ratio}")
+        logger.info(f"Kling fal.ai video uretimi: {duration}s, {aspect_ratio}")
+
+        if not self.api_key:
+            return {
+                "success": False,
+                "error": "FAL_API_KEY not configured",
+                "model": "Kling 3.0 Pro",
+                "provider": "fal.ai",
+            }
 
         try:
-            token = self._generate_jwt()
-
             request_body = {
                 "prompt": prompt[:2500],
-                "negative_prompt": negative_prompt[:2500],
-                "model_name": model_name,
                 "duration": str(duration),
                 "aspect_ratio": aspect_ratio,
-                "mode": mode,
+                "negative_prompt": negative_prompt,
                 "cfg_scale": cfg_scale,
             }
 
-            headers = {
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json",
-            }
+            if generate_audio is not None:
+                request_body["generate_audio"] = generate_audio
 
-            # Submit task
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                response = await client.post(
-                    f"{self.BASE_URL}/v1/videos/text2video",
-                    json=request_body,
-                    headers=headers,
-                )
-                response.raise_for_status()
-                result = response.json()
+            # Submit and poll fal.ai queue
+            result = await self._submit_and_poll(request_body)
 
-            task_id = result.get("data", {}).get("task_id")
-            if not task_id:
-                raise Exception(f"Task ID alinamadi: {result}")
-
-            logger.info(f"Kling task olusturuldu: {task_id}")
-
-            # Poll until complete
-            task_result = await self._poll_task(task_id)
-
-            # Extract video URL from result
-            works = task_result.get("data", {}).get("task_result", {}).get("videos", [])
-            if not works:
-                raise Exception(f"Video URL alinamadi: {task_result}")
-
-            video_url = works[0].get("url")
+            # Extract video URL
+            video_url = result.get("video", {}).get("url")
             if not video_url:
-                raise Exception(f"Video URL bos: {works[0]}")
+                raise Exception(f"Video URL alinamadi: {result}")
 
             # Download video locally
             video_path = await self._download_video(video_url)
@@ -146,63 +97,88 @@ class KlingHelper:
                 "duration": duration,
                 "model": "Kling 3.0 Pro",
                 "model_used": "kling-v3_pro",
-                "provider": "Kling Direct API",
-                "has_audio": True,
+                "provider": "fal.ai",
+                "has_audio": generate_audio is not False,
             }
 
         except Exception as e:
-            logger.error(f"Kling Direct API hatasi: {e}")
+            logger.error(f"Kling fal.ai hatasi: {e}")
             return {
                 "success": False,
                 "error": str(e),
                 "model": "Kling 3.0 Pro",
-                "provider": "Kling Direct API",
+                "provider": "fal.ai",
             }
 
-    async def _poll_task(self, task_id: str, timeout: int = 300, interval: int = 10) -> dict:
+    async def _submit_and_poll(self, request_body: dict) -> dict:
         """
-        Poll task status until complete.
+        Submit video generation to fal.ai queue and poll until complete.
 
-        Args:
-            task_id: Task ID from creation response
-            timeout: Max wait in seconds (default 5 min)
-            interval: Poll interval in seconds (default 10s)
+        Timeout: 30 minutes (video generation can be slow)
+        Poll interval: 5 seconds
         """
-        token = self._generate_jwt()
-        headers = {"Authorization": f"Bearer {token}"}
+        headers = {
+            "Authorization": f"Key {self.api_key}",
+            "Content-Type": "application/json",
+        }
 
-        max_attempts = timeout // interval
-        start_time = time.time()
+        async with httpx.AsyncClient(timeout=600.0) as client:
+            # Submit request
+            submit_url = f"{FAL_BASE_URL}/{FAL_ENDPOINT}"
+            logger.debug(f"  Submitting to: {submit_url}")
 
-        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(submit_url, json=request_body, headers=headers)
+            response.raise_for_status()
+
+            result = response.json()
+
+            # If result is ready immediately (sync response)
+            if "video" in result:
+                return result
+
+            # Queue response - need to poll
+            request_id = result.get("request_id")
+            if not request_id:
+                raise Exception(f"No request_id in response: {result}")
+
+            logger.info(f"  Request queued: {request_id}")
+
+            # Get polling URLs from response
+            status_url = result.get("status_url")
+            result_url = result.get("response_url")
+
+            if not status_url or not result_url:
+                # Fallback: construct URLs manually
+                status_url = f"{FAL_BASE_URL}/{FAL_ENDPOINT}/requests/{request_id}/status"
+                result_url = f"{FAL_BASE_URL}/{FAL_ENDPOINT}/requests/{request_id}"
+
+            # Poll for result (30 minutes max, 5 second intervals)
+            max_attempts = 360
             for attempt in range(max_attempts):
-                await asyncio.sleep(interval)
+                await asyncio.sleep(5)
 
-                # Refresh token if needed
-                headers["Authorization"] = f"Bearer {self._generate_jwt()}"
+                status_response = await client.get(status_url, headers=headers)
+                status_response.raise_for_status()
+                status = status_response.json()
 
-                response = await client.get(
-                    f"{self.BASE_URL}/v1/videos/{task_id}",
-                    headers=headers,
-                )
-                response.raise_for_status()
-                result = response.json()
+                current_status = status.get("status", "unknown")
+                logger.debug(f"  Status [{attempt + 1}/{max_attempts}]: {current_status}")
 
-                status = result.get("data", {}).get("task_status", "unknown")
-                elapsed = int(time.time() - start_time)
-                logger.debug(f"Kling task [{attempt+1}/{max_attempts}]: {status} ({elapsed}s)")
+                if current_status == "COMPLETED":
+                    result_response = await client.get(result_url, headers=headers)
+                    result_response.raise_for_status()
+                    return result_response.json()
 
-                if status == "succeed":
-                    return result
-                elif status in ("failed", "cancelled"):
-                    error_msg = result.get("data", {}).get("task_status_msg", "Bilinmeyen hata")
-                    raise Exception(f"Video uretimi basarisiz: {error_msg}")
-                # processing, submitted, staged — continue polling
+                elif current_status in ["FAILED", "CANCELLED"]:
+                    error_msg = status.get("error", "Unknown error")
+                    raise Exception(f"fal.ai video generation failed: {error_msg}")
 
-        raise Exception(f"Video uretimi zaman asimina ugradi ({timeout}s)")
+                # IN_QUEUE or IN_PROGRESS - continue polling
+
+        raise Exception("fal.ai video generation timed out (30 minutes)")
 
     async def _download_video(self, video_url: str) -> str:
-        """Download video from Kling CDN to local file."""
+        """Download video from fal.ai CDN to local file."""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
         unique_suffix = uuid.uuid4().hex[:6]
         output_path = settings.outputs_dir / f"kling_{timestamp}_{unique_suffix}.mp4"
@@ -220,25 +196,51 @@ class KlingHelper:
         return str(output_path)
 
     async def test_connection(self) -> Dict[str, Any]:
-        """Test API connection with JWT auth (no video generation)."""
+        """Test fal.ai API connection (lightweight auth check)."""
         try:
-            token = self._generate_jwt()
+            if not self.api_key:
+                return {
+                    "success": False,
+                    "error": "FAL_API_KEY not configured",
+                }
+
+            headers = {
+                "Authorization": f"Key {self.api_key}",
+                "Content-Type": "application/json",
+            }
+
             async with httpx.AsyncClient(timeout=10.0) as client:
-                response = await client.get(
-                    f"{self.BASE_URL}/v1/videos/text2video",
-                    headers={"Authorization": f"Bearer {token}"},
+                # Send a minimal request to verify auth
+                response = await client.post(
+                    f"{FAL_BASE_URL}/{FAL_ENDPOINT}",
+                    json={"prompt": "test", "duration": "3"},
+                    headers=headers,
                 )
+
+            # Any non-auth-error response means the key is valid
+            if response.status_code in (200, 422):
+                return {
+                    "success": True,
+                    "status_code": response.status_code,
+                    "message": f"fal.ai API reachable (HTTP {response.status_code})",
+                }
+
+            if response.status_code == 401:
+                return {
+                    "success": False,
+                    "error": "Invalid FAL_API_KEY (401 Unauthorized)",
+                }
+
             return {
                 "success": True,
                 "status_code": response.status_code,
-                "jwt_ok": True,
-                "message": f"API reachable (HTTP {response.status_code})",
+                "message": f"fal.ai API reachable (HTTP {response.status_code})",
             }
+
         except Exception as e:
             return {
                 "success": False,
                 "error": str(e),
-                "jwt_ok": self._token is not None,
             }
 
 
