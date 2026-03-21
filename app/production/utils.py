@@ -6,8 +6,6 @@ pipeline.py'dan extract edilmiştir.
 import subprocess
 from enum import Enum
 
-from telegram.helpers import escape_markdown
-
 
 # ============ CONSTANTS ============
 
@@ -72,6 +70,7 @@ async def add_freeze_frame(video_path: str, duration: float) -> str:
 
 def escape_md(value) -> str:
     """Telegram Markdown için güvenli escape - None ve boş değerleri de handle eder"""
+    from telegram.helpers import escape_markdown
     if value is None:
         return "N/A"
     return escape_markdown(str(value))
