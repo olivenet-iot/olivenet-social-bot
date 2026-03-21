@@ -28,6 +28,7 @@ DEFAULT_OUTPUT_FORMAT = "mp3"
 DEFAULT_INSTRUCTIONS = (
     "Türkçe konuş. Doğal, sıcak ve profesyonel bir tonla. "
     "Teknik terimleri net ve anlaşılır telaffuz et. "
+    "Kısaltmaları ve teknik terimleri doğal ve akıcı oku, harf harf değil tek kelime olarak telaffuz et. "
     "Hız ve vurgu doğal konuşma gibi olsun."
 )
 
@@ -40,14 +41,14 @@ PRONUNCIATION_FIXES = {
     "Olivenet": "Olivnet",
     "olivenet": "olivnet",
     "OLIVENET": "OLİVNET",
-    # Teknik terimler
-    "IoT": "nesnelerin interneti",
-    "iot": "nesnelerin interneti",
-    "LoRaWAN": "lora van",
+    # Teknik terimler (tek kelime - TTS bosluklu okunmasin)
+    "IoT": "ayoti",
+    "iot": "ayoti",
+    "LoRaWAN": "loravan",
     "LoRa": "lora",
-    "MQTT": "em ku ti ti",
-    "API": "ey pi ay",
-    "AI": "ey ay",
+    "MQTT": "emkutiti",
+    "API": "eypiay",
+    "AI": "eyay",
     # Kısaltmalar
     "vs.": "karşı",
     "vb.": "ve benzeri",

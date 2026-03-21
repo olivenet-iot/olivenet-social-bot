@@ -6,17 +6,18 @@ sesli video reels'e çevirir.
 
 Pipeline akışı:
 1. Haber -> TTS script (Creator)
-2. Script -> Ses (OpenAI TTS)
-3. Haber -> Video prompt (Creator)
-4. Prompt -> Video (Sora/Kling)
-5. Video + Ses -> Birleşik video (FFmpeg)
-6. Altyazı (opsiyonel, Whisper)
-7. Caption yazımı (Creator)
-8. Kalite kontrol (Reviewer)
-9. Yayın (Publisher)
+2. Caption yazımı (Creator)
+3. Script -> Ses (OpenAI TTS)
+4. Haber -> Video prompt (Creator)
+5. Prompt -> Video (Sora/Kling)
+6. Audio sync (ses video süresine uyumlandırılır)
+7. Video + Ses -> Birleşik video (FFmpeg)
+8. Altyazı (Whisper + ASS burn)
+9. Kalite kontrol + Yayın (Reviewer + Publisher)
 """
 
 import json
+import os
 from datetime import datetime
 from typing import Dict, Any, Optional
 
@@ -88,7 +89,7 @@ class NewsReelsPipeline(BasePipeline):
 
         try:
             # ========== 1. NEWS TTS SCRIPT ==========
-            self.log("Asama 1/7: Haber TTS scripti olusturuluyor...")
+            self.log("Asama 1/9: Haber TTS scripti olusturuluyor...")
 
             news_context = (
                 f"HABER: {title}\n"
@@ -115,7 +116,7 @@ class NewsReelsPipeline(BasePipeline):
             self.log(f"Script hazir: {speech_result.get('word_count', 0)} kelime")
 
             # ========== 2. CAPTION ==========
-            self.log("Asama 2/7: Caption uretiliyor...")
+            self.log("Asama 2/9: Caption uretiliyor...")
 
             content_result = await self.creator.execute({
                 "action": "create_post_multiplatform",
@@ -137,7 +138,7 @@ class NewsReelsPipeline(BasePipeline):
                 update_post(content_result["post_id"], tone=content_tone)
 
             # ========== 3. TTS AUDIO ==========
-            self.log("Asama 3/7: TTS ses uretiliyor...")
+            self.log("Asama 3/9: TTS ses uretiliyor...")
 
             audio_path = None
             audio_duration = 0
@@ -175,7 +176,7 @@ class NewsReelsPipeline(BasePipeline):
                 result["voice_fallback"] = True
 
             # ========== 4. VIDEO PROMPT ==========
-            self.log("Asama 4/7: Video prompt olusturuluyor...")
+            self.log("Asama 4/9: Video prompt olusturuluyor...")
             self.state = PipelineState.CREATING_VISUAL
 
             speech_structure = extract_shot_structure(speech_script, target_duration)
@@ -208,7 +209,7 @@ class NewsReelsPipeline(BasePipeline):
             result["stages_completed"].append("video_prompt")
 
             # ========== 5. VIDEO GENERATION ==========
-            self.log(f"Asama 5/7: Video uretiliyor ({model_name})...")
+            self.log(f"Asama 5/9: Video uretiliyor ({model_name})...")
 
             from app.sora_helper import generate_video_smart
 
@@ -234,23 +235,83 @@ class NewsReelsPipeline(BasePipeline):
             result["model_used"] = video_result.get("model_used", model_id)
             self.log(f"Video hazir: {video_path}")
 
-            # ========== 6. AUDIO-VIDEO MERGE ==========
+            # ========== 6. AUDIO SYNC ==========
             final_video_path = video_path
 
             if audio_path and not voice_fallback:
-                self.log("Asama 6/7: Audio-video birlestiriliyor...")
-                from app.instagram_helper import merge_audio_video
+                from app.instagram_helper import merge_audio_video, get_video_duration
+                from app.audio_sync_helper import sync_audio_to_video
 
-                merged = await merge_audio_video(video_path, audio_path)
-                if merged:
-                    final_video_path = merged
+                video_duration = await get_video_duration(video_path)
+
+                if audio_duration > video_duration:
+                    self.log(f"Asama 6/9: Audio ({audio_duration:.1f}s) > Video ({video_duration:.1f}s) - sync yapiliyor...")
+
+                    sync_result = await sync_audio_to_video(
+                        audio_path=audio_path,
+                        video_duration=video_duration,
+                        original_script=speech_script
+                    )
+
+                    if sync_result.get("success"):
+                        audio_path = sync_result["audio_path"]
+                        audio_duration = sync_result["final_duration"]
+                        self.log(f"Sync: {sync_result['action']} ({sync_result.get('trimmed_seconds', 0):.1f}s kirpildi)")
+                    else:
+                        self.log(f"Sync basarisiz: {sync_result.get('error')}, loop riski var")
+
+                # ========== 7. AUDIO-VIDEO MERGE ==========
+                self.log("Asama 7/9: Audio-video birlestiriliyor...")
+
+                merge_result = await merge_audio_video(
+                    video_path=video_path,
+                    audio_path=audio_path,
+                    target_duration=audio_duration,
+                    fade_out=True,
+                    fade_duration=0.5
+                )
+
+                if merge_result.get("success"):
+                    final_video_path = merge_result.get("output_path")
                     result["stages_completed"].append("audio_merge")
-                    self.log(f"Merge tamamlandi: {merged}")
+                    result["final_duration"] = merge_result.get("duration")
+                    self.log(f"Merge tamamlandi: {merge_result.get('duration', 0):.1f}s")
                 else:
-                    self.log("Merge basarisiz, sessiz video kullanilacak")
+                    self.log(f"Merge basarisiz: {merge_result.get('error')}, sessiz video kullanilacak")
 
-            # ========== 7. REVIEW + PUBLISH ==========
-            self.log("Asama 7/7: Kalite kontrol ve yayin...")
+                # ========== 8. SUBTITLE GENERATION ==========
+                self.log("Asama 8/9: Altyazi ekleniyor...")
+                try:
+                    from app.subtitle_helper import create_subtitle_file
+                    from app.instagram_helper import add_subtitles_to_video
+
+                    sub_result = await create_subtitle_file(
+                        audio_path=audio_path,
+                        original_script=speech_script,
+                        model_size=os.getenv("WHISPER_MODEL_SIZE", "base"),
+                        language="tr"
+                    )
+
+                    if sub_result.get("success"):
+                        burn_result = await add_subtitles_to_video(
+                            video_path=final_video_path,
+                            ass_path=sub_result["ass_path"]
+                        )
+
+                        if burn_result.get("success"):
+                            final_video_path = burn_result["output_path"]
+                            result["stages_completed"].append("subtitles")
+                            result["subtitle_count"] = sub_result["subtitle_count"]
+                            self.log(f"Altyazi eklendi: {sub_result['subtitle_count']} satir")
+                        else:
+                            self.log(f"Altyazi burn hatasi: {burn_result.get('error')}")
+                    else:
+                        self.log(f"Altyazi uretim hatasi: {sub_result.get('error')}")
+                except Exception as e:
+                    self.log(f"Altyazi exception: {e}")
+
+            # ========== 9. REVIEW + PUBLISH ==========
+            self.log("Asama 9/9: Kalite kontrol ve yayin...")
             self.state = PipelineState.REVIEWING
 
             post_text = content_result.get("post_text_ig", content_result.get("post_text", ""))
