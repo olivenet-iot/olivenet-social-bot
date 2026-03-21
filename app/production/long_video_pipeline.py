@@ -72,7 +72,7 @@ class LongVideoPipeline(BasePipeline):
             concatenate_videos_with_crossfade,
             merge_audio_video
         )
-        from app.elevenlabs_helper import ElevenLabsHelper
+        from app.openai_tts_helper import OpenAITTSHelper as ElevenLabsHelper
 
         # Model'in max süresine göre segment süresi belirlenir
         actual_segment_duration = get_max_duration(model_id)
@@ -197,7 +197,7 @@ class LongVideoPipeline(BasePipeline):
             self.log("[LONG VIDEO] Aşama 4: TTS ses üretiliyor...")
 
             # Voice reels ile aynı fonksiyon - ENV'deki voice ID'yi kullanır
-            from app.elevenlabs_helper import generate_speech_with_retry
+            from app.openai_tts_helper import generate_speech_with_retry
             tts_result = await generate_speech_with_retry(
                 text=speech_script,
                 max_retries=3

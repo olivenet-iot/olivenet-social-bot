@@ -120,8 +120,8 @@ class Settings(BaseSettings):
     kling_access_key: str = Field(default="", description="Kling API access key")
     kling_secret_key: str = Field(default="", description="Kling API secret key")
 
-    # FAL.ai Settings (lip-sync only)
-    fal_api_key: str = Field(default="", description="FAL API key for lip-sync")
+    # FAL.ai Settings (lip-sync and infographic generation)
+    fal_api_key: str = Field(default="", description="FAL API key for lip-sync and infographic generation")
 
     # ElevenLabs TTS Settings
     elevenlabs_api_key: str = Field(default="", description="ElevenLabs API key for TTS")
@@ -138,6 +138,15 @@ class Settings(BaseSettings):
     # ElevenLabs Cartoon/Animation Voice IDs
     elevenlabs_voice_id_cartoon_male: str = Field(default="DUnzBkwtjRWXPr6wRbmL", description="Cartoon male voice (Mark - fun, cheerful)")
     elevenlabs_voice_id_cartoon_female: str = Field(default="xyqF3vGMQlPk3e7yA4DI", description="Cartoon female voice (Ahu - cheerful, inviting)")
+
+    # OpenAI TTS Settings (ElevenLabs replacement)
+    openai_tts_model: str = Field(default="gpt-4o-mini-tts", description="OpenAI TTS model")
+    openai_tts_voice_male: str = Field(default="onyx", description="OpenAI TTS default/male voice")
+    openai_tts_voice_female: str = Field(default="nova", description="OpenAI TTS female voice")
+    openai_tts_voice_narrator: str = Field(default="fable", description="OpenAI TTS narrator voice")
+    openai_tts_voice_cartoon_male: str = Field(default="echo", description="OpenAI TTS cartoon male voice")
+    openai_tts_voice_cartoon_female: str = Field(default="shimmer", description="OpenAI TTS cartoon female voice")
+    openai_tts_speed: float = Field(default=1.0, description="OpenAI TTS speed (0.25-4.0)")
 
     # Claude Code Settings
     claude_timeout_post: int = Field(default=60, description="Timeout for post generation (seconds)")

@@ -140,7 +140,7 @@ class NewsReelsPipeline(BasePipeline):
             voice_fallback = False
 
             try:
-                from app.elevenlabs_helper import generate_speech_with_retry
+                from app.openai_tts_helper import generate_speech_with_retry
 
                 tts_result = await generate_speech_with_retry(
                     text=speech_script,

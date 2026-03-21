@@ -183,7 +183,7 @@ class VoiceReelsPipeline(BasePipeline):
             voice_fallback = False
 
             try:
-                from app.elevenlabs_helper import generate_speech_with_retry, ElevenLabsError, QuotaExceededError
+                from app.openai_tts_helper import generate_speech_with_retry, ElevenLabsError, QuotaExceededError
 
                 tts_result = await generate_speech_with_retry(
                     text=speech_script,

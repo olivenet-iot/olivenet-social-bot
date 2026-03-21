@@ -15,8 +15,8 @@ AI destekli Instagram icerik otomasyonu. v2 mimaride Brain Agent, Feed System ve
 - **Multi-Agent Sistem** - 8 uzman agent (Brain, Orchestrator, Planner, Creator, Reviewer, Publisher, Analytics + BaseAgent)
 - **7 Production Pipeline** - post, reels, carousel, voice_reels, long_video, news_reels, conversational
 - **Video Uretimi** - Sora 2, Sora 2 Pro, Veo 3.1, Kling 3.0 Pro (Direct API)
-- **Gorsel Uretimi** - FLUX.2 Pro (fotorealistik), Nano Banana (Gemini 3 Pro Image infographic)
-- **Sesli Reels** - ElevenLabs TTS ile Turkce seslendirme
+- **Gorsel Uretimi** - FLUX.2 Pro (fotorealistik), Nano Banana (fal-ai/nano-banana-pro infographic)
+- **Sesli Reels** - OpenAI TTS (gpt-4o-mini-tts) ile Turkce seslendirme
 - **Otomatik Altyazi** - Whisper ile word-level timing
 - **Telegram Kontrol** - 14 komut ile yonetim paneli
 - **Performance Learning** - Hook ve konu performans takibi, A/B testing
@@ -78,7 +78,7 @@ Detayli kurulum: [QUICKSTART.md](QUICKSTART.md)
 │ AGENTS │          │ AI SERVICES │    │   PUBLISH   │
 │ Creator│          │ Sora/Veo/   │    │ Instagram   │
 │Reviewer│          │ Kling/FLUX  │    │  Graph API  │
-│Planner │          │ ElevenLabs  │    └─────────────┘
+│Planner │          │ OpenAI TTS  │    └─────────────┘
 └────────┘          └─────────────┘
 
 ┌──────────────────────────────────────────────────────────────────┐
@@ -180,8 +180,8 @@ Detayli kurulum: [QUICKSTART.md](QUICKSTART.md)
 | Google Veo | Video uretimi | `veo_helper.py` |
 | Kling Direct API | Video uretimi (JWT auth) | `kling_helper.py` |
 | FLUX.2 Pro | Gorsel uretimi | `flux_helper.py` |
-| Nano Banana | Infographic uretimi (Gemini 3 Pro) | `nano_banana_helper.py` |
-| ElevenLabs | Turkce TTS | `elevenlabs_helper.py` |
+| Nano Banana | Infographic uretimi (fal-ai/nano-banana-pro) | `nano_banana_helper.py` |
+| OpenAI TTS | Turkce TTS (gpt-4o-mini-tts) | `openai_tts_helper.py` |
 | Cloudinary | Video CDN | `cloudinary_helper.py` |
 | Meta Ads | Reklam metrikleri | `meta_ads_helper.py` |
 
@@ -247,12 +247,13 @@ INSTAGRAM_USER_ID=...
 
 # Video
 OPENAI_API_KEY=...          # Sora
-GEMINI_API_KEY=...          # Veo + Nano Banana
+GEMINI_API_KEY=...          # Veo
 KLING_ACCESS_KEY=...        # Kling Direct API
 KLING_SECRET_KEY=...        # Kling Direct API
 
 # Gorsel
 FLUX_API_KEY=...
+FAL_API_KEY=...             # Nano Banana infographic
 
 # TTS
 ELEVENLABS_API_KEY=...

@@ -60,7 +60,7 @@ OPENAI_API_KEY=your_openai_api_key
 
 | Değişken | Zorunlu | Açıklama |
 |----------|---------|----------|
-| `GEMINI_API_KEY` | ✓ | Google AI Studio API key (Veo + Nano Banana) |
+| `GEMINI_API_KEY` | ✓ | Google AI Studio API key (Veo) |
 
 ```bash
 GEMINI_API_KEY=your_gemini_api_key
@@ -80,14 +80,14 @@ KLING_SECRET_KEY=your_kling_secret_key
 
 **Not:** JWT auth ile `api-singapore.klingai.com`'a bağlanır. Token 30 dk geçerli, otomatik yenilenir.
 
-### FAL.ai (Opsiyonel — sadece lip-sync)
+### FAL.ai (Infographic + Lip-sync)
 
 | Değişken | Zorunlu | Açıklama |
 |----------|---------|----------|
-| `FAL_API_KEY` | - | fal.ai API key (sadece lip-sync için, video üretimi artık Kling Direct API kullanıyor) |
+| `FAL_API_KEY` | ✓ | fal.ai API key (Nano Banana infographic üretimi + opsiyonel lip-sync) |
 
 ```bash
-FAL_API_KEY=your_fal_api_key  # Opsiyonel, sadece lip-sync
+FAL_API_KEY=your_fal_api_key  # Nano Banana infographic + lip-sync
 ```
 
 ---
@@ -104,31 +104,36 @@ FAL_API_KEY=your_fal_api_key  # Opsiyonel, sadece lip-sync
 FLUX_API_KEY=your_flux_api_key
 ```
 
-### Nano Banana (Gemini 3 Pro Image)
+### Nano Banana (fal-ai/nano-banana-pro)
 
-Aynı `GEMINI_API_KEY` kullanılır. İnfographic ve carousel slide üretimi için.
+`FAL_API_KEY` kullanılır. İnfographic ve carousel slide üretimi için fal.ai queue API ile httpx.
 
 ---
 
 ## TTS (Sesli Reels)
 
-### ElevenLabs
+### OpenAI TTS (Aktif)
 
 | Değişken | Zorunlu | Varsayılan | Açıklama |
 |----------|---------|------------|----------|
-| `ELEVENLABS_API_KEY` | ✓ | - | API key |
-| `ELEVENLABS_VOICE_ID` | ✓ | - | Varsayılan Türkçe voice ID |
-| `ELEVENLABS_MODEL` | - | `eleven_multilingual_v2` | Model |
-| `ELEVENLABS_VOICE_ID_FEMALE` | - | `EJGs6dWlD5VrB3llhBqB` | Kadın ses (conversational) |
-| `ELEVENLABS_VOICE_ID_NARRATOR` | - | `7VqWGAWwo2HMrylfKrcm` | Narrator ses (B-roll) |
-| `ELEVENLABS_VOICE_ID_CARTOON_MALE` | - | `DUnzBkwtjRWXPr6wRbmL` | Cartoon erkek |
-| `ELEVENLABS_VOICE_ID_CARTOON_FEMALE` | - | `xyqF3vGMQlPk3e7yA4DI` | Cartoon kadın |
+| `OPENAI_API_KEY` | ✓ | - | OpenAI API key (Sora ile paylaşımlı) |
+| `OPENAI_TTS_MODEL` | - | `gpt-4o-mini-tts` | TTS modeli |
+| `OPENAI_TTS_VOICE_MALE` | - | `onyx` | Varsayılan/erkek ses |
+| `OPENAI_TTS_VOICE_FEMALE` | - | `nova` | Kadın ses (conversational) |
+| `OPENAI_TTS_VOICE_NARRATOR` | - | `fable` | Narrator ses (B-roll) |
+| `OPENAI_TTS_VOICE_CARTOON_MALE` | - | `echo` | Cartoon erkek |
+| `OPENAI_TTS_VOICE_CARTOON_FEMALE` | - | `shimmer` | Cartoon kadın |
+| `OPENAI_TTS_SPEED` | - | `1.0` | Konuşma hızı (0.25-4.0) |
 
-```bash
-ELEVENLABS_API_KEY=your_elevenlabs_api_key
-ELEVENLABS_VOICE_ID=your_voice_id
-ELEVENLABS_MODEL=eleven_multilingual_v2
-```
+Mevcut sesler: alloy, ash, ballad, coral, echo, fable, onyx, nova, sage, shimmer, verse, marin, cedar
+
+### ElevenLabs (Yedek/Backup)
+
+| Değişken | Zorunlu | Varsayılan | Açıklama |
+|----------|---------|------------|----------|
+| `ELEVENLABS_API_KEY` | - | - | API key |
+| `ELEVENLABS_VOICE_ID` | - | - | Varsayılan Türkçe voice ID |
+| `ELEVENLABS_MODEL` | - | `eleven_multilingual_v2` | Model |
 
 ---
 
