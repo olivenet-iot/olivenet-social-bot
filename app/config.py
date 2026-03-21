@@ -96,9 +96,6 @@ class Settings(BaseSettings):
     meta_ad_account_id: str = Field(default="", description="Meta Ad Account ID (format: act_XXXXXXXXXX)")
     meta_business_id: str = Field(default="", description="Meta Business Manager ID")
 
-    # Gemini AI Settings
-    gemini_api_key: str = Field(default="", description="Gemini API Key for realistic image generation")
-
     # Replicate AI Settings
     replicate_api_token: str = Field(default="", description="Replicate API Token for Flux image generation")
 

@@ -62,7 +62,7 @@ async def generate_video_sora(
 
     if not OPENAI_API_KEY:
         print("[SORA] ❌ OPENAI_API_KEY not set")
-        return {"success": False, "error": "OPENAI_API_KEY not set", "fallback": "veo3"}
+        return {"success": False, "error": "OPENAI_API_KEY not set"}
 
     # Add no-text suffix to avoid AI text rendering issues
     prompt = prompt + VIDEO_NO_TEXT_SUFFIX
@@ -111,7 +111,7 @@ async def generate_video_sora(
             if response.status_code not in [200, 201]:
                 error_text = response.text[:500]
                 print(f"[SORA] ❌ API hatasi: {error_text}")
-                return {"success": False, "error": error_text, "fallback": "veo3"}
+                return {"success": False, "error": error_text}
 
             job_data = response.json()
             video_id = job_data.get("id")
@@ -130,7 +130,7 @@ async def generate_video_sora(
 
                 elapsed = (datetime.now() - start_time).total_seconds()
                 if elapsed > max_wait:
-                    return {"success": False, "error": "Timeout", "fallback": "veo3"}
+                    return {"success": False, "error": "Timeout"}
 
                 # GET /videos/{video_id}
                 status_response = await client.get(
@@ -155,7 +155,7 @@ async def generate_video_sora(
                     error = status_data.get("error", {})
                     error_msg = error.get("message", "Unknown") if isinstance(error, dict) else str(error)
                     print(f"[SORA] ❌ Failed: {error_msg}")
-                    return {"success": False, "error": error_msg, "fallback": "veo3"}
+                    return {"success": False, "error": error_msg}
 
         # 3. Video'yu indir - GET /videos/{video_id}/content
         async with httpx.AsyncClient(timeout=120, follow_redirects=True) as client:
@@ -193,10 +193,10 @@ async def generate_video_sora(
 
     except httpx.TimeoutException:
         print(f"[SORA] ⚠️ Timeout")
-        return {"success": False, "error": "timeout", "fallback": "veo3"}
+        return {"success": False, "error": "timeout"}
     except Exception as e:
         print(f"[SORA] ❌ Exception: {str(e)}")
-        return {"success": False, "error": str(e), "fallback": "veo3"}
+        return {"success": False, "error": str(e)}
 
 
 def analyze_prompt_complexity(prompt: str, topic: str = "") -> Dict[str, Any]:
@@ -208,13 +208,13 @@ def analyze_prompt_complexity(prompt: str, topic: str = "") -> Dict[str, Any]:
 
     for kw in high_keywords:
         if kw in combined:
-            return {"complexity": "high", "model": "veo3", "duration": 8}
+            return {"complexity": "high", "model": "kling_v3_pro", "duration": 10}
 
     for kw in medium_keywords:
         if kw in combined:
-            return {"complexity": "medium", "model": "veo3", "duration": 8}
+            return {"complexity": "medium", "model": "kling_v3_pro", "duration": 10}
 
-    return {"complexity": "low", "model": "veo3", "duration": 6}
+    return {"complexity": "low", "model": "kling_v3_pro", "duration": 10}
 
 
 async def generate_video_smart(
@@ -224,7 +224,7 @@ async def generate_video_smart(
     duration: int = 8,
     voice_mode: bool = False
 ) -> Dict[str, Any]:
-    """Akilli video uretimi - Kling / Sora / Veo secimi
+    """Akilli video uretimi - Kling / Sora secimi
 
     Args:
         voice_mode: True ise TTS voiceover eklenecek, Sora'ya NO dialogue suffix eklenir
@@ -235,14 +235,13 @@ async def generate_video_smart(
         complexity = {"complexity": "forced", "model": force_model, "duration": duration}
     else:
         complexity = analyze_prompt_complexity(prompt, topic)
-        model = complexity.get("model", "veo3")
+        model = complexity.get("model", "kling_v3_pro")
         duration = complexity.get("duration", duration)
 
     # Model isim normalizasyonu (UI'dan gelen kısa isimler ve video_models.py ID'leri)
     model_aliases = {
         "sora2": "sora-2",
         "sora2-pro": "sora-2-pro",
-        "veo": "veo3",
         # Multi-model voice reels ID'leri (video_models.py → kling_helper.py)
         "kling-3.0-pro": "kling_v3_pro",
     }
@@ -265,26 +264,16 @@ async def generate_video_smart(
             )
             if result.get("success"):
                 return result
-            # Kling basarisiz - Veo'ya fallback
-            print(f"[VIDEO] ⚠️ Kling basarisiz: {result.get('error')}, Veo'ya geciliyor...")
+            # Kling basarisiz - Sora'ya fallback
+            print(f"[VIDEO] ⚠️ Kling basarisiz: {result.get('error')}, Sora'ya geciliyor...")
         except Exception as e:
-            print(f"[VIDEO] ⚠️ Kling hatasi: {e}, Veo'ya geciliyor...")
+            print(f"[VIDEO] ⚠️ Kling hatasi: {e}, Sora'ya geciliyor...")
 
-        # Fallback to Veo
-        from app.veo_helper import generate_video_veo3
-        result = await generate_video_veo3(prompt, aspect_ratio="9:16", duration_seconds=duration)
+        # Fallback to Sora
+        result = await generate_video_sora(prompt, duration=min(duration, 12), size="720x1280", model="sora-2", voice_mode=voice_mode)
         if result.get("success"):
             result["fallback_from"] = model
-            result["model_used"] = result.get("model", "veo-3")
-        return result
-
-    # Veo secildiyse direkt Veo'ya git
-    if model == "veo3" or model.startswith("veo"):
-        print(f"[VIDEO] → Veo kullaniliyor...")
-        from app.veo_helper import generate_video_veo3
-        result = await generate_video_veo3(prompt, aspect_ratio="9:16", duration_seconds=duration)
-        if result.get("success"):
-            result["model_used"] = result.get("model", "veo-3")
+            result["model_used"] = "sora-2"
         return result
 
     # Sora dene
@@ -301,16 +290,8 @@ async def generate_video_smart(
     if sora_result.get("success"):
         return sora_result
 
-    # Sora basarisiz - Veo'ya fallback
-    if sora_result.get("fallback") == "veo3":
-        print(f"[VIDEO] ⚠️ Sora basarisiz, Veo'ya geciliyor...")
-        from app.veo_helper import generate_video_veo3
-        result = await generate_video_veo3(prompt, aspect_ratio="9:16", duration_seconds=duration)
-        if result.get("success"):
-            result["fallback_from"] = model
-            result["model_used"] = result.get("model", "veo-3")
-        return result
-
+    # Sora basarisiz - hata döndür
+    print(f"[VIDEO] ⚠️ Sora basarisiz: {sora_result.get('error')}")
     return sora_result
 
 

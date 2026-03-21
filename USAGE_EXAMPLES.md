@@ -145,13 +145,12 @@ result = await aggregator.run_feed_pipeline()
 ```
 Konu seçiminde "Reels" tipinde konu seçin.
 
-### Video Modelleri (4 model)
+### Video Modelleri (3 model)
 
 | Model | Süre | Özellik | Kullanım |
 |-------|------|---------|----------|
 | sora-2 | 4/8/12s | Yüksek kalite | Sinematik içerik |
 | sora-2-pro | 4/8/12s | Native speech | Conversational reels |
-| veo-3.1 | 4/6/8s | Native audio + lip-sync | Doğa sahneleri |
 | kling-3.0-pro | 5/10/15s | Hızlı, fizik tabanlı | Endüstriyel, haber |
 
 ### Python ile Video Üretimi
@@ -165,14 +164,7 @@ result = await generate_video_sora(
     model="sora-2"
 )
 
-# Veo
-from app.veo_helper import generate_video_veo3
-result = await generate_video_veo3(
-    prompt="Smart farming technology...",
-    duration_seconds=8
-)
-
-# Kling Direct API
+# Kling (via fal.ai)
 from app.kling_helper import KlingHelper
 kling = KlingHelper()
 result = await kling.generate_video(
@@ -189,7 +181,7 @@ result = await kling.generate_video(
 from app.video_models import get_model_config, validate_duration, get_available_models
 
 models = get_available_models()
-# ["sora-2", "sora-2-pro", "veo-3.1", "kling-3.0-pro"]
+# ["sora-2", "sora-2-pro", "kling-3.0-pro"]
 
 config = get_model_config("kling-3.0-pro")
 # {name, provider, durations, max_duration, ...}

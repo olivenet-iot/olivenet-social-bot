@@ -55,7 +55,7 @@ Olivenet Social Bot v2, 3 katmanlı otonom içerik üretim sistemidir: Kaynaklar
 │  └────────────────────────┼─────────────────────────────────┘    │
 │                           │                                       │
 │  ┌────────────────────────┼─────────────────────────────────┐    │
-│  │ AI Services: Sora │ Veo │ Kling │ FLUX │ Nano Banana     │    │
+│  │ AI Services: Sora │ Kling │ FLUX │ Nano Banana              │    │
 │  │              OpenAI TTS │ Cloudinary │ Instagram API      │    │
 │  └──────────────────────────────────────────────────────────┘    │
 └──────────────────────────────────────────────────────────────────┘
@@ -122,10 +122,9 @@ Olivenet Social Bot v2, 3 katmanlı otonom içerik üretim sistemidir: Kaynaklar
 │   ├── telegram_pipeline.py          # Telegram bot (14 komut)
 │   ├── kling_helper.py               # Kling Direct API (JWT auth)
 │   ├── nano_banana_helper.py         # fal.ai nano-banana-pro infographic
-│   ├── video_models.py               # 4 video model konfigürasyonu
+│   ├── video_models.py               # 3 video model konfigürasyonu
 │   ├── video_styles.py               # 10 görsel stil
 │   ├── sora_helper.py                # OpenAI Sora video
-│   ├── veo_helper.py                 # Google Veo video
 │   ├── flux_helper.py                # FLUX.2 Pro görsel
 │   ├── openai_tts_helper.py          # OpenAI TTS
 │   ├── cloudinary_helper.py          # Video CDN
@@ -308,12 +307,12 @@ v1 pipeline hala aktiftir ve v2 ile paralel çalışır.
                               │
     ┌─────────────────────────┼─────────────────────────────┐
     │                         │                             │
-┌───▼───┐ ┌───▼───┐ ┌───▼───┐ ┌───▼───┐ ┌───▼───┐ ┌───▼───┐
-│ SORA  │ │ VEO   │ │ KLING │ │ FLUX  │ │ NANO  │ │ELEVEN │
-│ VIDEO │ │ VIDEO │ │DIRECT │ │ IMAGE │ │BANANA │ │  TTS  │
-└───┬───┘ └───┬───┘ └───┬───┘ └───┬───┘ └───┬───┘ └───┬───┘
-    │         │         │         │         │         │
-    └─────────┴─────────┴────┬────┴─────────┴─────────┘
+  ┌───▼───┐ ┌───▼───┐ ┌───▼───┐ ┌───▼───┐ ┌───▼───┐
+  │ SORA  │ │ KLING │ │ FLUX  │ │ NANO  │ │OpenAI │
+  │ VIDEO │ │ VIDEO │ │ IMAGE │ │BANANA │ │  TTS  │
+  └───┬───┘ └───┬───┘ └───┬───┘ └───┬───┘ └───┬───┘
+      │         │         │         │         │
+      └─────────┴────┬────┴─────────┴─────────┘
                              │
                     ┌────────▼────────┐
                     │   CLOUDINARY    │
@@ -376,8 +375,8 @@ async def main():
 | **Veritabanı** | SQLite (12 tablo) |
 | **Bot** | python-telegram-bot |
 | **HTTP** | httpx (async) |
-| **AI** | Claude Code CLI, OpenAI, Google Gemini |
-| **Video** | Sora 2/Pro, Veo 3.1, Kling 3.0 Pro (Direct API) |
+| **AI** | Claude Code CLI, OpenAI |
+| **Video** | Sora 2/Pro, Kling 3.0 Pro (fal.ai) |
 | **Görsel** | FLUX.2 Pro, Nano Banana (fal-ai/nano-banana-pro) |
 | **TTS** | OpenAI TTS (Türkçe, gpt-4o-mini-tts) |
 | **CDN** | Cloudinary, imgbb |

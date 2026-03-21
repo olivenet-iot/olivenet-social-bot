@@ -625,7 +625,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "• 👨 ERKEK: Problem/soru sorar\n"
             "• 👩 KADIN: Çözüm sunar\n\n"
             "📹 *Model Seç:*\n\n"
-            "🌟 *Sora 2 / Veo 3.1*: Native speech\n"
+            "🌟 *Sora 2 / Sora 2 Pro*: Native speech\n"
             "⚡ *Kling*: TTS + Lipsync API",
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup(keyboard)
@@ -644,7 +644,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )])
         keyboard.append([InlineKeyboardButton("◀️ Geri", callback_data="create_conversational")])
 
-        native_speech_models = ["sora-2", "sora-2-pro", "veo-3.1"]
+        native_speech_models = ["sora-2", "sora-2-pro"]
         speech_info = "🗣️ Native Turkish speech" if model_id in native_speech_models else "🗣️ TTS + Lipsync API"
 
         await query.edit_message_text(
@@ -746,10 +746,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Video model seçim menüsü göster
         video_model_keyboard = InlineKeyboardMarkup([
             [
-                InlineKeyboardButton("🎬 Veo 3.1", callback_data="video_model:veo3"),
                 InlineKeyboardButton("🎥 Sora 2", callback_data="video_model:sora2"),
-            ],
-            [
                 InlineKeyboardButton("🔮 Kling 3.0 Pro", callback_data="video_model:kling_v3_pro"),
             ],
             [
@@ -761,7 +758,6 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ])
         await query.edit_message_text(
             "🎬 *Video Modeli Seçin*\n\n"
-            "• *Veo 3.1*: Google, 8s, native audio + lip-sync\n"
             "• *Sora 2*: OpenAI, 12s, sinematik kalite\n"
             "• *Kling 3.0 Pro*: Kling API, 15s, 🔮 sinematik yönetmenlik\n\n"
             "🎙️ *Sesli Reels*: Türkçe voiceover + video\n\n"
@@ -775,7 +771,6 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         model = action.replace("video_model:", "")
 
         model_names = {
-            "veo3": "Veo 3.1 (Google)",
             "sora2": "Sora 2 (OpenAI)",
             "kling_v3_pro": "Kling 3.0 Pro",
         }
@@ -849,7 +844,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if video_type == "silent":
             # Sessiz reels: Konu seçim menüsü
             model_names = {
-                "veo3": "Veo 3.1", "sora2": "Sora 2",
+                "sora2": "Sora 2",
                 "kling_v3_pro": "Kling 3.0 Pro",
             }
             model_name = model_names.get(model, model)
@@ -931,7 +926,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             model_config = get_model_config(model)
             model_name = f"{model_config.get('emoji', '🎬')} {model_config.get('name', model)}"
-            native_speech_models = ["sora-2", "veo-3.1"]
+            native_speech_models = ["sora-2", "sora-2-pro"]
             speech_mode = "Native Turkish speech" if model in native_speech_models else "TTS + Lipsync API"
 
             keyboard = [[InlineKeyboardButton("❌ İptal", callback_data=f"conv_model:{model}")]]
@@ -953,14 +948,8 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         style_id = parts[1] if len(parts) > 1 else "cinematic_4k"
 
         model_names = {
-            "veo3": "Veo 3 (Google)",
             "sora2": "Sora 2 (OpenAI)",
-            "kling_pro": "Kling 2.5 Pro",
-            "kling_26_pro": "Kling 2.6 Pro",
             "kling_v3_pro": "Kling 3.0 Pro",
-            "hailuo_pro": "Hailuo 02 Pro",
-            "wan_26": "Wan 2.6",
-            "kling_master": "Kling 2.1 Master"
         }
         model_name = model_names.get(model, model)
         style_config = get_style_config(style_id)
@@ -988,14 +977,8 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         style_id = parts[1] if len(parts) > 1 else "cinematic_4k"
 
         model_names = {
-            "veo3": "Veo 3 (Google)",
             "sora2": "Sora 2 (OpenAI)",
-            "kling_pro": "Kling 2.5 Pro",
-            "kling_26_pro": "Kling 2.6 Pro",
             "kling_v3_pro": "Kling 3.0 Pro",
-            "hailuo_pro": "Hailuo 02 Pro",
-            "wan_26": "Wan 2.6",
-            "kling_master": "Kling 2.1 Master"
         }
         model_name = model_names.get(model, model)
         style_config = get_style_config(style_id)
@@ -1035,7 +1018,6 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Hangi AI modeli ile video oluşturmak istersin?\n\n"
             "🌟 *Sora 2* - Sinematik kalite (max 12s)\n"
             "⭐ *Sora 2 Pro* - Premium, native speech (max 12s)\n"
-            "🎬 *Veo 3.1* - Native audio + lip-sync (max 8s)\n"
             "🔮 *Kling 3.0 Pro* - Sinematik yönetmenlik (max 15s)\n\n"
             "🔊 Tüm modellerde Türkçe AI voiceover eklenir.",
             parse_mode="Markdown",
@@ -1311,8 +1293,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Segmentler paralel üretilip birleştirilir.\n\n"
             "📊 *Segment süreleri modele göre değişir:*\n"
             "• Sora 2/Pro: 12s/segment\n"
-            "• Kling 3.0 Pro: 15s/segment (sinematik)\n"
-            "• Veo 3.1: 8s/segment\n\n"
+            "• Kling 3.0 Pro: 15s/segment (sinematik)\n\n"
             "🎬 *Segment sayısı seçin:*",
             reply_markup=InlineKeyboardMarkup(keyboard),
             parse_mode="Markdown"
@@ -1969,7 +1950,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = [
             [InlineKeyboardButton("🧠 AI Infographic", callback_data="set_type_nano_banana")],
             [InlineKeyboardButton("🖼️ FLUX Görsel", callback_data="set_type_flux")],
-            [InlineKeyboardButton("🎬 Video (Veo)", callback_data="set_type_video")],
+            [InlineKeyboardButton("🎬 Video", callback_data="set_type_video")],
             [InlineKeyboardButton("📱 Carousel", callback_data="set_type_carousel")],
             [InlineKeyboardButton("❌ İptal", callback_data="cancel")]
         ]
@@ -1977,7 +1958,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "🎨 *Görsel Tipi Seçin:*\n\n"
             "🧠 AI Infographic - Nano Banana (~$0.15)\n"
             "🖼️ FLUX - AI görsel üretimi (~$0.03)\n"
-            "🎬 Video - Veo ile video üretimi\n"
+            "🎬 Video - AI video üretimi\n"
             "📱 Carousel - Çoklu slayt formatı"
         )
         # Fotoğraf/video mesajı ise caption düzenle, değilse text düzenle
@@ -2001,7 +1982,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "infographic": "İnfografik",
             "nano_banana": "AI Infographic (Nano Banana)",
             "flux": "FLUX Görsel",
-            "video": "Video (Veo)",
+            "video": "Video",
             "carousel": "Carousel"
         }
         status_text = (
@@ -2201,7 +2182,6 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         model_names = {
-            "veo3": "Veo 3.1",
             "sora2": "Sora 2",
             "kling_v3_pro": "Kling 3.0 Pro",
         }
@@ -2395,7 +2375,7 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
         model_config = get_model_config(model_id)
         model_name = f"{model_config.get('emoji', '🎬')} {model_config.get('name', model_id)}"
 
-        native_speech_models = ["sora-2", "veo-3.1"]
+        native_speech_models = ["sora-2", "sora-2-pro"]
         if model_id in native_speech_models:
             pipeline_info = f"{model_id.upper()} native speech"
             pipeline_steps = (

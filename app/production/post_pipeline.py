@@ -219,9 +219,10 @@ class PostPipeline(BasePipeline):
                             image_path = visual_result.get("image_path")
 
                     elif visual_type == "video":
-                        from app.veo_helper import generate_video_with_retry
-                        visual_result = await generate_video_with_retry(
-                            prompt=visual_prompt_result.get("visual_prompt")
+                        from app.sora_helper import generate_video_smart
+                        visual_result = await generate_video_smart(
+                            prompt=visual_prompt_result.get("visual_prompt"),
+                            force_model="kling_v3_pro"
                         )
                         if visual_result.get("success"):
                             video_path = visual_result.get("video_path")

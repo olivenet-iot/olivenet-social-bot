@@ -429,9 +429,10 @@ Show natural gestures and expressions, NO actual speech.
                             image_path = visual_result.get("image_path")
 
                     elif visual_type == "video":
-                        from app.veo_helper import generate_video_with_retry
-                        visual_result = await generate_video_with_retry(
-                            prompt=visual_prompt_result.get("visual_prompt")
+                        from app.sora_helper import generate_video_smart
+                        visual_result = await generate_video_smart(
+                            prompt=visual_prompt_result.get("visual_prompt"),
+                            force_model="kling_v3_pro"
                         )
                         if visual_result.get("success"):
                             video_path = visual_result.get("video_path")
@@ -823,9 +824,10 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                     image_path = visual_result.get("image_path")
 
             elif visual_type == "video":
-                from app.veo_helper import generate_video_with_retry
-                visual_result = await generate_video_with_retry(
-                    prompt=visual_prompt_result.get("visual_prompt")
+                from app.sora_helper import generate_video_smart
+                visual_result = await generate_video_smart(
+                    prompt=visual_prompt_result.get("visual_prompt"),
+                    force_model="kling_v3_pro"
                 )
                 if visual_result.get("success"):
                     video_path = visual_result.get("video_path")
@@ -1067,9 +1069,10 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 image_path = await render_html_to_png(html)
 
             elif visual_type == "video":
-                from app.veo_helper import generate_video_with_retry
-                visual_result = await generate_video_with_retry(
-                    prompt=visual_prompt_result.get("visual_prompt")
+                from app.sora_helper import generate_video_smart
+                visual_result = await generate_video_smart(
+                    prompt=visual_prompt_result.get("visual_prompt"),
+                    force_model="kling_v3_pro"
                 )
                 if visual_result.get("success"):
                     video_path = visual_result.get("video_path")
@@ -1243,12 +1246,10 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                     if model == "kling_v3_pro":
                         return prompt_result.get("video_prompt_kling3") or prompt_result.get("video_prompt_kling", "")
                     return prompt_result.get("video_prompt_kling") or prompt_result.get("video_prompt_sora", "")
-                elif model and (model == "veo3" or model.startswith("veo")):
-                    return prompt_result.get("video_prompt_veo") or prompt_result.get("video_prompt_sora", "")
                 else:  # Sora veya default
-                    return prompt_result.get("video_prompt_sora") or prompt_result.get("video_prompt_veo", "")
+                    return prompt_result.get("video_prompt_sora") or prompt_result.get("video_prompt_kling3", "")
 
-            recommended_model = reels_prompt_result.get("recommended_model", "veo3")
+            recommended_model = reels_prompt_result.get("recommended_model", "kling_v3_pro")
             # force_model varsa onu kullan, yoksa recommended_model
             model_to_use = force_model or recommended_model
             video_prompt = get_video_prompt_for_model(reels_prompt_result, model_to_use)
@@ -1418,7 +1419,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
         Orijinal sesli reels — yedek.
 
         OpenAI TTS + Video + FFmpeg merge pipeline.
-        Multi-model desteği: Sora 2, Veo 2, Kling 2.1, Wan 2.1, Minimax
+        Multi-model desteği: Sora 2, Kling 3.0 Pro
 
         Pipeline Akışı:
         1. Konu seçimi (Planner) veya manuel konu işleme (Creator)
@@ -1436,7 +1437,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             force_model: Video modeli zorla (backward compat, deprecated)
             target_duration: Hedef süre (modele göre max sınır uygulanır)
             manual_topic_mode: True ise topic Creator ile profesyonelleştirilir
-            model_id: Video model ID (sora-2, sora-2-pro, veo-3.1, kling-3.0-pro)
+            model_id: Video model ID (sora-2, sora-2-pro, kling-3.0-pro)
             visual_style: Görsel stil (cinematic_4k, anime, vb.)
 
         Returns:
@@ -1657,7 +1658,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 video_prompt = (
                     reels_prompt_result.get("video_prompt_sora") or
                     reels_prompt_result.get("video_prompt_wan") or
-                    reels_prompt_result.get("video_prompt_veo", "")
+                    reels_prompt_result.get("video_prompt_kling3", "")
                 )
 
             complexity = reels_prompt_result.get("complexity", "medium")
@@ -2540,9 +2541,10 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                     image_path = visual_result.get("image_path")
 
             elif visual_type == "video":
-                from app.veo_helper import generate_video_with_retry
-                visual_result = await generate_video_with_retry(
-                    prompt=visual_prompt_result.get("visual_prompt")
+                from app.sora_helper import generate_video_smart
+                visual_result = await generate_video_smart(
+                    prompt=visual_prompt_result.get("visual_prompt"),
+                    force_model="kling_v3_pro"
                 )
                 if visual_result.get("success"):
                     video_path = visual_result.get("video_path")
@@ -2694,7 +2696,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
         Args:
             topic: Konu (None ise Planner'dan alınır)
             segment_count: Segment sayısı (2-6 arası, default 2)
-            model_id: Video model ID (kling-3.0-pro, sora-2, sora-2-pro, veo-3.1)
+            model_id: Video model ID (kling-3.0-pro, sora-2, sora-2-pro)
             transition_type: Geçiş tipi (crossfade, cut)
             transition_duration: Crossfade süresi (0.5s default)
             manual_topic_mode: True ise topic Creator ile işlenir
@@ -3181,7 +3183,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             topic: Topic (None uses Planner suggestion)
             manual_topic_mode: Process topic through Creator if True
             visual_style: Görsel stil (cinematic_4k, anime, vb.)
-            model_id: Video model (sora-2, sora-2-pro, veo-3.1, kling-3.0-pro)
+            model_id: Video model (sora-2, sora-2-pro, kling-3.0-pro)
 
         Returns:
             Pipeline result dict
@@ -3237,12 +3239,9 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             model_config = get_model_config(model_id)
             max_duration = model_config.get("max_duration", 12)
 
-            native_speech_models = ["sora-2", "sora-2-pro", "veo-3.1"]
+            native_speech_models = ["sora-2", "sora-2-pro"]
             if model_id in native_speech_models:
-                if model_id in ["sora-2", "sora-2-pro"]:
-                    target_duration = min(12, max_duration)  # Sora API max 12s
-                else:
-                    target_duration = min(8, max_duration)  # Veo = 8s
+                target_duration = min(12, max_duration)  # Sora API max 12s
             else:
                 target_duration = 12  # TTS+Lipsync için sabit
 
@@ -3292,29 +3291,20 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             self.state = PipelineState.CREATING_VISUAL
 
             if model_id in native_speech_models:
-                # ===== NATIVE SPEECH MODELS (Sora 2, Veo 3.1) =====
+                # ===== NATIVE SPEECH MODELS (Sora 2, Sora 2 Pro) =====
                 self.log(f"[CONV REELS] Native speech modu ({model_id})")
 
-                if model_id in ["sora-2", "sora-2-pro"]:
-                    from app.sora_helper import generate_video_sora
-                    from app.video_models import get_model_config
-                    sora_config = get_model_config(model_id)
-                    sora_duration = sora_config.get("default_duration", 12)
+                from app.sora_helper import generate_video_sora
+                from app.video_models import get_model_config
+                sora_config = get_model_config(model_id)
+                sora_duration = sora_config.get("default_duration", 12)
 
-                    conversation_result = await generate_video_sora(
-                        prompt=video_prompt,
-                        duration=sora_duration,
-                        size="720x1280",
-                        model=model_id
-                    )
-                elif model_id == "veo-3.1":  # veo-3.1
-                    from app.veo_helper import generate_video_veo
-                    conversation_result = await generate_video_veo(
-                        prompt=video_prompt,
-                        duration_seconds=8,
-                        aspect_ratio="9:16",
-                        model="veo-3.1-generate-preview"
-                    )
+                conversation_result = await generate_video_sora(
+                    prompt=video_prompt,
+                    duration=sora_duration,
+                    size="720x1280",
+                    model=model_id
+                )
 
                 if not conversation_result.get("success"):
                     raise Exception(f"Conversation video hatası: {conversation_result.get('error')}")

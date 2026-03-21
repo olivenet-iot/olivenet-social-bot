@@ -55,7 +55,7 @@ add_logo_overlay(image_path, position="bottom_left", logo_scale=0.12)
 ```
 
 ## video_models.py
-Video model konfigurasyonlari (4 model).
+Video model konfigurasyonlari (3 model).
 
 ```python
 from app.video_models import (
@@ -65,12 +65,12 @@ from app.video_models import (
 )
 
 models = get_available_models()
-# ["sora-2", "sora-2-pro", "veo-3.1", "kling-3.0-pro"]
+# ["sora-2", "sora-2-pro", "kling-3.0-pro"]
 
 config = get_model_config("kling-3.0-pro")
 # {name, provider, durations, default_duration, max_duration, ...}
 
-duration = validate_duration("veo-3.1", 10)  # -> 8 (clamped)
+duration = validate_duration("kling-3.0-pro", 20)  # -> 15 (clamped)
 disable = should_disable_audio("kling-3.0-pro", voice_mode=True)  # -> True
 ```
 
@@ -153,16 +153,6 @@ generate_video_smart(prompt, topic="", force_model=None, duration=8) -> Dict
 # Returns: {success, video_path, model_used}
 ```
 
-## veo_helper.py
-Google Veo video uretimi.
-
-```python
-generate_video_veo3(prompt, aspect_ratio="9:16", duration_seconds=8) -> Dict
-# Returns: {success, video_path, file_size_mb, model, duration}
-
-generate_video_with_retry(prompt, max_retries=2) -> Dict
-```
-
 ## openai_tts_helper.py
 OpenAI TTS (Turkce seslendirme, gpt-4o-mini-tts).
 
@@ -199,7 +189,6 @@ settings.telegram_bot_token
 settings.telegram_admin_chat_id
 settings.instagram_access_token
 settings.instagram_user_id
-settings.gemini_api_key
 settings.flux_api_key
 settings.openai_api_key
 settings.kling_access_key       # Kling Direct API
@@ -227,7 +216,6 @@ settings.database_path
 | instagram_helper.py | app/instagram_helper.py |
 | insights_helper.py | app/insights_helper.py |
 | sora_helper.py | app/sora_helper.py |
-| veo_helper.py | app/veo_helper.py |
 | openai_tts_helper.py | app/openai_tts_helper.py |
 | claude_helper.py | app/claude_helper.py |
 | renderer.py | app/renderer.py |

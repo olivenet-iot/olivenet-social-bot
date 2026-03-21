@@ -8,7 +8,6 @@
 | Instagram Insights | Meta | `insights_helper.py` | Metrik çekme |
 | Meta Ads | Meta | `meta_ads_helper.py` | Reklam metrikleri |
 | Sora | OpenAI | `sora_helper.py` | Video üretimi |
-| Veo 3.1 | Google | `veo_helper.py` | Video üretimi |
 | Kling 3.0 Pro | fal.ai | `kling_helper.py` | Video üretimi |
 | FLUX.2 Pro | BFL/Replicate | `flux_helper.py` | Görsel üretimi |
 | Nano Banana | fal.ai (fal-ai/nano-banana-pro) | `nano_banana_helper.py` | İnfographic üretimi |
@@ -118,39 +117,7 @@ generate_video_sora(
 
 ---
 
-## 4. Google Veo 3.1 (Video)
-
-### Genel Bilgi
-- **SDK:** google-generativeai
-- **Dosya:** `app/veo_helper.py`
-- **Model:** veo-3.1-generate-preview
-
-### Parametreler
-
-| Parametre | Değerler | Varsayılan |
-|-----------|----------|------------|
-| `duration_seconds` | 4, 6, 8 | 8 |
-| `aspect_ratio` | 9:16, 16:9, 1:1 | 9:16 |
-
-### Fonksiyon
-
-```python
-generate_video_veo3(
-    prompt: str,
-    aspect_ratio: str = "9:16",
-    duration_seconds: int = 8,
-    model: str = "veo-3.1-generate-preview"
-) -> dict
-# Döner: {"success": bool, "video_path": str, "file_size_mb": float}
-```
-
-### Notlar
-- Native audio + lip-sync destekli
-- Doğa/açık alan sahneleri için güçlü
-
----
-
-## 5. Kling 3.0 Pro (fal.ai)
+## 4. Kling 3.0 Pro (fal.ai)
 
 ### Genel Bilgi
 - **Base URL:** `https://queue.fal.run/fal-ai/kling-video/v3/pro/text-to-video`
@@ -198,7 +165,7 @@ result = await kling.generate_video(
 
 ---
 
-## 6. FLUX.2 Pro (Görsel)
+## 5. FLUX.2 Pro (Görsel)
 
 ### Genel Bilgi
 - **Endpoint:** `https://api.bfl.ai/v1/flux-2-pro`
@@ -227,7 +194,7 @@ generate_image_flux(
 
 ---
 
-## 7. Nano Banana (fal.ai — İnfographic)
+## 6. Nano Banana (fal.ai — İnfographic)
 
 ### Genel Bilgi
 - **Model:** fal-ai/nano-banana-pro (via fal.ai queue API)
@@ -258,7 +225,7 @@ add_logo_overlay(image_path, position="bottom_left", logo_scale=0.12)
 
 ---
 
-## 8. OpenAI TTS (Sesli Reels)
+## 7. OpenAI TTS (Sesli Reels)
 
 ### Genel Bilgi
 - **Endpoint:** `POST https://api.openai.com/v1/audio/speech`
@@ -302,7 +269,7 @@ result = await generate_dialog_audio(
 
 ---
 
-## 9. Cloudinary (Video CDN)
+## 8. Cloudinary (Video CDN)
 
 ### Genel Bilgi
 - **Dosya:** `app/cloudinary_helper.py`
@@ -324,7 +291,7 @@ Local Video → FFmpeg Convert → Cloudinary Upload → CDN URL → Instagram A
 
 ---
 
-## 10. Meta Ads API
+## 9. Meta Ads API
 
 ### Genel Bilgi
 - **Versiyon:** v21.0
@@ -340,7 +307,7 @@ get_campaign_insights(date_start, date_stop, level="campaign") -> list
 
 ---
 
-## 11. Telegram Bot API
+## 10. Telegram Bot API
 
 ### Genel Bilgi
 - **Library:** python-telegram-bot
@@ -373,7 +340,6 @@ get_campaign_insights(date_start, date_stop, level="campaign") -> list
 |-----|------------|---------|
 | Instagram | 200/saat | 60s |
 | Sora | - | 300s (5 dk) |
-| Veo | - | 300s (5 dk) |
 | Kling (fal.ai) | - | 300s |
 | OpenAI TTS | - | 60s |
 | FLUX | - | 120s |
@@ -385,9 +351,8 @@ get_campaign_insights(date_start, date_stop, level="campaign") -> list
 Video üretiminde hata durumunda:
 
 ```
-1. Kling 3.0 Pro başarısız → Veo 3.1 dene
-2. Veo 3.1 başarısız → Sora 2 dene
-3. Hepsi başarısız → Hata bildir
+1. Kling 3.0 Pro başarısız → Sora 2 dene
+2. Sora 2 başarısız → Hata bildir
 ```
 
 ---

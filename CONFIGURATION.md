@@ -56,16 +56,6 @@ INSTAGRAM_BUSINESS_ID=your_instagram_business_id
 OPENAI_API_KEY=your_openai_api_key
 ```
 
-### Google Veo (Gemini)
-
-| Değişken | Zorunlu | Açıklama |
-|----------|---------|----------|
-| `GEMINI_API_KEY` | ✓ | Google AI Studio API key (Veo) |
-
-```bash
-GEMINI_API_KEY=your_gemini_api_key
-```
-
 ### Kling (fal.ai üzerinden)
 
 Kling video üretimi `FAL_API_KEY` ile fal.ai üzerinden çalışır. Ayrı Kling key gerekmez.
@@ -306,7 +296,6 @@ INSTAGRAM_BUSINESS_ID=your_business_id
 
 # ============ VIDEO GENERATION ============
 OPENAI_API_KEY=your_openai_key
-GEMINI_API_KEY=your_gemini_key
 # KLING_ACCESS_KEY=  # deprecated — Kling artık FAL_API_KEY ile fal.ai üzerinden çalışır
 # KLING_SECRET_KEY=  # deprecated
 

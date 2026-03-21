@@ -41,7 +41,14 @@ description: v2 migrasyonu degisiklik logu. Check when debugging or understandin
 - %94 text rendering dogrulugu
 - renderer.py hala carousel slide rendering icin mevcut (template dosyalari olmadan)
 
+### Veo 3.1 Kaldirildi
+- `app/veo_helper.py` — Google Veo video uretimi kaldirildi
+- `google-generativeai` SDK bagimliligi kaldirildi
+- `GEMINI_API_KEY` env var artik gerekli degil
+- Kalan video modelleri: sora-2, sora-2-pro, kling-3.0-pro (3 model)
+
 ### Silinen Dosyalar
+- `app/veo_helper.py` — Google Veo video uretimi (kaldirildi)
 - `app/fal_helper.py` — Kling fal.ai'ye geri dondu, eski fal_helper gereksiz
 - `app/gemini_helper.py` — Nano banana ile degistirildi
 - `templates/*.html` — 11 HTML template silindi
@@ -69,7 +76,7 @@ description: v2 migrasyonu degisiklik logu. Check when debugging or understandin
 | app/sources/feed_aggregator.py | Feed pipeline |
 | app/kling_helper.py | Kling via fal.ai |
 | app/nano_banana_helper.py | fal.ai nano-banana-pro infographic |
-| app/video_models.py | 4 video model config |
+| app/video_models.py | 3 video model config |
 | app/video_styles.py | 10 gorsel stil |
 
 ## Deep Links

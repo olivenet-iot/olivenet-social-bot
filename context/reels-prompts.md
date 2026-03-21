@@ -10,7 +10,7 @@
 
 | Complexity | Model | Kullanım |
 |------------|-------|----------|
-| LOW | Veo 3 | Tek sahne, statik/basit hareket, ürün odaklı |
+| LOW | Kling 3.0 Pro | Tek sahne, statik/basit hareket, hızlı üretim |
 | MEDIUM | Sora 2 | 2-3 element, kamera takibi, orta hareket |
 | HIGH | Sora 2 Pro | Dönüşüm, çoklu sahne, insan figürü |
 
@@ -48,51 +48,6 @@ Sound:
 ```
 
 ---
-
-## VEO 3.1 PROMPT FORMATI
-
-### Timestamp Yapısı (8 saniye):
-```
-[00:00-00:02] [HOOK] [Shot tipi], [subject], [dramatic action]. Audio: [impact sound].
-[00:02-00:04] [CONTEXT] [Camera movement], [subject detail], [environment]. Ambient: [atmosphere].
-[00:04-00:06] [DEVELOPMENT] [Transition], [new angle], [key visual]. SFX: [subtle effect].
-[00:06-00:08] [RESOLUTION] [Final shot], [emotional moment], [closing visual]. Music: [mood].
-```
-
-### 5-Part Formula:
-[CINEMATOGRAPHY] + [SUBJECT] + [ACTION] + [CONTEXT] + [STYLE]
-
-### Kamera Hareketleri (Veo 3.1):
-| Hareket | Prompt Terimi | Kullanım |
-|---------|--------------|----------|
-| Dolly | smooth dolly in/out | Yaklaşma/uzaklaşma |
-| Crane | crane shot rising/descending | Yükseklik değişimi |
-| Orbit | 180° arc around subject | Ürün etrafında dönme |
-| Tracking | lateral tracking shot | Yatay takip |
-| Rack focus | rack focus from A to B | Odak geçişi |
-| Handheld | subtle handheld movement | Organik his |
-
-### Audio Entegrasyonu:
-- Her shot için ses tanımı ekle
-- Audio: Impact sesleri (beep, click, whoosh)
-- Ambient: Ortam sesleri (ventilation, nature, city)
-- SFX: Spesifik efektler
-- Music: Duygu tonu (hopeful, dramatic, calm)
-
-### Veo 3.1 Örnek Prompt (8s):
-```
-[00:00-00:02] Medium close-up, IoT sensor device on industrial shelf, LED indicator
-suddenly activates with green pulse. Audio: subtle electronic beep.
-
-[00:02-00:04] Smooth dolly out reveals greenhouse environment, sensor connected to
-irrigation system, morning light through glass panels. Ambient: gentle ventilation hum.
-
-[00:04-00:06] Rack focus transition to water droplets on plant leaves, automated
-sprinkler activating precisely. SFX: soft water spray sound.
-
-[00:06-00:08] Wide establishing shot, thriving greenhouse with multiple sensor nodes
-glowing green, camera slowly rises with crane movement. Music: hopeful ambient tone.
-```
 
 ---
 
@@ -243,7 +198,7 @@ Subject + Description + Movement + Scene + Camera + Lighting + Atmosphere
 
 ### Kling Kuralları
 - Basit, virgülle ayrılmış cümleler
-- 5-10 saniye içerik (Veo/Sora'dan uzun!)
+- 5-10 saniye içerik (Sora'dan uzun!)
 - Fiziksel karmaşıklıktan kaçın (top sektirme vb.)
 - Sayılardan kaçın ("10 sensör" → "multiple sensors")
 - Max 200 karakter önerilir
