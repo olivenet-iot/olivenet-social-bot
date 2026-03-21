@@ -45,7 +45,9 @@ Show natural gestures and expressions, NO actual speech.
         topic: str = None,
         manual_topic_mode: bool = False,
         visual_style: str = "cinematic_4k",
-        model_id: str = "sora-2"
+        model_id: str = "sora-2",
+        opportunity: Dict = None,
+        content_tone: str = "educational"
     ) -> Dict[str, Any]:
         """
         Conversational Reels pipeline with multi-model support.

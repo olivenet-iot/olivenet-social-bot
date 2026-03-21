@@ -16,7 +16,7 @@ class PostPipeline(BasePipeline):
     def __init__(self, telegram_callback=None):
         super().__init__("post", telegram_callback)
 
-    async def run(self, topic=None, manual_topic_mode=False, visual_type=None) -> Dict[str, Any]:
+    async def run(self, topic=None, manual_topic_mode=False, visual_type=None, opportunity=None, content_tone="educational") -> Dict[str, Any]:
         """Günlük içerik pipeline'ı çalıştır"""
         self.log("Günlük içerik pipeline'ı başlatılıyor...")
         self.state = PipelineState.PLANNING
@@ -102,7 +102,9 @@ class PostPipeline(BasePipeline):
                 "topic": topic_result.get("topic"),
                 "category": topic_result.get("category"),
                 "suggested_hooks": topic_result.get("suggested_hooks", []),
-                "visual_type": topic_result.get("suggested_visual", "flux")
+                "visual_type": topic_result.get("suggested_visual", "flux"),
+                "content_tone": content_tone,
+                "news_context": self._build_news_context(opportunity) if opportunity else None,
             })
 
             if "error" in content_result:

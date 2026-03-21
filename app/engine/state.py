@@ -10,7 +10,7 @@ from app.utils.logger import get_logger
 from app.database.crud import (
     get_kktc_now, get_weekly_progress, get_published_posts,
     get_analytics_summary, get_opportunity_stats, get_top_opportunities,
-    get_best_performing_hooks
+    get_best_performing_hooks, get_recently_selected_opportunities
 )
 
 logger = get_logger("state")
@@ -51,7 +51,9 @@ class SystemState:
         """Content opportunity havuzu durumu."""
         try:
             stats = get_opportunity_stats()
-            top = get_top_opportunities(limit=5, min_score=50)
+            recently_selected = get_recently_selected_opportunities(hours=24)
+            exclude_ids = [r["id"] for r in recently_selected]
+            top = get_top_opportunities(limit=5, min_score=50, exclude_ids=exclude_ids or None)
             return {
                 **stats,
                 "top_opportunities": [
@@ -64,11 +66,15 @@ class SystemState:
                         "hook": o.get("hook_suggestion", "")
                     }
                     for o in top
+                ],
+                "recently_selected": [
+                    {"id": r["id"], "title": r["title"][:60]}
+                    for r in recently_selected
                 ]
             }
         except Exception as e:
             logger.error(f"Error getting pool status: {e}")
-            return {"active_count": 0, "top_opportunities": []}
+            return {"active_count": 0, "top_opportunities": [], "recently_selected": []}
 
     def get_performance_summary(self, days: int = 7) -> Dict[str, Any]:
         """Son N günün performans özeti."""

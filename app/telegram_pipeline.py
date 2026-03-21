@@ -279,10 +279,10 @@ async def cmd_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text += f"❌ Başarısız: {summary.get('failed', 0)}\n\n"
 
     text += "📈 *BU HAFTA:*\n"
-    text += f"Toplam: {weekly.get('total', 0)}/{weekly.get('total_target', 12)}\n"
-    text += f"🎬 Reels: {weekly.get('reels', 0)}/{weekly.get('reels_target', 7)}\n"
-    text += f"🎠 Carousel: {weekly.get('carousel', 0)}/{weekly.get('carousel_target', 2)}\n"
-    text += f"📝 Post: {weekly.get('post', 0)}/{weekly.get('post_target', 3)}\n"
+    text += f"Toplam: {weekly.get('total', 0)} içerik\n"
+    text += f"🎬 Reels: {weekly.get('reels', 0)}\n"
+    text += f"🎠 Carousel: {weekly.get('carousel', 0)}\n"
+    text += f"📝 Post: {weekly.get('post', 0)}\n"
 
     keyboard = [[InlineKeyboardButton("🏠 Ana Menü", callback_data="main_menu")]]
     await update.message.reply_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
@@ -1783,10 +1783,10 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         text += "━━━━━━━━━━━━━━━━━━━\n"
         text += "📈 *BU HAFTA:*\n"
-        text += f"Toplam: {weekly.get('total', 0)}/{weekly.get('total_target', 12)} içerik\n"
-        text += f"🎬 Reels: {weekly.get('reels', 0)}/{weekly.get('reels_target', 7)}\n"
-        text += f"🎠 Carousel: {weekly.get('carousel', 0)}/{weekly.get('carousel_target', 2)}\n"
-        text += f"📝 Post: {weekly.get('post', 0)}/{weekly.get('post_target', 3)}\n"
+        text += f"Toplam: {weekly.get('total', 0)} içerik\n"
+        text += f"🎬 Reels: {weekly.get('reels', 0)}\n"
+        text += f"🎠 Carousel: {weekly.get('carousel', 0)}\n"
+        text += f"📝 Post: {weekly.get('post', 0)}\n"
 
         # En iyi performans
         best = get_best_performing_content(days=7)

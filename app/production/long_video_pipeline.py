@@ -33,7 +33,9 @@ class LongVideoPipeline(BasePipeline):
         transition_type: str = "crossfade",
         transition_duration: float = 0.5,
         manual_topic_mode: bool = False,
-        visual_style: str = "cinematic_4k"
+        visual_style: str = "cinematic_4k",
+        opportunity: Dict = None,
+        content_tone: str = "educational"
     ) -> Dict[str, Any]:
         """
         Multi-segment uzun video pipeline.

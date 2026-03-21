@@ -43,7 +43,8 @@ class NewsReelsPipeline(BasePipeline):
         model_id: str = "sora-2",
         target_duration: int = 15,
         visual_style: str = "cinematic_4k",
-        autonomous: bool = True
+        autonomous: bool = True,
+        content_tone: str = "news_commentary"
     ) -> Dict[str, Any]:
         """
         Haber fırsatını sesli reels'e çevir.
@@ -103,6 +104,7 @@ class NewsReelsPipeline(BasePipeline):
                 "target_duration": target_duration,
                 "tone": "informative",
                 "news_context": news_context,
+                "content_tone": content_tone,
             })
 
             if not speech_result.get("success"):
@@ -121,6 +123,7 @@ class NewsReelsPipeline(BasePipeline):
                 "category": "haber",
                 "visual_type": "video",
                 "news_context": news_context,
+                "content_tone": content_tone,
             })
 
             if "error" in content_result:

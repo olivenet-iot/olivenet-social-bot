@@ -1375,7 +1375,6 @@ def get_weekly_progress() -> Dict[str, Any]:
 
     Returns:
         Dict with keys: total, reels, carousel, post (actual counts)
-        and targets: reels_target, carousel_target, post_target
     """
     conn = get_connection()
     cursor = conn.cursor()
@@ -1415,11 +1414,6 @@ def get_weekly_progress() -> Dict[str, Any]:
         'reels': counts['reels'],
         'carousel': counts['carousel'],
         'post': post_count,
-        # Config hedefleri (hardcoded - config import döngüsel olabilir)
-        'reels_target': 7,
-        'carousel_target': 2,
-        'post_target': 3,
-        'total_target': 12,
         'week_start': week_start.strftime('%Y-%m-%d')
     }
 
@@ -2194,19 +2188,28 @@ def get_opportunities_by_status(status: str, limit: int = 20) -> List[Dict]:
     return results
 
 
-def get_top_opportunities(limit: int = 5, min_score: float = 50.0) -> List[Dict]:
+def get_top_opportunities(limit: int = 5, min_score: float = 50.0, exclude_ids: List[int] = None) -> List[Dict]:
     """En yüksek skorlu hazır fırsatları getir"""
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute('''
+    params = [min_score]
+    exclude_clause = ""
+    if exclude_ids:
+        placeholders = ",".join("?" * len(exclude_ids))
+        exclude_clause = f"AND id NOT IN ({placeholders})"
+        params.extend(exclude_ids)
+    params.append(limit)
+
+    cursor.execute(f'''
         SELECT * FROM content_opportunities
         WHERE status IN ('ready', 'scored')
         AND combined_score >= ?
         AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
+        {exclude_clause}
         ORDER BY combined_score DESC
         LIMIT ?
-    ''', (min_score, limit))
+    ''', params)
 
     rows = cursor.fetchall()
     conn.close()
@@ -2221,6 +2224,23 @@ def get_top_opportunities(limit: int = 5, min_score: float = 50.0) -> List[Dict]
                 d["tags"] = []
         results.append(d)
     return results
+
+
+def get_recently_selected_opportunities(hours: int = 24) -> List[Dict]:
+    """Son N saat içinde seçilmiş fırsatları getir (tekrar seçimi önlemek için)."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT id, title, status, selected_at
+        FROM content_opportunities
+        WHERE selected_at IS NOT NULL
+          AND selected_at > datetime('now', ?)
+          AND status IN ('selected', 'producing', 'used')
+        ORDER BY selected_at DESC
+    ''', (f'-{hours} hours',))
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
 
 
 def check_duplicate_opportunity(url_hash: str = None, title_hash: str = None) -> bool:

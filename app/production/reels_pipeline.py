@@ -17,7 +17,7 @@ class ReelsPipeline(BasePipeline):
     def __init__(self, telegram_callback=None):
         super().__init__("reels", telegram_callback)
 
-    async def run(self, topic=None, force_model=None, manual_topic_mode=False, visual_style="cinematic_4k", viral_format=None, hook_type=None) -> Dict[str, Any]:
+    async def run(self, topic=None, force_model=None, manual_topic_mode=False, visual_style="cinematic_4k", viral_format=None, hook_type=None, opportunity=None, content_tone="educational") -> Dict[str, Any]:
         """
         Instagram Reels içeriği üret ve yayınla
         Sora 2 Pro → Sora 2 → Veo 3 fallback zinciri ile
@@ -83,7 +83,9 @@ class ReelsPipeline(BasePipeline):
                 "action": "create_post_multiplatform",
                 "topic": topic,
                 "category": topic_data.get("category", "tanitim"),
-                "visual_type": "video"
+                "visual_type": "video",
+                "content_tone": content_tone,
+                "news_context": self._build_news_context(opportunity) if opportunity else None,
             })
 
             if "error" in content_result:

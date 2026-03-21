@@ -27,7 +27,9 @@ class VoiceReelsPipeline(BasePipeline):
         target_duration: int = 15,
         manual_topic_mode: bool = False,
         model_id: str = "sora-2",
-        visual_style: str = "cinematic_4k"
+        visual_style: str = "cinematic_4k",
+        opportunity: Dict = None,
+        content_tone: str = "educational"
     ) -> Dict[str, Any]:
         """
         Sesli Instagram Reels içeriği üret ve yayınla.
