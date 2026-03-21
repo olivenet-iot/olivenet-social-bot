@@ -276,8 +276,7 @@ class NewsReelsPipeline(BasePipeline):
                     publish_result = await self.publisher.execute({
                         "action": "publish",
                         "post_id": content_result.get("post_id"),
-                        "visual_path": final_video_path,
-                        "visual_type": "video",
+                        "video_path": final_video_path,
                         "post_text": post_text,
                         "platform": "instagram"
                     })
