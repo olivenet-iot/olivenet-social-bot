@@ -244,28 +244,6 @@ class KlingHelper:
             }
 
 
-# Convenience function
-async def generate_kling_video(
-    prompt: str,
-    duration: int = 5,
-    aspect_ratio: str = "9:16",
-) -> Dict[str, Any]:
-    """
-    Kling AI ile video uret (kolaylik fonksiyonu).
-
-    Args:
-        prompt: Video prompt'u
-        duration: 5 veya 10 saniye
-        aspect_ratio: 9:16 (dikey), 16:9 (yatay), 1:1 (kare)
-    """
-    helper = KlingHelper()
-    return await helper.generate_video(
-        prompt=prompt,
-        duration=duration,
-        aspect_ratio=aspect_ratio,
-    )
-
-
 if __name__ == "__main__":
     import asyncio
 

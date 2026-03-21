@@ -1708,6 +1708,25 @@ Sadece JSON döndür.
         post_text = input_data.get("post_text", "")
         feedback = input_data.get("feedback", "")
         post_id = input_data.get("post_id")
+        content_tone = input_data.get("content_tone", "educational")
+        news_context = input_data.get("news_context")
+
+        # Tone-specific revision guidance
+        REVISION_TONE_GUIDANCE = {
+            "news_commentary": "HABER YORUMU tonu: Faktöel, analitik, kaynak belirtmeli. Pazarlama dili YASAK. LinkedIn tonu normaldir.",
+            "educational": "EĞİTİCİ ton: Öğretici, bilgi paylaşımı odaklı, satış dili yok.",
+            "showcase": "SHOWCASE tonu: Birinci şahıs, samimi, mütevazı. Gerçek proje deneyimi.",
+            "thought_leadership": "DÜŞÜNCE LİDERLİĞİ tonu: Kişisel görüş, güçlü tez, sektör analizi."
+        }
+
+        tone_guidance = REVISION_TONE_GUIDANCE.get(content_tone, REVISION_TONE_GUIDANCE["educational"])
+
+        news_context_section = ""
+        if news_context:
+            news_context_section = f"""
+### Haber/Fırsat Bağlamı
+{news_context}
+"""
 
         prompt = f"""
 ## GÖREV: Post Revizyonu
@@ -1718,10 +1737,14 @@ Sadece JSON döndür.
 ### Geri Bildirim
 {feedback}
 
+### İçerik Tonu: {content_tone}
+{tone_guidance}
+{news_context_section}
 ---
 
 Geri bildirime göre post'u revize et.
-Orijinal mesajı ve tonu koru, sadece belirtilen sorunları düzelt.
+⚠️ İÇERİK TONUNU KORU — {content_tone} tonundan SAPMA.
+Orijinal mesajı koru, sadece belirtilen sorunları düzelt.
 
 ÇIKTI FORMATI (JSON):
 ```json

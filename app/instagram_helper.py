@@ -816,23 +816,6 @@ async def simple_concat_fallback(
         return {"success": False, "error": f"Fallback hata: {str(e)}"}
 
 
-async def get_video_duration(video_path: str) -> Optional[float]:
-    """FFprobe ile video süresini al"""
-    try:
-        cmd = [
-            "ffprobe", "-v", "error",
-            "-show_entries", "format=duration",
-            "-of", "default=noprint_wrappers=1:nokey=1",
-            video_path
-        ]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-        if result.returncode == 0 and result.stdout.strip():
-            return float(result.stdout.strip())
-    except Exception:
-        pass
-    return None
-
-
 async def get_account_info() -> Dict[str, Any]:
     """
     Instagram hesap bilgilerini al

@@ -153,6 +153,8 @@ class LongVideoPipeline(BasePipeline):
                 "visual_type": "reels",
                 "category": topic_data.get("category", "tanitim"),
                 "original_user_brief": original_user_brief,
+                "content_tone": content_tone,
+                "news_context": self._build_news_context(opportunity) if opportunity else None,
             })
 
             caption = content_result.get("post_text_ig") or content_result.get("post_text", "")
@@ -167,6 +169,10 @@ class LongVideoPipeline(BasePipeline):
             self.log(f"[LONG VIDEO] Caption oluşturuldu (Post ID: {post_id})")
             result["stages_completed"].append("caption_creation")
             result["post_id"] = post_id
+
+            # Persist tone to DB
+            if post_id and content_tone:
+                update_post(post_id, tone=content_tone)
 
             # ========== AŞAMA 3: Speech Script Üretimi ==========
             self.log(f"[LONG VIDEO] Aşama 3: Voiceover scripti üretiliyor ({actual_video_duration}s)...")
@@ -184,6 +190,8 @@ class LongVideoPipeline(BasePipeline):
                 "tone": "friendly",  # Samimi ton (voice reels ile aynı)
                 "post_id": post_id,
                 "original_user_brief": original_user_brief,
+                "content_tone": content_tone,
+                "news_context": self._build_news_context(opportunity) if opportunity else None,
             })
 
             if not speech_result.get("success"):
@@ -433,7 +441,8 @@ class LongVideoPipeline(BasePipeline):
                 "post_id": post_id,
                 "content_type": "reels",
                 "caption": caption,
-                "video_path": final_video_path
+                "video_path": final_video_path,
+                "content_tone": content_tone
             })
 
             score = review_result.get("score", 7)

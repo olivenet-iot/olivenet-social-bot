@@ -8,6 +8,7 @@ from typing import Dict, Any
 from app.production.base_pipeline import BasePipeline
 from app.production.utils import PipelineState, escape_md
 from app.database import save_prompt
+from app.database.crud import update_post
 from app.video_models import get_max_duration
 
 
@@ -97,6 +98,10 @@ class ReelsPipeline(BasePipeline):
 
             self.log(f"[REELS] Caption: IG {content_result.get('ig_word_count', 0)} kelime")
 
+            # Persist tone to DB
+            if content_result.get("post_id") and content_tone:
+                update_post(content_result["post_id"], tone=content_tone)
+
             # ========== AŞAMA 3: Video Prompt Üretimi ==========
             self.log("[REELS] Aşama 3: Video prompt oluşturuluyor...")
             self.state = PipelineState.CREATING_VISUAL
@@ -109,7 +114,9 @@ class ReelsPipeline(BasePipeline):
                 "post_id": content_result.get("post_id"),
                 "visual_style": visual_style,
                 "viral_format": viral_format,
-                "hook_type": hook_type
+                "hook_type": hook_type,
+                "content_tone": content_tone,
+                "news_context": self._build_news_context(opportunity) if opportunity else None,
             })
 
             if not reels_prompt_result.get("success"):
@@ -194,7 +201,9 @@ class ReelsPipeline(BasePipeline):
                 "action": "review_post",
                 "post_text": content_result.get("post_text_ig", ""),
                 "topic": topic,
-                "post_id": content_result.get("post_id")
+                "post_id": content_result.get("post_id"),
+                "content_tone": content_tone,
+                "news_context": self._build_news_context(opportunity) if opportunity else None
             })
 
             score = review_result.get("total_score", 0)

@@ -58,17 +58,27 @@ VIDEO_MODELS: Dict[str, dict] = {
 }
 
 
+MODEL_ALIASES = {
+    "sora2": "sora-2",
+    "sora2-pro": "sora-2-pro",
+    "kling_v3_pro": "kling-3.0-pro",
+}
+
+
 def get_model_config(model_id: str) -> dict:
     """
     Get model configuration by ID.
 
     Args:
         model_id: Model identifier (e.g., "sora-2", "kling-3.0-pro")
-                  Also accepts fal internal names (e.g., "kling_v3_pro")
+                  Also accepts aliases (e.g., "sora2", "kling_v3_pro")
 
     Returns:
         Model configuration dict. Falls back to kling-3.0-pro if not found.
     """
+    # Resolve aliases first
+    model_id = MODEL_ALIASES.get(model_id, model_id)
+
     # Direct key lookup
     if model_id in VIDEO_MODELS:
         return VIDEO_MODELS[model_id]
@@ -128,7 +138,7 @@ def get_prompt_key(model_id: str) -> str:
         model_id: Model identifier
 
     Returns:
-        Prompt key (e.g., "video_prompt_sora", "video_prompt_wan")
+        Prompt key (e.g., "video_prompt_sora", "video_prompt_kling3")
     """
     config = get_model_config(model_id)
     return config.get("prompt_key", "video_prompt_sora")
