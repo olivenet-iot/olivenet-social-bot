@@ -11,6 +11,7 @@ from typing import Dict, Any
 from app.production.base_pipeline import BasePipeline
 from app.production.utils import PipelineState, escape_md, extract_shot_structure
 from app.database import save_prompt
+from app.database.crud import update_post
 from app.video_models import get_model_config, get_prompt_key, validate_duration, get_max_duration
 
 
@@ -143,7 +144,9 @@ class VoiceReelsPipeline(BasePipeline):
                 "action": "create_post_multiplatform",
                 "topic": topic,
                 "category": topic_data.get("category", "tanitim"),
-                "visual_type": "video"
+                "visual_type": "video",
+                "content_tone": content_tone,
+                "news_context": self._build_news_context(opportunity) if opportunity else None,
             })
 
             if "error" in content_result:
@@ -154,6 +157,10 @@ class VoiceReelsPipeline(BasePipeline):
             result["post_id"] = content_result.get("post_id")
 
             self.log(f"[VOICE REELS] Caption: IG {content_result.get('ig_word_count', 0)} kelime")
+
+            # Persist tone to DB
+            if content_result.get("post_id") and content_tone:
+                update_post(content_result["post_id"], tone=content_tone)
 
             # ========== AŞAMA 3: Speech Script Üretimi ========== [YENİ]
             self.log("[VOICE REELS] Aşama 3: Voiceover scripti oluşturuluyor...")
@@ -273,7 +280,7 @@ class VoiceReelsPipeline(BasePipeline):
             if not video_prompt:
                 video_prompt = (
                     reels_prompt_result.get("video_prompt_sora") or
-                    reels_prompt_result.get("video_prompt_wan", "")
+                    reels_prompt_result.get("video_prompt_kling3", "")
                 )
 
             complexity = reels_prompt_result.get("complexity", "medium")

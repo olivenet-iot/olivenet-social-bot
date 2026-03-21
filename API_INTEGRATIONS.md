@@ -280,8 +280,6 @@ result = await generate_dialog_audio(
 ```python
 upload_video_to_cloudinary(video_path, folder="olivenet-reels") -> dict
 # Döner: {"success": bool, "url": str, "public_id": str, "duration": float}
-
-delete_from_cloudinary(public_id) -> bool
 ```
 
 ### Workflow

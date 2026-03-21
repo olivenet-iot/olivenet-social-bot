@@ -132,6 +132,10 @@ class NewsReelsPipeline(BasePipeline):
             result["post_id"] = content_result.get("post_id")
             result["stages_completed"].append("caption")
 
+            # Persist tone to DB
+            if content_result.get("post_id") and content_tone:
+                update_post(content_result["post_id"], tone=content_tone)
+
             # ========== 3. TTS AUDIO ==========
             self.log("Asama 3/7: TTS ses uretiliyor...")
 
@@ -195,7 +199,7 @@ class NewsReelsPipeline(BasePipeline):
             video_prompt = (
                 reels_prompt_result.get(prompt_key) or
                 reels_prompt_result.get("video_prompt_sora") or
-                reels_prompt_result.get("video_prompt_wan", "")
+                reels_prompt_result.get("video_prompt_kling3", "")
             )
 
             if not video_prompt or not video_prompt.strip():

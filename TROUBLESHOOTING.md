@@ -69,27 +69,24 @@ Error: (#4) Application request limit reached
 
 ---
 
-### 4. Kling API Authentication Failed
+### 4. Kling Video Generation Failed
 
 **Belirti:**
 ```
-Error: JWT authentication failed
-Error: KLING_ACCESS_KEY ve KLING_SECRET_KEY tanimli degil
+Error: Kling video generation failed
+Error: FAL_API_KEY not set
 ```
 
 **Çözüm:**
 
-1. `.env` dosyasında key'lerin doğru olduğunu kontrol edin:
+1. `.env` dosyasında fal.ai key'inin doğru olduğunu kontrol edin:
    ```bash
-   KLING_ACCESS_KEY=your_access_key
-   KLING_SECRET_KEY=your_secret_key
+   FAL_API_KEY=your_fal_api_key
    ```
 
-2. Key'lerin geçerli olduğunu doğrulayın (Kling AI dashboard'dan)
+2. Key'in geçerli olduğunu doğrulayın (fal.ai dashboard'dan)
 
-3. JWT token otomatik yenilenir (30 dk), manual müdahale gerekmez
-
-4. API endpoint: `api-singapore.klingai.com` — ağ erişimini kontrol edin
+3. Kling 3.0 Pro video generation fal.ai proxy üzerinden çalışır
 
 ---
 

@@ -47,9 +47,9 @@ async def generate_image_flux(
         }
     """
 
-    api_key = os.getenv("BFL_API_KEY")
+    api_key = os.getenv("FLUX_API_KEY") or os.getenv("BFL_API_KEY")
     if not api_key:
-        return {"success": False, "error": "BFL_API_KEY not set"}
+        return {"success": False, "error": "FLUX_API_KEY not set"}
 
     # Çıktı yolu
     if not output_path:
@@ -167,9 +167,9 @@ async def get_credits() -> Dict[str, Any]:
     """
     Kullanıcının kalan kredisini sorgula.
     """
-    api_key = os.getenv("BFL_API_KEY")
+    api_key = os.getenv("FLUX_API_KEY") or os.getenv("BFL_API_KEY")
     if not api_key:
-        return {"success": False, "error": "BFL_API_KEY not set"}
+        return {"success": False, "error": "FLUX_API_KEY not set"}
 
     headers = {"x-key": api_key}
 

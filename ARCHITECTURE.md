@@ -120,7 +120,7 @@ Olivenet Social Bot v2, 3 katmanlı otonom içerik üretim sistemidir: Kaynaklar
 │   ├── main.py                       # v2 entry point
 │   ├── config.py                     # Konfigürasyon yönetimi
 │   ├── telegram_pipeline.py          # Telegram bot (14 komut)
-│   ├── kling_helper.py               # Kling Direct API (JWT auth)
+│   ├── kling_helper.py               # Kling 3.0 Pro via fal.ai
 │   ├── nano_banana_helper.py         # fal.ai nano-banana-pro infographic
 │   ├── video_models.py               # 3 video model konfigürasyonu
 │   ├── video_styles.py               # 10 görsel stil

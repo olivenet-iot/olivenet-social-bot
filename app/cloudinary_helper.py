@@ -115,31 +115,6 @@ async def upload_video_to_cloudinary(video_path: str, folder: str = "olivenet-re
         return {"success": False, "error": str(e)}
 
 
-async def delete_from_cloudinary(public_id: str) -> Dict[str, Any]:
-    """Cloudinary'den video sil"""
-
-    if not configure_cloudinary():
-        return {"success": False, "error": "Cloudinary not configured"}
-
-    try:
-        import cloudinary.uploader
-
-        loop = asyncio.get_event_loop()
-
-        def do_delete():
-            return cloudinary.uploader.destroy(public_id, resource_type="video")
-
-        result = await loop.run_in_executor(None, do_delete)
-
-        if result.get("result") == "ok":
-            return {"success": True}
-        else:
-            return {"success": False, "error": result}
-
-    except Exception as e:
-        return {"success": False, "error": str(e)}
-
-
 async def upload_image_to_cloudinary(image_path: str, folder: str = "olivenet-images") -> Dict[str, Any]:
     """
     Görseli Cloudinary'ye yükle.

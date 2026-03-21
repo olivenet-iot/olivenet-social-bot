@@ -1657,7 +1657,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             if not video_prompt:
                 video_prompt = (
                     reels_prompt_result.get("video_prompt_sora") or
-                    reels_prompt_result.get("video_prompt_wan") or
+                    reels_prompt_result.get("video_prompt_kling3") or
                     reels_prompt_result.get("video_prompt_kling3", "")
                 )
 

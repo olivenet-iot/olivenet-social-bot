@@ -8,6 +8,7 @@ from typing import Dict, Any
 from app.production.base_pipeline import BasePipeline
 from app.production.utils import PipelineState, escape_md
 from app.database import save_prompt
+from app.database.crud import update_post
 
 
 class PostPipeline(BasePipeline):
@@ -112,6 +113,10 @@ class PostPipeline(BasePipeline):
 
             self.current_data["content"] = content_result
             result["stages_completed"].append("content_creation")
+
+            # Persist tone to DB
+            if content_result.get("post_id") and content_tone:
+                update_post(content_result["post_id"], tone=content_tone)
 
             # Telegram'a içeriği gönder
             self.state = PipelineState.AWAITING_CONTENT_APPROVAL

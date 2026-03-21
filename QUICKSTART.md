@@ -77,19 +77,17 @@ Detaylı ayarlar için: [CONFIGURATION.md](CONFIGURATION.md)
 
 ---
 
-## 3. Kling Direct API Kurulumu
+## 3. Kling Video (fal.ai) Kurulumu
 
-1. [Kling AI Platform](https://klingai.com) hesabı oluşturun
-2. API erişimi talep edin
-3. Access Key ve Secret Key alın
-4. `.env`'e ekleyin:
+1. [fal.ai](https://fal.ai) hesabı oluşturun
+2. API key alın
+3. `.env`'e ekleyin:
 
 ```bash
-KLING_ACCESS_KEY=your_access_key
-KLING_SECRET_KEY=your_secret_key
+FAL_API_KEY=your_fal_api_key
 ```
 
-API JWT auth kullanır, token otomatik yenilenir. Endpoint: `api-singapore.klingai.com`
+Kling 3.0 Pro video generation fal.ai proxy üzerinden çalışır (pay-as-you-go).
 
 ---
 
