@@ -46,6 +46,64 @@ FEEDS = [
         "tags": ["embedded", "edge", "computing"]
     },
 
+    # ========== Tier 1.5: AI / ML ==========
+    {
+        "name": "OpenAI Blog",
+        "url": "https://openai.com/blog/rss.xml",
+        "category": "ai",
+        "language": "en",
+        "priority": "high",
+        "tags": ["ai", "llm", "research"]
+    },
+    {
+        "name": "Google DeepMind Blog",
+        "url": "https://deepmind.google/blog/rss.xml",
+        "category": "ai",
+        "language": "en",
+        "priority": "high",
+        "tags": ["ai", "research", "deeplearning"]
+    },
+    {
+        "name": "Hugging Face Blog",
+        "url": "https://huggingface.co/blog/feed.xml",
+        "category": "ai",
+        "language": "en",
+        "priority": "normal",
+        "tags": ["ai", "llm", "open-source"]
+    },
+    {
+        "name": "The Verge AI",
+        "url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml",
+        "category": "ai",
+        "language": "en",
+        "priority": "normal",
+        "tags": ["ai", "tech", "news"]
+    },
+    {
+        "name": "Ars Technica AI",
+        "url": "https://feeds.arstechnica.com/arstechnica/technology-lab",
+        "category": "ai",
+        "language": "en",
+        "priority": "normal",
+        "tags": ["ai", "tech", "science"]
+    },
+    {
+        "name": "VentureBeat AI",
+        "url": "https://venturebeat.com/category/ai/feed/",
+        "category": "ai",
+        "language": "en",
+        "priority": "normal",
+        "tags": ["ai", "enterprise", "startup"]
+    },
+    {
+        "name": "NVIDIA AI Blog",
+        "url": "https://blogs.nvidia.com/feed/",
+        "category": "ai",
+        "language": "en",
+        "priority": "normal",
+        "tags": ["ai", "edge-ai", "gpu", "embedded"]
+    },
+
     # ========== Tier 2: Genel Teknoloji ==========
     {
         "name": "TechCrunch AI",
@@ -102,6 +160,7 @@ CATEGORY_WEIGHTS = {
     "energy": 0.8,
     "industrial": 0.8,
     "maker": 0.7,
+    "ai": 0.8,
     "tech": 0.6,
     "research": 0.6,
 }

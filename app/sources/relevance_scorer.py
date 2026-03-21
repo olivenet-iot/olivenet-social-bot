@@ -66,7 +66,7 @@ Etiketler: {json.dumps(opportunity.get('tags', []))}
 
 Bu fırsatı aşağıdaki kriterlere göre 1-10 arası puanla:
 
-1. **relevance_score** (1-10): Bu konu Olivenet'in uzmanlık alanına (IoT, LoRaWAN, akıllı tarım, enerji izleme, endüstriyel otomasyon) ne kadar yakın?
+1. **relevance_score** (1-10): Bu konu Olivenet'in uzmanlık alanına (IoT, LoRaWAN, akıllı tarım, enerji izleme, endüstriyel otomasyon, yapay zeka, Edge AI, LLM, agentic AI) ne kadar yakın?
 2. **timeliness_score** (1-10): Bu konu ne kadar güncel ve zamanında? Trend mi, yoksa her zaman geçerli mi?
 3. **virality_potential** (1-10): Bu konu sosyal medyada ne kadar ilgi çekebilir? Dikkat çekici mi?
 
