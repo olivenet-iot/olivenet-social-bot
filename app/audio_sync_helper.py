@@ -98,7 +98,7 @@ def shorten_script(script: str, target_duration: float, words_per_second: float 
     Args:
         script: Orijinal script
         target_duration: Hedef süre (saniye)
-        words_per_second: Ortalama konuşma hızı (1.8 wps - ElevenLabs Türkçe TTS ölçümü)
+        words_per_second: Ortalama konuşma hızı (1.8 wps - Türkçe TTS ölçümü)
 
     Returns:
         Kısaltılmış script

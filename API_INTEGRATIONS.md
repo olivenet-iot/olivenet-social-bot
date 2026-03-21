@@ -11,8 +11,8 @@
 | Veo 3.1 | Google | `veo_helper.py` | Video üretimi |
 | Kling 3.0 Pro | Kling Direct API | `kling_helper.py` | Video üretimi (JWT auth) |
 | FLUX.2 Pro | BFL/Replicate | `flux_helper.py` | Görsel üretimi |
-| Nano Banana | Google Gemini 3 Pro | `nano_banana_helper.py` | İnfographic üretimi |
-| ElevenLabs | ElevenLabs | `elevenlabs_helper.py` | Türkçe TTS |
+| Nano Banana | fal.ai (fal-ai/nano-banana-pro) | `nano_banana_helper.py` | İnfographic üretimi |
+| OpenAI TTS | OpenAI | `openai_tts_helper.py` | Türkçe TTS (gpt-4o-mini-tts) |
 | Cloudinary | Cloudinary | `cloudinary_helper.py` | Video CDN |
 | Telegram | Telegram | `telegram_pipeline.py` | Bot arayüzü |
 
@@ -236,10 +236,11 @@ generate_image_flux(
 
 ---
 
-## 7. Nano Banana (Gemini 3 Pro Image — İnfographic)
+## 7. Nano Banana (fal.ai — İnfographic)
 
 ### Genel Bilgi
-- **Model:** gemini-3-pro-image-preview
+- **Model:** fal-ai/nano-banana-pro (via fal.ai queue API)
+- **HTTP Client:** httpx (async)
 - **Dosya:** `app/nano_banana_helper.py`
 - **Amaç:** HTML template'lerin yerini alan AI infographic üretimi
 - **Text Accuracy:** %94
@@ -248,7 +249,6 @@ generate_image_flux(
 - Olivenet marka renkleri ile infographic üretimi
 - Carousel slide üretimi
 - Logo overlay
-- Google Search grounding (gerçek zamanlı veri)
 
 ### Fonksiyonlar
 
@@ -267,43 +267,46 @@ add_logo_overlay(image_path, position="bottom_left", logo_scale=0.12)
 
 ---
 
-## 8. ElevenLabs TTS (Sesli Reels)
+## 8. OpenAI TTS (Sesli Reels)
 
 ### Genel Bilgi
-- **Endpoint:** `https://api.elevenlabs.io/v1/text-to-speech/{voice_id}`
-- **Dosya:** `app/elevenlabs_helper.py`
-- **Model:** eleven_multilingual_v2
+- **Endpoint:** `POST https://api.openai.com/v1/audio/speech`
+- **Dosya:** `app/openai_tts_helper.py`
+- **Model:** gpt-4o-mini-tts (instructions parametresi ile ton kontrolü)
+- **Maliyet:** $15/1M karakter (tts-1), $30/1M karakter (tts-1-hd)
 
-### Voice Settings
+### Sesler
 
-| Parametre | Aralık | Varsayılan |
-|-----------|--------|------------|
-| `stability` | 0-1 | 0.5 |
-| `similarity_boost` | 0-1 | 0.75 |
-| `style` | 0-1 | 0.0 |
-| `speed` | 0.5-2.0 | 1.0 |
-
-### Voice ID'ler
-
-| Voice | ID | Kullanım |
+| Voice | Adı | Kullanım |
 |-------|-----|----------|
-| Default (erkek) | `ELEVENLABS_VOICE_ID` | Standard voice reels |
-| Kadın | `ELEVENLABS_VOICE_ID_FEMALE` | Conversational reels |
-| Narrator | `ELEVENLABS_VOICE_ID_NARRATOR` | B-roll voiceover |
-| Cartoon erkek | `ELEVENLABS_VOICE_ID_CARTOON_MALE` | Animasyon |
-| Cartoon kadın | `ELEVENLABS_VOICE_ID_CARTOON_FEMALE` | Animasyon |
+| `onyx` | Varsayılan/erkek | Standard voice reels, haber |
+| `nova` | Kadın | Conversational reels |
+| `fable` | Narrator | B-roll voiceover |
+| `echo` | Cartoon erkek | Animasyon |
+| `shimmer` | Cartoon kadın | Animasyon |
+
+Tüm sesler: alloy, ash, ballad, coral, echo, fable, onyx, nova, sage, shimmer, verse, marin, cedar
 
 ### Fonksiyon
 
 ```python
-ElevenLabsHelper.generate_speech(
-    text: str,
-    voice_id: str = None,
-    model_id: str = "eleven_multilingual_v2",
-    voice_settings: dict = None,
-    speed: float = 1.0
-) -> dict
+from app.openai_tts_helper import generate_speech_with_retry, generate_dialog_audio
+
+# Tekli ses
+result = await generate_speech_with_retry(
+    text="Merhaba dünya",
+    voice_id="onyx",       # opsiyonel, varsayılan: onyx
+    max_retries=3
+)
 # Döner: {"success": bool, "audio_path": str, "duration_seconds": float}
+
+# Diyalog (erkek/kadın)
+result = await generate_dialog_audio(
+    dialog_lines=[{"speaker": "male", "text": "..."}, {"speaker": "female", "text": "..."}],
+    male_voice_id="onyx",
+    female_voice_id="nova"
+)
+# Döner: {"success": bool, "audio_path": str, "total_duration": float, "audio_segments": list}
 ```
 
 ---
@@ -381,7 +384,7 @@ get_campaign_insights(date_start, date_stop, level="campaign") -> list
 | Sora | - | 300s (5 dk) |
 | Veo | - | 300s (5 dk) |
 | Kling Direct | - | 300s |
-| ElevenLabs | - | 120s |
+| OpenAI TTS | - | 60s |
 | FLUX | - | 120s |
 
 ---

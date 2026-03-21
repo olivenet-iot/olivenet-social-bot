@@ -203,10 +203,10 @@ duration = validate_duration("kling-3.0-pro", 20)  # -> 15 (clamped)
 
 ### Özellikler
 
-- ElevenLabs TTS ile Türkçe seslendirme
+- OpenAI TTS (gpt-4o-mini-tts) ile Türkçe seslendirme
 - Video ve ses senkronizasyonu
 - Otomatik shot timing
-- 5 farklı ses (erkek, kadın, narrator, cartoon erkek/kadın)
+- 5 farklı ses (onyx, nova, fable, echo, shimmer)
 
 ### Python ile Voice Reels
 
@@ -224,12 +224,10 @@ result = await pipeline.run(
 ### TTS Kullanımı
 
 ```python
-from app.elevenlabs_helper import ElevenLabsHelper
+from app.openai_tts_helper import generate_speech_with_retry
 
-tts = ElevenLabsHelper()
-result = await tts.generate_speech(
-    text="Merhaba, bugün sera otomasyonundan bahsedeceğiz.",
-    speed=1.0
+result = await generate_speech_with_retry(
+    text="Merhaba, bugün sera otomasyonundan bahsedeceğiz."
 )
 # {"success": True, "audio_path": "...", "duration_seconds": 4.5}
 ```

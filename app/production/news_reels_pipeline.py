@@ -6,7 +6,7 @@ sesli video reels'e çevirir.
 
 Pipeline akışı:
 1. Haber -> TTS script (Creator)
-2. Script -> Ses (ElevenLabs)
+2. Script -> Ses (OpenAI TTS)
 3. Haber -> Video prompt (Creator)
 4. Prompt -> Video (Sora/Kling/Veo)
 5. Video + Ses -> Birleşik video (FFmpeg)
@@ -140,7 +140,7 @@ class NewsReelsPipeline(BasePipeline):
             voice_fallback = False
 
             try:
-                from app.elevenlabs_helper import generate_speech_with_retry
+                from app.openai_tts_helper import generate_speech_with_retry
 
                 tts_result = await generate_speech_with_retry(
                     text=speech_script,

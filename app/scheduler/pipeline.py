@@ -1417,14 +1417,14 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
         """
         Orijinal sesli reels — yedek.
 
-        ElevenLabs TTS + Video + FFmpeg merge pipeline.
+        OpenAI TTS + Video + FFmpeg merge pipeline.
         Multi-model desteği: Sora 2, Veo 2, Kling 2.1, Wan 2.1, Minimax
 
         Pipeline Akışı:
         1. Konu seçimi (Planner) veya manuel konu işleme (Creator)
         2. Caption üretimi (Creator)
         3. Speech script üretimi (Creator)
-        4. TTS ses üretimi (ElevenLabs)
+        4. TTS ses üretimi (OpenAI TTS)
         5. Video prompt üretimi (Creator)
         6. Video üretimi (model_id'ye göre)
         7. Audio-video birleştirme (FFmpeg)
@@ -1566,7 +1566,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             voice_fallback = False
 
             try:
-                from app.elevenlabs_helper import generate_speech_with_retry, ElevenLabsError, QuotaExceededError
+                from app.openai_tts_helper import generate_speech_with_retry, OpenAITTSError, QuotaExceededError
 
                 tts_result = await generate_speech_with_retry(
                     text=speech_script,
@@ -1599,7 +1599,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
 
                     if tts_result.get("quota_exceeded"):
                         await self.notify_telegram(
-                            message=f"⚠️ *ElevenLabs Kota Aşıldı*\n\nSessiz video ile devam ediliyor...",
+                            message=f"⚠️ *TTS Kota Aşıldı*\n\nSessiz video ile devam ediliyor...",
                             data={},
                             buttons=[]
                         )
@@ -2683,7 +2683,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
         1. Konu seçimi (Planner/Creator)
         2. Caption üretimi (Creator)
         3. Speech script üretimi
-        4. TTS ses üretimi (ElevenLabs)
+        4. TTS ses üretimi (OpenAI TTS)
         5. Multi-scene prompt üretimi (Creator)
         6. Paralel video üretimi (N segment)
         7. Video birleştirme (FFmpeg crossfade)
@@ -2708,7 +2708,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             concatenate_videos_with_crossfade,
             merge_audio_video
         )
-        from app.elevenlabs_helper import ElevenLabsHelper
+        from app.openai_tts_helper import OpenAITTSHelper
         from app.database.crud import create_post, update_post
 
         # Model'in max süresine göre segment süresi belirlenir
@@ -2808,7 +2808,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             # ========== AŞAMA 3: Speech Script Üretimi ==========
             self.log(f"[LONG VIDEO] Aşama 3: Voiceover scripti üretiliyor ({actual_video_duration}s)...")
 
-            # Kelime hedefi: ~1.8 kelime/saniye (ElevenLabs Türkçe TTS ölçümü)
+            # Kelime hedefi: ~1.8 kelime/saniye (Türkçe TTS ölçümü)
             target_words = int(actual_video_duration * 1.8)
 
             speech_result = await self.creator.execute({
@@ -2834,7 +2834,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             self.log("[LONG VIDEO] Aşama 4: TTS ses üretiliyor...")
 
             # Voice reels ile aynı fonksiyon - ENV'deki voice ID'yi kullanır
-            from app.elevenlabs_helper import generate_speech_with_retry
+            from app.openai_tts_helper import generate_speech_with_retry
             tts_result = await generate_speech_with_retry(
                 text=speech_script,
                 max_retries=3
@@ -2865,7 +2865,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 deficit_percent = (duration_deficit / actual_video_duration) * 100
                 self.log(f"⚠️ [LONG VIDEO] Audio kısa ({audio_duration:.1f}s / {actual_video_duration}s), script uzatılıyor...")
 
-                # Script'i uzat (1.8 WPS - ElevenLabs Türkçe TTS ölçümü)
+                # Script'i uzat (1.8 WPS - Türkçe TTS ölçümü)
                 extended_target_words = int(actual_video_duration * 1.8)
                 extended_result = await self.creator.execute({
                     "action": "create_speech_script",
@@ -3171,7 +3171,7 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
            - Sora 2: Native Turkish speech (12s)
            - Other models: TTS + Video + Lipsync API
         4. B-roll video generation (8-12s)
-        5. B-roll voiceover generation (ElevenLabs narrator)
+        5. B-roll voiceover generation (OpenAI TTS narrator)
         6. B-roll merge (FFmpeg)
         7. Concat conversation + B-roll
         8. Whisper transcription + subtitles
@@ -3329,17 +3329,17 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 self.log(f"[CONV REELS] TTS + Lipsync modu ({model_id})")
 
                 # 3a. Dialog TTS üret
-                from app.elevenlabs_helper import generate_dialog_audio
+                from app.openai_tts_helper import generate_dialog_audio
                 from app.video_styles import should_use_cartoon_voices
                 from app.config import settings
 
                 if should_use_cartoon_voices(visual_style):
-                    male_voice = settings.elevenlabs_voice_id_cartoon_male
-                    female_voice = settings.elevenlabs_voice_id_cartoon_female
+                    male_voice = settings.openai_tts_voice_cartoon_male
+                    female_voice = settings.openai_tts_voice_cartoon_female
                     self.log(f"[CONV REELS] Cartoon voices kullanılıyor")
                 else:
-                    male_voice = settings.elevenlabs_voice_id
-                    female_voice = settings.elevenlabs_voice_id_female
+                    male_voice = settings.openai_tts_voice_male
+                    female_voice = settings.openai_tts_voice_female
                     self.log(f"[CONV REELS] Realistic voices kullanılıyor")
 
                 dialog_tts_result = await generate_dialog_audio(
@@ -3405,16 +3405,16 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
             # ========== STAGE 4: B-roll Voiceover (TTS önce) ==========
             self.log("[CONV REELS] Aşama 4: B-roll voiceover...")
 
-            from app.elevenlabs_helper import generate_speech_with_retry
+            from app.openai_tts_helper import generate_speech_with_retry
             from app.config import settings
             from app.video_styles import should_use_cartoon_voices
 
             # Stil bazlı narrator voice seçimi
             if should_use_cartoon_voices(visual_style):
-                narrator_voice = settings.elevenlabs_voice_id_cartoon_female
+                narrator_voice = settings.openai_tts_voice_cartoon_female
                 self.log(f"[CONV REELS] Cartoon narrator voice kullanılıyor")
             else:
-                narrator_voice = settings.elevenlabs_voice_id_narrator
+                narrator_voice = settings.openai_tts_voice_narrator
                 self.log(f"[CONV REELS] Realistic narrator voice kullanılıyor")
 
             broll_audio_result = await generate_speech_with_retry(

@@ -47,7 +47,7 @@ class LongVideoPipeline(BasePipeline):
         1. Konu seçimi (Planner/Creator)
         2. Caption üretimi (Creator)
         3. Speech script üretimi
-        4. TTS ses üretimi (ElevenLabs)
+        4. TTS ses üretimi (OpenAI TTS)
         5. Multi-scene prompt üretimi (Creator)
         6. Paralel video üretimi (N segment)
         7. Video birleştirme (FFmpeg crossfade)
@@ -72,7 +72,7 @@ class LongVideoPipeline(BasePipeline):
             concatenate_videos_with_crossfade,
             merge_audio_video
         )
-        from app.elevenlabs_helper import ElevenLabsHelper
+        from app.openai_tts_helper import OpenAITTSHelper
 
         # Model'in max süresine göre segment süresi belirlenir
         actual_segment_duration = get_max_duration(model_id)
@@ -171,7 +171,7 @@ class LongVideoPipeline(BasePipeline):
             # ========== AŞAMA 3: Speech Script Üretimi ==========
             self.log(f"[LONG VIDEO] Aşama 3: Voiceover scripti üretiliyor ({actual_video_duration}s)...")
 
-            # Kelime hedefi: ~1.8 kelime/saniye (ElevenLabs Türkçe TTS ölçümü)
+            # Kelime hedefi: ~1.8 kelime/saniye (Türkçe TTS ölçümü)
             target_words = int(actual_video_duration * 1.8)
 
             speech_result = await self.creator.execute({
@@ -197,7 +197,7 @@ class LongVideoPipeline(BasePipeline):
             self.log("[LONG VIDEO] Aşama 4: TTS ses üretiliyor...")
 
             # Voice reels ile aynı fonksiyon - ENV'deki voice ID'yi kullanır
-            from app.elevenlabs_helper import generate_speech_with_retry
+            from app.openai_tts_helper import generate_speech_with_retry
             tts_result = await generate_speech_with_retry(
                 text=speech_script,
                 max_retries=3
@@ -228,7 +228,7 @@ class LongVideoPipeline(BasePipeline):
                 deficit_percent = (duration_deficit / actual_video_duration) * 100
                 self.log(f"⚠️ [LONG VIDEO] Audio kısa ({audio_duration:.1f}s / {actual_video_duration}s), script uzatılıyor...")
 
-                # Script'i uzat (1.8 WPS - ElevenLabs Türkçe TTS ölçümü)
+                # Script'i uzat (1.8 WPS - Türkçe TTS ölçümü)
                 extended_target_words = int(actual_video_duration * 1.8)
                 extended_result = await self.creator.execute({
                     "action": "create_speech_script",

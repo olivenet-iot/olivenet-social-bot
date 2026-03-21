@@ -108,17 +108,17 @@ Error: Cloudinary upload failed - Invalid credentials
 
 ---
 
-### 6. ElevenLabs Quota Exceeded
+### 6. TTS Quota Exceeded
 
 **Belirti:**
 ```
-Error: QuotaExceededError - Monthly character limit reached
+Error: QuotaExceededError - Usage limit exceeded
 ```
 
 **Çözüm:**
 
-1. [ElevenLabs Dashboard](https://elevenlabs.io/) → Usage kontrol et
-2. Plan upgrade et veya
+1. [OpenAI Dashboard](https://platform.openai.com/usage) → Usage kontrol et
+2. Billing limit artır veya
 3. Kısa metinler kullan (max 500 karakter önerisi)
 
 ---
@@ -379,12 +379,11 @@ token = kling._generate_jwt()
 print(f"JWT token generated: {token[:20]}...")
 ```
 
-### ElevenLabs
+### OpenAI TTS
 
 ```python
-from app.elevenlabs_helper import ElevenLabsHelper
-tts = ElevenLabsHelper()
-result = await tts.generate_speech("Test")
+from app.openai_tts_helper import generate_speech_with_retry
+result = await generate_speech_with_retry("Test")
 print(result)
 ```
 
