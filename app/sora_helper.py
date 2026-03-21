@@ -252,9 +252,9 @@ async def generate_video_smart(
     print(f"[VIDEO] 🎯 Complexity: {complexity.get('complexity')}")
     print(f"[VIDEO] Model: {model}")
 
-    # Kling modelleri icin Kling Direct API kullan
+    # Kling modelleri icin fal.ai kullan
     if model and model.startswith("kling"):
-        print(f"[VIDEO] → Kling AI Direct API ({model}) kullaniliyor...")
+        print(f"[VIDEO] → Kling fal.ai ({model}) kullaniliyor...")
         try:
             from app.kling_helper import KlingHelper
             kling = KlingHelper()

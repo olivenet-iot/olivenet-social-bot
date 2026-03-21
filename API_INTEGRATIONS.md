@@ -9,7 +9,7 @@
 | Meta Ads | Meta | `meta_ads_helper.py` | Reklam metrikleri |
 | Sora | OpenAI | `sora_helper.py` | Video üretimi |
 | Veo 3.1 | Google | `veo_helper.py` | Video üretimi |
-| Kling 3.0 Pro | Kling Direct API | `kling_helper.py` | Video üretimi (JWT auth) |
+| Kling 3.0 Pro | fal.ai | `kling_helper.py` | Video üretimi |
 | FLUX.2 Pro | BFL/Replicate | `flux_helper.py` | Görsel üretimi |
 | Nano Banana | fal.ai (fal-ai/nano-banana-pro) | `nano_banana_helper.py` | İnfographic üretimi |
 | OpenAI TTS | OpenAI | `openai_tts_helper.py` | Türkçe TTS (gpt-4o-mini-tts) |
@@ -150,22 +150,13 @@ generate_video_veo3(
 
 ---
 
-## 5. Kling 3.0 Pro (Direct API)
+## 5. Kling 3.0 Pro (fal.ai)
 
 ### Genel Bilgi
-- **Base URL:** `https://api-singapore.klingai.com`
-- **Auth:** JWT (HS256) — `KLING_ACCESS_KEY` / `KLING_SECRET_KEY`
+- **Base URL:** `https://queue.fal.run/fal-ai/kling-video/v3/pro/text-to-video`
+- **Auth:** Key `{FAL_API_KEY}`
 - **Dosya:** `app/kling_helper.py`
-- **Model:** kling-v3 (Kling 3.0 Pro)
-
-### JWT Auth
-
-```python
-# Otomatik token yönetimi (30 dk expiry, 5 dk kala yenilenir)
-headers = {"alg": "HS256", "typ": "JWT"}
-payload = {"iss": access_key, "exp": now + 1800, "nbf": now - 5}
-token = jwt.encode(payload, secret_key, algorithm="HS256", headers=headers)
-```
+- **Model:** kling-v3 (Kling 3.0 Pro via fal.ai)
 
 ### Parametreler
 
@@ -203,7 +194,7 @@ result = await kling.generate_video(
 - Native audio destekli (ambient ses)
 - Fizik tabanlı hareket simülasyonu
 - Endüstriyel ve gerçekçi sahneler için ideal
-- `config.py`'de `fal_api_key` alanı hala mevcut (lip-sync için opsiyonel/legacy)
+- fal.ai queue API üzerinden çalışır (`FAL_API_KEY` gerekli)
 
 ---
 
@@ -383,7 +374,7 @@ get_campaign_insights(date_start, date_stop, level="campaign") -> list
 | Instagram | 200/saat | 60s |
 | Sora | - | 300s (5 dk) |
 | Veo | - | 300s (5 dk) |
-| Kling Direct | - | 300s |
+| Kling (fal.ai) | - | 300s |
 | OpenAI TTS | - | 60s |
 | FLUX | - | 120s |
 

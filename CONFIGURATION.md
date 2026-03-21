@@ -66,28 +66,25 @@ OPENAI_API_KEY=your_openai_api_key
 GEMINI_API_KEY=your_gemini_api_key
 ```
 
-### Kling Direct API
+### Kling (fal.ai üzerinden)
+
+Kling video üretimi `FAL_API_KEY` ile fal.ai üzerinden çalışır. Ayrı Kling key gerekmez.
 
 | Değişken | Zorunlu | Açıklama |
 |----------|---------|----------|
-| `KLING_ACCESS_KEY` | ✓ | Kling AI API access key |
-| `KLING_SECRET_KEY` | ✓ | Kling AI API secret key |
+| `KLING_ACCESS_KEY` | - | ~~Eski Direct API key~~ (deprecated, kullanılmıyor) |
+| `KLING_SECRET_KEY` | - | ~~Eski Direct API secret~~ (deprecated, kullanılmıyor) |
 
-```bash
-KLING_ACCESS_KEY=your_kling_access_key
-KLING_SECRET_KEY=your_kling_secret_key
-```
+**Not:** Kling artık fal.ai proxy üzerinden çağrılır. `FAL_API_KEY` yeterlidir.
 
-**Not:** JWT auth ile `api-singapore.klingai.com`'a bağlanır. Token 30 dk geçerli, otomatik yenilenir.
-
-### FAL.ai (Infographic + Lip-sync)
+### FAL.ai (Infographic + Lip-sync + Kling)
 
 | Değişken | Zorunlu | Açıklama |
 |----------|---------|----------|
-| `FAL_API_KEY` | ✓ | fal.ai API key (Nano Banana infographic üretimi + opsiyonel lip-sync) |
+| `FAL_API_KEY` | ✓ | fal.ai API key (Nano Banana infographic + lip-sync + Kling video üretimi) |
 
 ```bash
-FAL_API_KEY=your_fal_api_key  # Nano Banana infographic + lip-sync
+FAL_API_KEY=your_fal_api_key  # Nano Banana infographic + lip-sync + Kling video
 ```
 
 ---
@@ -310,8 +307,8 @@ INSTAGRAM_BUSINESS_ID=your_business_id
 # ============ VIDEO GENERATION ============
 OPENAI_API_KEY=your_openai_key
 GEMINI_API_KEY=your_gemini_key
-KLING_ACCESS_KEY=your_kling_access_key
-KLING_SECRET_KEY=your_kling_secret_key
+# KLING_ACCESS_KEY=  # deprecated — Kling artık FAL_API_KEY ile fal.ai üzerinden çalışır
+# KLING_SECRET_KEY=  # deprecated
 
 # ============ IMAGE GENERATION ============
 FLUX_API_KEY=your_flux_key
@@ -340,7 +337,7 @@ FEED_POLL_MINUTES=30
 EXPIRY_CHECK_HOURS=6
 
 # ============ OPSIYONEL ============
-FAL_API_KEY=your_fal_key  # Sadece lip-sync için
+FAL_API_KEY=your_fal_key  # Infographic + lip-sync + Kling video
 ```
 
 ---
@@ -351,4 +348,4 @@ FAL_API_KEY=your_fal_key  # Sadece lip-sync için
 - `.gitignore`'a `.env` ekli olduğundan emin olun
 - Production'da dosya izinlerini kısıtlayın: `chmod 600 .env`
 - Token'ları düzenli olarak yenileyin
-- Kling JWT token'ları otomatik yenilenir (30 dk)
+- Kling artık fal.ai üzerinden çalışır, ayrı JWT yönetimi gerekmez

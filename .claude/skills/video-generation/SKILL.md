@@ -1,6 +1,6 @@
 ---
 name: video-generation
-description: AI video generation with Sora, Veo, and Kling Direct API. Use when creating Reels, video prompts, or handling video generation workflows.
+description: AI video generation with Sora, Veo, and Kling via fal.ai. Use when creating Reels, video prompts, or handling video generation workflows.
 ---
 
 # AI Video Generation
@@ -12,7 +12,7 @@ description: AI video generation with Sora, Veo, and Kling Direct API. Use when 
 | sora-2 | OpenAI | 4/8/12s | Yüksek kalite, gerçekçi |
 | sora-2-pro | OpenAI | 4/8/12s | Native speech, conversational only |
 | veo-3.1 | Google | 4/6/8s | Native audio + lip-sync |
-| kling-3.0-pro | Kling Direct API | 5/10/15s | Sinematik, fizik tabanlı, native audio |
+| kling-3.0-pro | fal.ai | 5/10/15s | Sinematik, fizik tabanlı, native audio |
 
 ## Model Selection (Brain Agent)
 
@@ -57,27 +57,25 @@ result = await generate_video_sora(prompt, model="sora-2", size="720x1280", dura
 from app.veo_helper import generate_video_veo3
 result = await generate_video_veo3(prompt, aspect_ratio="9:16", duration_seconds=8)
 
-# Kling (Direct API - api-singapore.klingai.com)
+# Kling (via fal.ai)
 from app.kling_helper import KlingHelper
 kling = KlingHelper()
 result = await kling.generate_video(
     prompt=prompt,
     duration=10,          # 5/10/15s
     aspect_ratio="9:16",
-    model_name="kling-v3",
-    mode="pro",
-    generate_audio=True   # Native audio
+    generate_audio=True   # Native audio (fal.ai default)
 )
 ```
 
-## Kling Direct API Details
+## Kling via fal.ai Details
 
-- **Base URL:** `https://api-singapore.klingai.com`
-- **Auth:** JWT (HS256) with `KLING_ACCESS_KEY` / `KLING_SECRET_KEY`
-- **Model:** kling-v3 (Kling 3.0 Pro)
+- **Endpoint:** `fal-ai/kling-video/v3/pro/text-to-video`
+- **Auth:** `FAL_API_KEY` (shared with nano-banana and lip-sync)
+- **Model:** Kling 3.0 Pro
 - **Durations:** 5s, 10s, 15s
 - **Features:** Native audio, physics-based motion, cinematic quality
-- Token auto-renewal: 30 min expiry, refreshed at 5 min remaining
+- Pay-as-you-go pricing via fal.ai queue API
 
 ## Instagram Specs
 
@@ -93,8 +91,7 @@ result = await kling.generate_video(
 ```bash
 OPENAI_API_KEY=...          # Sora
 GEMINI_API_KEY=...          # Veo
-KLING_ACCESS_KEY=...        # Kling Direct API
-KLING_SECRET_KEY=...        # Kling Direct API
+FAL_API_KEY=...             # Kling video, infographics, lip-sync
 ```
 
 ## Return Format
@@ -132,5 +129,5 @@ KLING_SECRET_KEY=...        # Kling Direct API
 - `app/video_styles.py` - 10 görsel stil
 - `app/sora_helper.py` - Sora + smart selection
 - `app/veo_helper.py` - Veo generation
-- `app/kling_helper.py` - Kling Direct API (JWT auth)
+- `app/kling_helper.py` - Kling via fal.ai
 - `context/reels-prompts.md` - Prompt examples
