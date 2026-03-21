@@ -305,6 +305,10 @@ class BaseAgent(ABC):
         self.log(f"All {max_retries} Claude retries failed: {last_error}", level="error")
         return f'{{"error": "{last_error}", "retries_exhausted": true}}'
 
+    def _is_error_response(self, response: str) -> bool:
+        """Check if a call_claude() response is an error string."""
+        return response.strip().startswith('{"error"')
+
     @abstractmethod
     async def execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Agent'ın ana görevi - her agent implement etmeli"""

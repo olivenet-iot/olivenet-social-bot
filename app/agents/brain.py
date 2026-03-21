@@ -256,9 +256,9 @@ Evergreen fırsatlar için 'educational' veya 'showcase' kullan.
 YARATICI PARAMETRELER:
 - model_id: Video model seçimi. İçeriğe göre aktif seçim yap.
   MODEL SEÇİMİ REHBERİ:
-  - kling-3.0-pro: Hızlı üretim (2-3 dk), 15s'e kadar, ambient ses destekli. Endüstriyel, gerçekçi sahneler için ideal. Kling Direct API.
-  - sora-2: Yüksek sinematik kalite, 12s max, yavaş (5-8 dk). Yaratıcı ve artistik sahneler için. Sesli reels'te iyi sonuç verir.
-  - sora-2-pro: Sora 2'nin premium versiyonu, native speech destekli. Conversational ve voice reels için en iyi seçim.
+  - kling-3.0-pro: Hızlı üretim (2-3 dk), 15s'e kadar, ambient ses destekli. Endüstriyel, gerçekçi sahneler için ideal. news_reels için varsayılan (saf sinematik görsel + ambient ses, TTS/altyazı YOK).
+  - sora-2: Yüksek sinematik kalite, 12s max, yavaş (5-8 dk). Yaratıcı ve artistik sahneler için.
+  - sora-2-pro: Sora 2'nin premium versiyonu, native speech destekli. voice_reels ve conversational için en iyi seçim (TTS ile Türkçe seslendirme).
 
   Modeli içeriğe göre seç:
   - Haber bazlı acil içerik → kling-3.0-pro (hızlı)
@@ -275,7 +275,7 @@ YARATICI PARAMETRELER:
   - Futuristik/trend → neon_cyberpunk
   - İnfografik tarzı/clean → minimalist
 - hook_type: Sadece reels için. Seçenekler: {', '.join(VALID_HOOK_TYPES)}. Fırsatın hook önerisini dikkate al.
-- voice_mode: Sesli içerik mi? voice_reels/news_reels/conversational→true, diğerleri→false
+- voice_mode: Sesli içerik mi? voice_reels/conversational→true, diğerleri→false. news_reels DAIMA false (saf sinematik görsel).
 
 CAROUSEL PARAMETRELERİ (sadece content_type=carousel ise):
 - carousel_style: Renk paleti. Seçenekler: {', '.join(CAROUSEL_STYLES.keys())}
@@ -324,7 +324,7 @@ KARAR VER ve JSON formatında yanıt ver:
                 if content_type != "reels":
                     result["hook_type"] = None
                 if result.get("voice_mode") is None:
-                    result["voice_mode"] = content_type in ("voice_reels", "news_reels", "conversational")
+                    result["voice_mode"] = content_type in ("voice_reels", "conversational")
 
                 # Carousel parameter defaults
                 if content_type == "carousel":

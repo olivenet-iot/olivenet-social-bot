@@ -1515,6 +1515,17 @@ Sadece post metnini yaz, başka açıklama ekleme.
 """
 
         ig_response = await self.call_claude(ig_prompt, timeout=60)
+        if self._is_error_response(ig_response):
+            self.log("IG caption generation failed", level="error")
+            log_agent_action(
+                agent_name=self.name,
+                action="create_post_multiplatform",
+                input_data={"topic": topic, "category": category},
+                output_data={"error": ig_response},
+                success=False,
+                error_message="IG caption generation failed"
+            )
+            return {"error": "IG caption generation failed", "raw_response": ig_response}
         ig_text = ig_response.strip()
 
         # Instagram caption uzunluk kontrolü
@@ -1549,6 +1560,17 @@ Sadece post metnini yaz, başka açıklama ekleme.
 """
 
         fb_response = await self.call_claude(fb_prompt, timeout=60)
+        if self._is_error_response(fb_response):
+            self.log("FB caption generation failed", level="error")
+            log_agent_action(
+                agent_name=self.name,
+                action="create_post_multiplatform",
+                input_data={"topic": topic, "category": category},
+                output_data={"error": fb_response},
+                success=False,
+                error_message="FB caption generation failed"
+            )
+            return {"error": "FB caption generation failed", "raw_response": fb_response}
         fb_text = fb_response.strip()
 
         # Text-based prompt, hook_type çıkarılamıyor
