@@ -3,12 +3,13 @@ Post Pipeline - Günlük içerik üretim pipeline'ı.
 ContentPipeline.run_daily_content() metodundan extract edilmiştir.
 """
 
+from datetime import datetime
 from typing import Dict, Any
 
 from app.production.base_pipeline import BasePipeline
 from app.production.utils import PipelineState, escape_md
 from app.database import save_prompt
-from app.database.crud import update_post
+from app.database.crud import update_post, update_opportunity
 
 
 class PostPipeline(BasePipeline):
@@ -474,6 +475,15 @@ Prompt: _{visual_prompt_result.get('visual_prompt', 'N/A')[:200]}..._
                 if publish_result.get("success"):
                     result["stages_completed"].append("published")
                     result["success"] = True
+
+                    # Persist metadata to DB
+                    post_id = content_result.get("post_id")
+                    if post_id:
+                        update_post(post_id, visual_path=image_path or video_path)
+                        if opportunity:
+                            update_opportunity(opportunity["id"], status="used",
+                                              used_at=datetime.utcnow().isoformat(),
+                                              post_id=post_id)
 
                     await self.notify_telegram(
                         message=f"""

@@ -3,12 +3,13 @@ Reels Pipeline - Instagram Reels içerik üretim pipeline'ı.
 pipeline.py'daki run_reels_content metodundan extract edilmiştir.
 """
 
+from datetime import datetime
 from typing import Dict, Any
 
 from app.production.base_pipeline import BasePipeline
 from app.production.utils import PipelineState, escape_md
 from app.database import save_prompt
-from app.database.crud import update_post
+from app.database.crud import update_post, update_opportunity
 from app.video_models import get_max_duration
 
 
@@ -242,6 +243,15 @@ class ReelsPipeline(BasePipeline):
                 result["instagram_post_id"] = publish_result.get("instagram_post_id")
 
                 self.log(f"[REELS] Başarıyla yayınlandı! Instagram Reels")
+
+                # Persist metadata to DB
+                post_id = content_result.get("post_id")
+                if post_id:
+                    update_post(post_id, video_model=model_used, visual_path=video_path)
+                    if opportunity:
+                        update_opportunity(opportunity["id"], status="used",
+                                          used_at=datetime.utcnow().isoformat(),
+                                          post_id=post_id)
 
                 await self.notify_telegram(
                     message=f"🎉 *REELS* - Yayınlandı!\n\n"

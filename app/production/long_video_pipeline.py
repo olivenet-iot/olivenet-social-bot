@@ -6,12 +6,13 @@ ContentPipeline.run_long_video_pipeline() metodundan extract edilmiştir.
 
 import os
 import json
+from datetime import datetime
 from typing import Dict, Any
 
 from app.production.base_pipeline import BasePipeline
 from app.production.utils import PipelineState, escape_md, extract_shot_structure
 from app.database import save_prompt
-from app.database.crud import create_post, update_post
+from app.database.crud import create_post, update_post, update_opportunity
 from app.video_models import get_model_config, get_max_duration, validate_duration
 
 
@@ -472,6 +473,12 @@ class LongVideoPipeline(BasePipeline):
                 result["success"] = True
                 result["instagram_post_id"] = instagram_id
                 result["stages_completed"].append("publish")
+
+                # Persist opportunity linkage
+                if opportunity and post_id:
+                    update_opportunity(opportunity["id"], status="used",
+                                      used_at=datetime.utcnow().isoformat(),
+                                      post_id=post_id)
 
                 # Telegram bildirimi
                 await self.notify_telegram(
