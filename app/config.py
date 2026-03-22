@@ -122,7 +122,7 @@ class Settings(BaseSettings):
 
     # OpenAI TTS Settings
     openai_tts_model: str = Field(default="gpt-4o-mini-tts", description="OpenAI TTS model")
-    openai_tts_voice_male: str = Field(default="onyx", description="OpenAI TTS default/male voice")
+    openai_tts_voice_male: str = Field(default="alloy", description="OpenAI TTS default/male voice")
     openai_tts_voice_female: str = Field(default="nova", description="OpenAI TTS female voice")
     openai_tts_voice_narrator: str = Field(default="fable", description="OpenAI TTS narrator voice")
     openai_tts_voice_cartoon_male: str = Field(default="echo", description="OpenAI TTS cartoon male voice")
