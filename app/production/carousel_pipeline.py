@@ -10,7 +10,7 @@ from typing import Dict, Any
 from app.production.base_pipeline import BasePipeline
 from app.production.utils import PipelineState, escape_md
 from app.database import save_prompt
-from app.database.crud import update_post
+from app.database.crud import update_post, update_opportunity
 from app.validators.text_validator import validate_html_content, fix_common_issues
 
 
@@ -388,6 +388,15 @@ class CarouselPipeline(BasePipeline):
                 result["instagram_post_id"] = publish_result.get("instagram_post_id")
 
                 self.log("[CAROUSEL] Başarıyla yayınlandı!")
+
+                # Persist metadata to DB
+                post_id = carousel_content.get("post_id")
+                if post_id:
+                    update_post(post_id, visual_path=image_urls[0] if image_urls else None)
+                    if opportunity:
+                        update_opportunity(opportunity["id"], status="used",
+                                          used_at=datetime.utcnow().isoformat(),
+                                          post_id=post_id)
 
                 await self.notify_telegram(
                     message=f"🎠 *CAROUSEL* - Yayınlandı!\n\n"

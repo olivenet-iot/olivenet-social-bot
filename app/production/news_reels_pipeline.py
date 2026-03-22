@@ -22,6 +22,7 @@ from app.production.base_pipeline import BasePipeline
 from app.production.utils import PipelineState
 from app.production.quality_gate import QualityGate
 from app.utils.logger import get_logger
+from app.database import save_prompt
 from app.database.crud import update_opportunity, update_post
 from app.video_models import get_model_config, get_prompt_key, validate_duration, get_max_duration
 
@@ -144,6 +145,12 @@ class NewsReelsPipeline(BasePipeline):
 
             result["stages_completed"].append("video_prompt")
 
+            # Save video prompt to DB
+            if video_prompt and content_result.get("post_id"):
+                save_prompt(post_id=content_result.get("post_id"),
+                            prompt_text=video_prompt, prompt_type='video',
+                            style=visual_style)
+
             # ========== 3. VIDEO GENERATION ==========
             self.log(f"Asama 3/5: Video uretiliyor ({model_name})...")
 
@@ -206,6 +213,9 @@ class NewsReelsPipeline(BasePipeline):
                         result["stages_completed"].append("published")
                         update_opportunity(opp_id, status="used", used_at=datetime.utcnow().isoformat(),
                                          post_id=content_result.get("post_id"))
+                        model_used = video_result.get("model_used", model_id)
+                        update_post(content_result.get("post_id"), video_model=model_used,
+                                    visual_path=video_path)
                         self.log("Yayinlandi!")
                     else:
                         raise Exception(f"Publish error: {publish_result.get('error')}")

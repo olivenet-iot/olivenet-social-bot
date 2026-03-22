@@ -6,12 +6,13 @@ ContentPipeline.run_reels_voice_content() metodundan extract edilmistir.
 """
 
 import os
+from datetime import datetime
 from typing import Dict, Any
 
 from app.production.base_pipeline import BasePipeline
 from app.production.utils import PipelineState, escape_md, extract_shot_structure
 from app.database import save_prompt
-from app.database.crud import update_post
+from app.database.crud import update_post, update_opportunity
 from app.video_models import get_model_config, get_prompt_key, validate_duration, get_max_duration
 
 
@@ -482,6 +483,16 @@ class VoiceReelsPipeline(BasePipeline):
                 result["instagram_post_id"] = publish_result.get("instagram_post_id")
 
                 self.log(f"[VOICE REELS] Başarıyla yayınlandı! Instagram Reels")
+
+                # Persist metadata to DB
+                post_id = content_result.get("post_id")
+                if post_id:
+                    update_post(post_id, voice_mode=True, video_model=model_used,
+                                visual_path=final_video_path)
+                    if opportunity:
+                        update_opportunity(opportunity["id"], status="used",
+                                          used_at=datetime.utcnow().isoformat(),
+                                          post_id=post_id)
 
                 voice_status = "🔊 Sesli" if (audio_path and not voice_fallback) else "🔇 Sessiz"
 

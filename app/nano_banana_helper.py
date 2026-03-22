@@ -1,14 +1,14 @@
 """
-Nano Banana Pro - Gemini Image Generation for Infographics
-Model: gemini-3-pro-image-preview
-- Text rendering %94 accuracy
-- Google Search grounding (real-time data)
+Nano Banana Pro - fal.ai Image Generation for Infographics
+Model: fal-ai/nano-banana-pro
+- Text rendering with high accuracy
 - Infographic, diagram, arrow-box visuals
+- Queue-based async generation via fal.ai
 """
 
 import os
 import asyncio
-import base64
+import httpx
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 
@@ -17,8 +17,21 @@ from app.utils.logger import get_logger
 
 logger = get_logger("nano_banana")
 
-GEMINI_API_KEY = settings.gemini_api_key or os.getenv("GEMINI_API_KEY")
+FAL_API_KEY = settings.fal_api_key or os.getenv("FAL_API_KEY", "")
 OUTPUT_DIR = str(settings.outputs_dir)
+
+# fal.ai endpoint config
+FAL_BASE_URL = "https://queue.fal.run"
+FAL_MODEL_ENDPOINT = "fal-ai/nano-banana-pro"
+
+# Map Gemini-style aspect ratios to fal.ai image_size values
+ASPECT_RATIO_MAP = {
+    "1:1": "square_hd",
+    "16:9": "landscape_16_9",
+    "9:16": "portrait_9_16",
+    "4:3": "landscape_4_3",
+    "3:4": "portrait_4_3",
+}
 
 # Infographic style guidelines for Turkish IoT/Tech content
 INFOGRAPHIC_STYLE_PROMPT = """
@@ -48,9 +61,6 @@ AVOID:
 
 OUTPUT: High quality infographic suitable for Instagram post
 """
-
-# Google GenAI client
-_client = None
 
 
 def add_logo_overlay(
@@ -127,13 +137,93 @@ def add_logo_overlay(
         return image_path
 
 
-def get_client():
-    """Get Google GenAI client (singleton)"""
-    global _client
-    if _client is None:
-        from google import genai
-        _client = genai.Client(api_key=GEMINI_API_KEY)
-    return _client
+async def _fal_submit_and_poll(prompt: str, image_size: str = "square_hd") -> Dict[str, Any]:
+    """
+    Submit image generation request to fal.ai queue API and poll for result.
+
+    Timeout: 3 minutes (image generation is faster than video)
+    """
+    headers = {
+        "Authorization": f"Key {FAL_API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    request_body = {
+        "prompt": prompt,
+        "image_size": image_size,
+    }
+
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        # Submit request
+        submit_url = f"{FAL_BASE_URL}/{FAL_MODEL_ENDPOINT}"
+        logger.debug(f"  Submitting to: {submit_url}")
+
+        response = await client.post(submit_url, json=request_body, headers=headers)
+        response.raise_for_status()
+
+        result = response.json()
+
+        # If result is ready immediately (sync response)
+        if "images" in result:
+            return result
+
+        # Queue response - need to poll for result
+        request_id = result.get("request_id")
+        if not request_id:
+            raise Exception(f"No request_id in response: {result}")
+
+        logger.info(f"  Request queued: {request_id}")
+
+        # Get polling URLs from response
+        status_url = result.get("status_url")
+        result_url = result.get("response_url")
+
+        if not status_url or not result_url:
+            # Fallback: construct URLs manually
+            status_url = f"{FAL_BASE_URL}/{FAL_MODEL_ENDPOINT}/requests/{request_id}/status"
+            result_url = f"{FAL_BASE_URL}/{FAL_MODEL_ENDPOINT}/requests/{request_id}"
+
+        # Poll for result (3 minutes max, 3 second intervals)
+        max_attempts = 60
+        for attempt in range(max_attempts):
+            await asyncio.sleep(3)
+
+            status_response = await client.get(status_url, headers=headers)
+            status_response.raise_for_status()
+            status = status_response.json()
+
+            current_status = status.get("status", "unknown")
+            logger.debug(f"  Status [{attempt + 1}/{max_attempts}]: {current_status}")
+
+            if current_status == "COMPLETED":
+                result_response = await client.get(result_url, headers=headers)
+                result_response.raise_for_status()
+                return result_response.json()
+
+            elif current_status in ["FAILED", "CANCELLED"]:
+                error_msg = status.get("error", "Unknown error")
+                raise Exception(f"fal.ai generation failed: {error_msg}")
+
+            # IN_QUEUE or IN_PROGRESS - continue polling
+
+        raise Exception("fal.ai generation timed out (3 minutes)")
+
+
+async def _download_fal_image(image_url: str, filename_prefix: str) -> str:
+    """Download image from fal.ai CDN and save as PNG."""
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    image_path = f"{OUTPUT_DIR}/{filename_prefix}_{timestamp}.png"
+
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        response = await client.get(image_url)
+        response.raise_for_status()
+
+        with open(image_path, "wb") as f:
+            f.write(response.content)
+
+    logger.info(f"  Image saved: {image_path} ({os.path.getsize(image_path)/1024:.1f} KB)")
+    return image_path
 
 
 async def generate_infographic(
@@ -154,78 +244,48 @@ async def generate_infographic(
         style: Visual style (modern, minimal, colorful)
         language: Language for text (tr, en)
         aspect_ratio: Image ratio (1:1, 16:9, 9:16)
-        resolution: Image size (1K, 2K, 4K)
-        use_search: Enable Google Search grounding for real-time data
+        resolution: Image size (kept for backward compat, mapped to fal.ai image_size)
+        use_search: Kept for backward compat (no-op with fal.ai)
 
     Returns:
         Dict with success, image_path, error, etc.
     """
 
-    if not GEMINI_API_KEY:
-        return {"success": False, "error": "GEMINI_API_KEY not configured"}
+    if not FAL_API_KEY:
+        return {"success": False, "error": "FAL_API_KEY not configured"}
 
     start_time = datetime.now()
 
     # Build the prompt
     prompt = _build_infographic_prompt(topic, content_text, style, language)
 
+    # Map aspect ratio to fal.ai image_size
+    fal_image_size = ASPECT_RATIO_MAP.get(aspect_ratio, "square_hd")
+
     logger.info(f"Nano Banana infographic generation starting...")
     logger.info(f"  Topic: {topic[:50]}...")
-    logger.info(f"  Style: {style}, Aspect: {aspect_ratio}, Resolution: {resolution}")
+    logger.info(f"  Style: {style}, Image size: {fal_image_size}")
 
     try:
-        from google.genai import types
+        # Generate via fal.ai
+        logger.info("  Sending request to fal.ai nano-banana-pro...")
 
-        client = get_client()
+        result = await _fal_submit_and_poll(prompt, fal_image_size)
 
-        # Build config with optional Google Search grounding
-        tools = []
-        if use_search:
-            tools.append({"google_search": {}})
+        # Extract image URL from response
+        images = result.get("images", [])
+        if not images:
+            return {"success": False, "error": "No images in fal.ai response"}
 
-        config = types.GenerateContentConfig(
-            response_modalities=['TEXT', 'IMAGE'],
-            tools=tools if tools else None,
-            image_config=types.ImageConfig(
-                aspect_ratio=aspect_ratio,
-                image_size=resolution
-            )
-        )
+        image_url = images[0].get("url")
+        if not image_url:
+            return {"success": False, "error": "No image URL in fal.ai response"}
 
-        # Generate content
-        logger.info("  Sending request to Nano Banana Pro API...")
+        # Download image
+        image_path = await _download_fal_image(image_url, "nano_banana")
 
-        response = client.models.generate_content(
-            model="gemini-3-pro-image-preview",
-            contents=prompt,
-            config=config
-        )
-
-        # Process response
-        image_path = None
-        text_response = ""
-
-        for part in response.parts:
-            if hasattr(part, 'inline_data') and part.inline_data:
-                # Save image
-                os.makedirs(OUTPUT_DIR, exist_ok=True)
-                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                image_path = f"{OUTPUT_DIR}/nano_banana_{timestamp}.png"
-
-                image = part.as_image()
-                image.save(image_path)
-
-                # Logo overlay devre dışı - içerikle çakışıyor
-                # add_logo_overlay(image_path)
-
-                file_size = os.path.getsize(image_path)
-                logger.info(f"  Image saved: {image_path} ({file_size/1024:.1f} KB)")
-
-            elif hasattr(part, 'text') and part.text:
-                text_response = part.text
-
-        if not image_path:
-            return {"success": False, "error": "No image generated in response"}
+        # Logo overlay devre dışı - içerikle çakışıyor
+        # add_logo_overlay(image_path)
 
         elapsed = (datetime.now() - start_time).total_seconds()
 
@@ -234,14 +294,10 @@ async def generate_infographic(
             "image_path": image_path,
             "file_size": os.path.getsize(image_path),
             "duration": elapsed,
-            "text_response": text_response,
-            "model": "gemini-3-pro-image-preview",
-            "cost_estimate": 0.15  # ~$0.15 per image
+            "text_response": "",
+            "model": "fal-ai/nano-banana-pro",
+            "cost_estimate": 0.15
         }
-
-    except ImportError as e:
-        logger.error(f"google-genai package missing: {e}")
-        return {"success": False, "error": f"google-genai package missing: {e}"}
 
     except Exception as e:
         error_msg = str(e)
@@ -268,8 +324,8 @@ async def generate_carousel_infographics(
         Dict with success, image_paths list, errors, etc.
     """
 
-    if not GEMINI_API_KEY:
-        return {"success": False, "error": "GEMINI_API_KEY not configured"}
+    if not FAL_API_KEY:
+        return {"success": False, "error": "FAL_API_KEY not configured"}
 
     if not slides:
         return {"success": False, "error": "No slides provided"}
@@ -330,7 +386,7 @@ async def generate_carousel_infographics(
         "errors": errors,
         "duration": elapsed,
         "cost_estimate": total_cost,
-        "model": "gemini-3-pro-image-preview"
+        "model": "fal-ai/nano-banana-pro"
     }
 
 
@@ -338,45 +394,26 @@ async def _generate_single_slide(prompt: str, slide_number: int) -> Dict[str, An
     """Generate a single carousel slide"""
 
     try:
-        from google.genai import types
+        result = await _fal_submit_and_poll(prompt, "square_hd")
 
-        client = get_client()
+        images = result.get("images", [])
+        if not images:
+            return {"success": False, "error": "No images in fal.ai response"}
 
-        config = types.GenerateContentConfig(
-            response_modalities=['TEXT', 'IMAGE'],
-            tools=[{"google_search": {}}],
-            image_config=types.ImageConfig(
-                aspect_ratio="1:1",
-                image_size="1K"
-            )
-        )
+        image_url = images[0].get("url")
+        if not image_url:
+            return {"success": False, "error": "No image URL in fal.ai response"}
 
-        response = client.models.generate_content(
-            model="gemini-3-pro-image-preview",
-            contents=prompt,
-            config=config
-        )
+        image_path = await _download_fal_image(image_url, f"nano_carousel_{slide_number}")
 
-        # Find and save image
-        for part in response.parts:
-            if hasattr(part, 'inline_data') and part.inline_data:
-                os.makedirs(OUTPUT_DIR, exist_ok=True)
-                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                image_path = f"{OUTPUT_DIR}/nano_carousel_{timestamp}_{slide_number}.png"
+        # Logo overlay devre dışı - içerikle çakışıyor
+        # add_logo_overlay(image_path)
 
-                image = part.as_image()
-                image.save(image_path)
-
-                # Logo overlay devre dışı - içerikle çakışıyor
-                # add_logo_overlay(image_path)
-
-                return {
-                    "success": True,
-                    "image_path": image_path,
-                    "cost_estimate": 0.15
-                }
-
-        return {"success": False, "error": "No image in response"}
+        return {
+            "success": True,
+            "image_path": image_path,
+            "cost_estimate": 0.15
+        }
 
     except Exception as e:
         return {"success": False, "error": str(e)}
@@ -471,7 +508,7 @@ Maintain consistent color scheme and design language across all slides.
 async def test_nano_banana():
     """Test the Nano Banana helper"""
 
-    print("Testing Nano Banana Pro...")
+    print("Testing Nano Banana Pro (fal.ai)...")
 
     result = await generate_infographic(
         topic="LoRaWAN Gateway nedir ve nasil calisir?",

@@ -1,5 +1,6 @@
 import os
 import traceback
+from datetime import datetime
 from typing import Dict, Any
 
 from app.production.base_pipeline import BasePipeline
@@ -163,7 +164,8 @@ Show natural gestures and expressions, NO actual speech.
             result["stages_completed"].append("conversation_content")
 
             # Create post in database
-            from app.database import create_post, update_post
+            from app.database import create_post, update_post, save_prompt
+            from app.database.crud import update_opportunity
             post_id = create_post(
                 topic=topic,
                 post_text=caption,
@@ -174,6 +176,15 @@ Show natural gestures and expressions, NO actual speech.
                 voice_mode=True
             )
             result["post_id"] = post_id
+
+            # Save video prompts to DB
+            if post_id:
+                if video_prompt:
+                    save_prompt(post_id=post_id, prompt_text=video_prompt,
+                                prompt_type='video', style='conversation')
+                if broll_prompt:
+                    save_prompt(post_id=post_id, prompt_text=broll_prompt,
+                                prompt_type='video', style='broll')
 
             # ========== STAGE 3: Conversation Video Generation ==========
             self.log(f"[CONV REELS] Aşama 3: Conversation video ({model_id})...")
@@ -556,8 +567,14 @@ Show natural gestures and expressions, NO actual speech.
                     post_id,
                     visual_path=final_video_path,
                     total_video_duration=final_duration,
-                    voice_mode=True
+                    voice_mode=True,
+                    video_model=model_id,
+                    tone=content_tone
                 )
+                if opportunity:
+                    update_opportunity(opportunity["id"], status="used",
+                                      used_at=datetime.utcnow().isoformat(),
+                                      post_id=post_id)
 
             # ========== STAGE 9: Review & Approval ==========
             self.log("[CONV REELS] Aşama 9: Onay bekleniyor...")
