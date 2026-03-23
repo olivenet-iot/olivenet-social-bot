@@ -2551,7 +2551,12 @@ async def cmd_brain(update: Update, context: ContextTypes.DEFAULT_TYPE):
             output = log.get("output_data", "{}")
             try:
                 data = json.loads(output) if isinstance(output, str) else (output or {})
+                # Handle double-encoded JSON
+                if isinstance(data, str):
+                    data = json.loads(data)
             except Exception:
+                data = {}
+            if not isinstance(data, dict):
                 data = {}
             decisions.append({
                 "action": data.get("action", "?"),
