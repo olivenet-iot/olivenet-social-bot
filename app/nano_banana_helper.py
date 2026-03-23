@@ -31,6 +31,7 @@ ASPECT_RATIO_MAP = {
     "9:16": "portrait_9_16",
     "4:3": "landscape_4_3",
     "3:4": "portrait_4_3",
+    "4:5": "portrait_4_3",  # closest fal.ai match for Instagram post format
 }
 
 # Infographic style guidelines for Turkish IoT/Tech content
@@ -303,6 +304,61 @@ async def generate_infographic(
         error_msg = str(e)
         logger.error(f"Nano Banana error: {error_msg}")
         return {"success": False, "error": error_msg}
+
+
+async def generate_image(
+    prompt: str,
+    aspect_ratio: str = "1:1",
+) -> Dict[str, Any]:
+    """
+    Generate a single image from a raw prompt using Nano Banana Pro.
+
+    Unlike generate_infographic(), this passes the prompt directly to fal.ai
+    without wrapping it in infographic layout instructions.
+
+    Args:
+        prompt: Complete image generation prompt (English)
+        aspect_ratio: "1:1", "9:16", "4:5", etc.
+
+    Returns:
+        Dict with success, image_path, cost_estimate, etc.
+    """
+    if not FAL_API_KEY:
+        return {"success": False, "error": "FAL_API_KEY not configured"}
+
+    fal_size = ASPECT_RATIO_MAP.get(aspect_ratio, "square_hd")
+    start_time = datetime.now()
+
+    logger.info(f"Nano Banana image generation starting...")
+    logger.info(f"  Aspect ratio: {aspect_ratio} -> {fal_size}")
+
+    try:
+        result = await _fal_submit_and_poll(prompt, image_size=fal_size)
+
+        images = result.get("images", [])
+        if not images:
+            return {"success": False, "error": "No images in fal.ai response"}
+
+        image_url = images[0].get("url")
+        if not image_url:
+            return {"success": False, "error": "No image URL in fal.ai response"}
+
+        image_path = await _download_fal_image(image_url, "image_post")
+
+        elapsed = (datetime.now() - start_time).total_seconds()
+
+        return {
+            "success": True,
+            "image_path": image_path,
+            "file_size": os.path.getsize(image_path),
+            "duration": elapsed,
+            "model": "fal-ai/nano-banana-pro",
+            "cost_estimate": 0.10,
+        }
+
+    except Exception as e:
+        logger.error(f"Nano Banana image generation error: {e}")
+        return {"success": False, "error": str(e)}
 
 
 async def generate_carousel_infographics(

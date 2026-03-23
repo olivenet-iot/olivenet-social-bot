@@ -52,6 +52,23 @@ VIDEO_MODELS: Dict[str, dict] = {
         "description": "Sinematik yönetmenlik, 15s, fizik tabanlı hareket ⭐",
         "helper_module": "kling_helper",
         "kling_model": "kling-v3",
+        "kling_mode": "pro",
+        "has_native_audio": True,
+        "disable_audio_for_voice": True
+    },
+    "kling-3.0-std": {
+        "name": "Kling 3.0 Standard",
+        "provider": "kling",
+        "emoji": "🎬",
+        "durations": [5, 10],
+        "default_duration": 5,
+        "max_duration": 10,
+        "aspect_ratio": "9:16",
+        "prompt_key": "video_prompt_kling3",
+        "description": "Kısa video loop, uygun fiyat",
+        "helper_module": "kling_helper",
+        "kling_model": "kling-v3",
+        "kling_mode": "standard",
         "has_native_audio": True,
         "disable_audio_for_voice": True
     },
@@ -62,6 +79,7 @@ MODEL_ALIASES = {
     "sora2": "sora-2",
     "sora2-pro": "sora-2-pro",
     "kling_v3_pro": "kling-3.0-pro",
+    "kling_v3_std": "kling-3.0-std",
 }
 
 
