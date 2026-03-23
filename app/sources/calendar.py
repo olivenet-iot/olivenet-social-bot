@@ -92,6 +92,8 @@ class EventCalendar:
                     relevance_score=8,
                     timeliness_score=9,
                     virality_potential=6,
+                    visual_potential=7,
+                    originality_score=7,
                     combined_score=75.0,
                     content_type_suggestion=event.get("content_type", "reels"),
                     status="ready"
