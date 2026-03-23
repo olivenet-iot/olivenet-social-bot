@@ -1418,6 +1418,57 @@ def get_weekly_progress() -> Dict[str, Any]:
     }
 
 
+def get_weekly_content_breakdown() -> Dict[str, Any]:
+    """Pipeline-type-aware weekly content breakdown with cost estimates."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    today = datetime.now()
+    week_start = today - timedelta(days=today.weekday())
+    week_start = week_start.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    cursor.execute('''
+        SELECT visual_type, voice_mode, video_model, COUNT(*) as count
+        FROM posts
+        WHERE status = 'published'
+          AND published_at >= ?
+        GROUP BY visual_type, voice_mode, video_model
+    ''', (week_start,))
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    counts = {'video_reels': 0, 'image_post': 0, 'carousel': 0, 'voice_reels': 0}
+    cost_per_type = {
+        'video_reels': 1.70, 'image_post': 0.10,
+        'carousel': 0.60, 'voice_reels': 1.80,
+    }
+
+    for row in rows:
+        vtype = (row['visual_type'] or '').lower()
+        voice = bool(row['voice_mode'])
+        n = row['count']
+
+        if voice:
+            counts['voice_reels'] += n
+        elif vtype in ('video', 'reels'):
+            counts['video_reels'] += n
+        elif vtype in ('image', 'flux'):
+            counts['image_post'] += n
+        elif vtype == 'carousel':
+            counts['carousel'] += n
+        else:
+            counts['video_reels'] += n  # default
+
+    total_cost = sum(counts[k] * cost_per_type[k] for k in counts)
+
+    return {
+        **counts,
+        'total': sum(counts.values()),
+        'estimated_cost': round(total_cost, 2),
+    }
+
+
 def get_next_scheduled() -> Optional[Dict]:
     """
     Sıradaki planlanmış içerik.

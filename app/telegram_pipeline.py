@@ -29,8 +29,9 @@ from app.video_models import VIDEO_MODELS, get_model_config, get_model_durations
 from app.video_styles import VIDEO_STYLES, STYLE_CATEGORIES, get_style_config, get_styles_by_category
 from app.database.crud import (
     get_top_opportunities, get_opportunity, get_opportunity_stats,
-    get_agent_logs, update_opportunity
+    get_agent_logs, update_opportunity, get_weekly_content_breakdown
 )
+from app.engine.scheduler import BRAIN_CYCLE_MINUTES
 
 # Global değişkenler
 pipeline: ContentPipeline = None
@@ -2459,108 +2460,139 @@ async def cmd_pool(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("\n".join(lines))
 
 
+def _get_topic_short(opp_id, reason: str) -> str:
+    """Opportunity title (25 chars max), fallback to reason."""
+    if opp_id:
+        try:
+            opp = get_opportunity(int(opp_id))
+            if opp and opp.get("title"):
+                t = str(opp["title"])[:25]
+                return t
+        except Exception:
+            pass
+    r = str(reason or "")
+    return r[:25] if r else "?"
+
+
+def _shorten_model(model_id: str) -> str:
+    """Strip version numbers: 'kling-3.0-pro' → 'kling-pro'."""
+    if not model_id:
+        return "?"
+    import re
+    return re.sub(r'-?\d+\.?\d*', '', model_id).replace('--', '-').strip('-') or model_id
+
+
+def _shorten_content_type(ct: str) -> str:
+    """Compact content type names."""
+    mapping = {"image_to_video": "i2v", "news_reels": "news", "voice_reels": "voice"}
+    return mapping.get(ct, ct or "?")
+
+
+def _format_production_status(prod) -> str:
+    """One-line production status."""
+    if not prod or not isinstance(prod, dict):
+        return "⏳ Üretiliyor..."
+    inner = prod.get("production_result", prod)
+    if not isinstance(inner, dict):
+        return "⏳ Üretiliyor..."
+    success = inner.get("success")
+    if success is True:
+        return "✅ Yayınlandı"
+    if success is False:
+        err = str(inner.get("error", "?"))[:30]
+        return f"❌ {err}"
+    return "⏳ Üretiliyor..."
+
+
 def _format_brain_decision(d: dict) -> str:
-    """Format a single brain decision compactly."""
-    emoji_map = {"produce": "🎬", "wait": "⏸️", "adjust_strategy": "🔄"}
+    """Ultra-compact brain decision: max 3 lines."""
     action = str(d.get("action", "?"))
-    emoji = emoji_map.get(action, "🧠")
 
-    # Timestamp: show HH:MM only
+    # Timestamp HH:MM
     ts_raw = str(d.get("timestamp", ""))
-    if len(ts_raw) >= 16:
-        hhmm = ts_raw[11:16]
-    else:
-        hhmm = ts_raw
-
-    # Reason truncated to 120 chars
-    reason = str(d.get("reason", ""))
-    if len(reason) > 120:
-        reason = reason[:120] + "..."
-
-    parts = [f"{emoji} {action} — {hhmm}", reason]
+    hhmm = ts_raw[11:16] if len(ts_raw) >= 16 else ts_raw
 
     if action == "produce":
-        opp_id = d.get("opportunity_id", "")
-        score = d.get("combined_score", "")
-        ctype = d.get("content_type", "")
-        if opp_id or score or ctype:
-            score_str = f"{float(score):.1f}" if score else "?"
-            parts.append(f"📊 Opp: #{opp_id} | Skor: {score_str} | Tür: {ctype or '?'}")
+        ct = d.get("content_type", "")
+        emoji = {"image_post": "📸", "carousel": "📊"}.get(ct, "🎬")
+        topic = _get_topic_short(d.get("opportunity_id"), d.get("reason", ""))
+        model = _shorten_model(str(d.get("model_id", "")))
+        ct_short = _shorten_content_type(ct)
+        status = _format_production_status(d.get("production_result"))
+        return f"{emoji} produce — {hhmm}\n{topic} → {ct_short} ({model})\n{status}"
 
-        model_id = d.get("model_id", "")
-        tone = d.get("content_tone", "")
-        if model_id or tone:
-            parts.append(f"🎬 Model: {model_id or '?'} | Ton: {tone or '?'}")
-
-    # Production result
-    prod = d.get("production_result", {}) or {}
-    if isinstance(prod, dict) and prod:
-        inner = prod.get("production_result", prod)
-        if isinstance(inner, dict):
-            success = inner.get("success")
-            if success is True:
-                post_id = inner.get("instagram_post_id", "?")
-                parts.append(f"✅ Sonuç: {post_id}")
-            elif success is False:
-                err = str(inner.get("error", "?"))[:60]
-                parts.append(f"❌ Sonuç: {err}")
-
-    return "\n".join(parts)
+    # skip / wait / adjust_strategy
+    emoji = {"wait": "⏸️", "skip": "⏸️", "adjust_strategy": "🔄"}.get(action, "🧠")
+    reason = str(d.get("reason", ""))
+    if len(reason) > 60:
+        reason = reason[:60] + "…"
+    return f"{emoji} {action} — {hhmm}\n{reason}"
 
 
 async def cmd_brain(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Brain Agent son kararları"""
+    """Brain Agent son kararları — ultra-compact"""
     global brain_agent
 
     if not is_admin(update.effective_user.id):
         await update.message.reply_text("⛔ Yetkiniz yok.")
         return
 
-    # In-memory decisions (fastest)
+    # Collect decisions: in-memory first, DB fallback
+    decisions = []
     if brain_agent and hasattr(brain_agent, "get_last_decisions"):
         decisions = brain_agent.get_last_decisions(5)
-    else:
-        decisions = []
 
     if not decisions:
-        # Fallback to DB logs
         logs = get_agent_logs(agent_name="brain", limit=5)
         if not logs:
             await update.message.reply_text("🧠 Brain henüz karar almadı.")
             return
-
-        lines = ["🧠 Brain Agent (DB Logs)\n"]
         for log in logs:
             output = log.get("output_data", "{}")
             try:
-                import json as _json
-                data = _json.loads(output) if isinstance(output, str) else (output or {})
+                data = json.loads(output) if isinstance(output, str) else (output or {})
             except Exception:
                 data = {}
-            decision = {
-                "action": log.get("action", "?"),
+            decisions.append({
+                "action": data.get("action", "?"),
                 "timestamp": str(log.get("timestamp", "")),
                 "reason": data.get("reason", ""),
                 "opportunity_id": data.get("opportunity_id", ""),
                 "content_type": data.get("content_type", ""),
                 "model_id": data.get("model_id", ""),
-                "content_tone": data.get("content_tone", ""),
                 "production_result": data.get("production_result"),
-            }
-            lines.append(_format_brain_decision(decision))
+            })
 
-        await update.message.reply_text("\n\n".join(lines))
-        return
-
-    lines = ["🧠 Brain Agent (Son Kararlar)\n"]
+    lines = ["🧠 Brain"]
     for d in decisions:
         lines.append(_format_brain_decision(d))
 
+    # Weekly footer
+    try:
+        wb = get_weekly_content_breakdown()
+        parts = []
+        if wb['video_reels']:
+            parts.append(f"{wb['video_reels']} reels")
+        if wb['image_post']:
+            parts.append(f"{wb['image_post']} image")
+        if wb['carousel']:
+            parts.append(f"{wb['carousel']} carousel")
+        if wb['voice_reels']:
+            parts.append(f"{wb['voice_reels']} voice")
+        week_str = ", ".join(parts) if parts else "0"
+        lines.append(f"📊 Bu hafta: {week_str}")
+        lines.append(f"💰 Tahmini: ~${wb['estimated_cost']:.2f}")
+    except Exception:
+        pass
+
     dry_run = brain_agent.is_dry_run if brain_agent else True
     mode = "DRY-RUN" if dry_run else "LIVE"
-    lines.append(f"Mod: {mode}")
+    lines.append(f"⏰ Mod: {mode} | Cycle: {BRAIN_CYCLE_MINUTES}dk")
 
-    await update.message.reply_text("\n\n".join(lines))
+    msg = "\n".join(lines)
+    if len(msg) > 4000:
+        msg = msg[:4000] + "\n…"
+    await update.message.reply_text(msg)
 
 
 async def cmd_feeds(update: Update, context: ContextTypes.DEFAULT_TYPE):

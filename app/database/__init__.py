@@ -22,8 +22,8 @@ from .crud import (
     # Approval Audit Trail
     log_approval_decision, get_approval_history, get_approval_stats,
     # Telegram Bot Helpers
-    get_todays_summary, get_weekly_progress, get_next_scheduled,
-    get_best_performing_content, get_next_schedule_slot,
+    get_todays_summary, get_weekly_progress, get_weekly_content_breakdown,
+    get_next_scheduled, get_best_performing_content, get_next_schedule_slot,
     # Scheduler Helpers
     get_kktc_now, get_todays_content_by_type, should_run_scheduled_content,
     # Prompt Tracking
