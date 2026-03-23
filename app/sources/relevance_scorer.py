@@ -1,5 +1,5 @@
 """
-Relevance Scorer - İçerik fırsatlarını Claude API ile skorla
+Relevance Scorer - İçerik fırsatlarını Claude API ile 5 boyutlu skorla
 """
 
 import json
@@ -20,7 +20,7 @@ MAX_SCORES_PER_HOUR = 20
 
 
 class RelevanceScorer(BaseAgent):
-    """Claude API ile içerik fırsatlarını skorla."""
+    """Claude API ile içerik fırsatlarını 5 boyutlu skorla."""
 
     def __init__(self):
         super().__init__("scorer")
@@ -37,7 +37,7 @@ class RelevanceScorer(BaseAgent):
         return {"error": f"Unknown action: {action}"}
 
     async def score_opportunity(self, opportunity: Dict) -> Dict:
-        """Tek bir fırsatı skorla. Claude API çağrısı yapar."""
+        """Tek bir fırsatı 5 boyutlu skorla. Claude API çağrısı yapar."""
         if not opportunity.get("title"):
             return {"error": "No title"}
 
@@ -49,7 +49,7 @@ class RelevanceScorer(BaseAgent):
         company_profile = self.load_context("company-profile.md")
         content_strategy = self.load_context("content-strategy.md")
 
-        prompt = f"""Sen bir içerik fırsat değerlendirme uzmanısın. Olivenet, KKTC merkezli bir Endüstriyel IoT şirketidir.
+        prompt = f"""Sen bir içerik fırsat değerlendirme uzmanısın. Olivenet, KKTC merkezli bir teknoloji şirketidir — IoT, Edge AI, enerji izleme ve yapay zeka çözümleri sunar. Instagram'da hem teknik hem popüler bilim içeriği üretir.
 
 OLIVENET HAKKINDA:
 {company_profile[:1500]}
@@ -64,22 +64,56 @@ Kaynak: {opportunity.get('source_name', '')}
 Dil: {opportunity.get('original_language', 'en')}
 Etiketler: {json.dumps(opportunity.get('tags', []))}
 
-Bu fırsatı aşağıdaki kriterlere göre 1-10 arası puanla:
+Bu fırsatı aşağıdaki 5 boyutta 1-10 arası puanla:
 
-1. **relevance_score** (1-10): Bu konu Olivenet'in uzmanlık alanına (IoT, LoRaWAN, akıllı tarım, enerji izleme, endüstriyel otomasyon, yapay zeka, Edge AI, LLM, agentic AI) ne kadar yakın?
-2. **timeliness_score** (1-10): Bu konu ne kadar güncel ve zamanında? Trend mi, yoksa her zaman geçerli mi?
-3. **virality_potential** (1-10): Bu konu sosyal medyada ne kadar ilgi çekebilir? Dikkat çekici mi?
+1. **olivenet_relevance** (1-10): Bu konu Olivenet'in uzmanlık alanı ve Instagram içerik stratejisine ne kadar uygun?
+   - Direkt IoT, LoRaWAN, akıllı sensör = 8-10
+   - Edge AI, endüstriyel otomasyon, akıllı tarım = 7-9
+   - Genel AI/ML, LLM, agentic AI = 5-7
+   - Enerji, sürdürülebilirlik, akıllı şehir = 5-7
+   - Genel teknoloji haberi = 3-5
+   - Alakasız (politika, spor, magazin) = 1-2
 
-Ayrıca:
+2. **visual_potential** (1-10): Bu konu Instagram Reels/video olarak ne kadar görsel ve sinematik olabilir?
+   - Robot, drone, fabrika, sensör görseli = 8-10
+   - Veri dashboard, grafik, karşılaştırma = 6-8
+   - Soyut konsept ama animasyonla anlatılabilir = 4-6
+   - Sadece metin bazlı, görsel potansiyeli düşük = 1-3
+
+3. **viral_potential** (1-10): Bu konu sosyal medyada ne kadar dikkat çekip paylaşılabilir?
+   - "Bunu bilmiyordum!" etkisi yaratır = 8-10
+   - Trend konu, herkesin konuştuğu = 7-9
+   - Niş ama meraklısı için çok değerli = 5-7
+   - Rutin haber, sürpriz yok = 3-5
+   - Çok teknik, dar kitle = 1-3
+
+4. **timeliness** (1-10): Bu konu ne kadar güncel ve zamanında?
+   - Son 24 saat, breaking news = 9-10
+   - Bu hafta trend = 7-8
+   - Bu ay gündem = 5-6
+   - Evergreen, her zaman geçerli = 4-5
+   - Eski haber, geçmiş = 1-3
+
+5. **originality** (1-10): Bu konu ne kadar özgün ve farklı?
+   - Daha önce hiç görmediğimiz bir açı = 9-10
+   - Bilinen konuya yeni bir bakış = 6-8
+   - Herkesin paylaştığı standart haber = 3-5
+   - Tekrar, zaten çok işlenmiş = 1-2
+
+Ayrıca şunları da belirt:
+- **reasoning**: Neden bu skorları verdin? (1-2 cümle, Türkçe)
 - **olivenet_angle**: Bu haberi Olivenet perspektifinden nasıl anlatırız? (1-2 cümle, Türkçe)
 - **content_type_suggestion**: En uygun format nedir? ("reels", "carousel", "post", "voice_reels")
 - **hook_suggestion**: Önerilen hook/açılış cümlesi (Türkçe, max 15 kelime)
 
 JSON formatında yanıt ver:
 {{
-    "relevance_score": 7,
-    "timeliness_score": 8,
-    "virality_potential": 6,
+    "olivenet_relevance": 7,
+    "visual_potential": 8,
+    "viral_potential": 6,
+    "timeliness": 7,
+    "originality": 5,
+    "reasoning": "...",
     "olivenet_angle": "...",
     "content_type_suggestion": "reels",
     "hook_suggestion": "..."
@@ -89,18 +123,29 @@ JSON formatında yanıt ver:
             response = await self.call_claude_with_retry(prompt, timeout=60, max_retries=2)
             result = json.loads(response)
 
-            # Skor doğrulama (1-10 aralığında)
-            for key in ["relevance_score", "timeliness_score", "virality_potential"]:
+            # Skor doğrulama (1-10 aralığında) — 5 boyut
+            for key in ["olivenet_relevance", "visual_potential", "viral_potential", "timeliness", "originality"]:
                 val = result.get(key, 0)
                 if not isinstance(val, (int, float)):
                     val = 0
                 result[key] = max(0, min(10, val))
 
+            # Reasoning log
+            if result.get("reasoning"):
+                logger.info(f"Score reasoning [{opportunity.get('title', '')[:40]}]: {result['reasoning']}")
+
+            # Backward-compat mapping (DB column names)
+            result["relevance_score"] = result["olivenet_relevance"]
+            result["timeliness_score"] = result["timeliness"]
+            # virality_potential stays as-is (same key name from prompt → DB)
+
             # Combined score hesapla
             result["combined_score"] = self.calculate_combined_score(
-                relevance=result["relevance_score"],
-                timeliness=result["timeliness_score"],
-                virality=result["virality_potential"],
+                olivenet_relevance=result["olivenet_relevance"],
+                visual_potential=result["visual_potential"],
+                viral_potential=result["viral_potential"],
+                timeliness=result["timeliness"],
+                originality=result["originality"],
                 source_type=opportunity.get("source_type", "rss"),
                 source_name=opportunity.get("source_name", ""),
                 priority=self._get_feed_priority(opportunity.get("source_name", "")),
@@ -119,30 +164,35 @@ JSON formatında yanıt ver:
 
     def calculate_combined_score(
         self,
-        relevance: float,
+        olivenet_relevance: float,
+        visual_potential: float,
+        viral_potential: float,
         timeliness: float,
-        virality: float,
+        originality: float,
         source_type: str = "rss",
         source_name: str = "",
         priority: str = "normal",
         age_hours: float = 0
     ) -> float:
-        """0-100 arası birleşik skor hesapla."""
+        """0-100 arası birleşik skor hesapla — 5 boyutlu ağırlıklı formül."""
 
-        # Temel skorlar (1-10 -> 0-100 normalize)
+        # Ağırlıklı ortalama (1-10 -> 0-100 normalize)
         base = (
-            relevance * 10 * 0.30 +
-            timeliness * 10 * 0.25 +
-            virality * 10 * 0.20
-        )
+            olivenet_relevance * 0.25 +
+            visual_potential * 0.25 +
+            viral_potential * 0.20 +
+            timeliness * 0.15 +
+            originality * 0.15
+        ) * 10
 
         # Kaynak öncelik bonusu
         source_bonus = PRIORITY_BONUS.get(priority, 0)
 
         # Yaşlanma cezası (sadece RSS haberleri için)
+        # Azaltıldı: timeliness zaten Claude tarafından skorlanıyor
         age_penalty = 0
         if source_type == "rss" and age_hours > 0:
-            age_penalty = min(age_hours * 2, 40)
+            age_penalty = min(age_hours * 1, 20)
 
         score = base + source_bonus - age_penalty
 
@@ -170,6 +220,8 @@ JSON formatında yanıt ver:
                     relevance_score=result["relevance_score"],
                     timeliness_score=result["timeliness_score"],
                     virality_potential=result["virality_potential"],
+                    visual_potential=result.get("visual_potential", 0),
+                    originality_score=result.get("originality", 0),
                     combined_score=result["combined_score"],
                     olivenet_angle=result.get("olivenet_angle", ""),
                     content_type_suggestion=result.get("content_type_suggestion", ""),

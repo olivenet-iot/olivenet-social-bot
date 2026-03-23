@@ -167,8 +167,8 @@ CATEGORY_WEIGHTS = {
 
 # Öncelik bazlı bonus skorlar
 PRIORITY_BONUS = {
-    "high": 15,
-    "normal": 5,
+    "high": 10,
+    "normal": 3,
     "low": 0,
 }
 

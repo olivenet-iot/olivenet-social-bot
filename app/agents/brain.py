@@ -34,6 +34,9 @@ OPTIMAL_HOURS = [10, 14, 19]
 # Brain'in varsayılan model tercihleri
 MODEL_DEFAULTS = {
     "news_reels": "kling-3.0-pro",
+    "short_reels": "kling-3.0-std",
+    "image_post": "nano-banana-pro",
+    "image_to_video": "kling-3.0-pro",
     "voice_reels": "sora-2-pro",
     "reels": "kling-3.0-pro",
     "long_video": "kling-3.0-pro",
@@ -42,7 +45,7 @@ MODEL_DEFAULTS = {
     "post": None,
 }
 
-VALID_MODELS = ["sora-2", "sora-2-pro", "kling-3.0-pro"]
+VALID_MODELS = ["sora-2", "sora-2-pro", "kling-3.0-pro", "kling-3.0-std", "nano-banana-pro"]
 VALID_VISUAL_STYLES = ["cinematic_4k", "3d_render", "neon_cyberpunk", "anime", "minimalist"]
 VALID_HOOK_TYPES = ["question", "statistic", "bold_claim", "problem", "value", "fear", "before_after", "list", "comparison", "local"]
 
@@ -215,14 +218,6 @@ MEVCUT DURUM:
 HAFTALIK İLERLEME:
 {json.dumps(weekly, indent=2, default=str)}
 
-HAFTALIK REHBER (hedef değil, rehber — sen karar ver):
-- Haftada toplam 8-14 içerik üret (duruma göre ayarla)
-- Çeşitlilik önemli: tek formata takılma
-- Haber yoğun haftalarda news_reels ve carousel ağırlıklı ol
-- Haber az ise evergreen reels ve post'lara ağırlık ver
-- Performans verisine göre adapte ol: hangi format daha iyi engagement alıyorsa ona yönel
-- Her gün en az 1, en fazla 3 içerik
-
 HAZIR FIRSATLAR (Top 5):
 {opp_text}
 
@@ -232,67 +227,79 @@ SON 24 SAATTE SEÇİLEN FIRSATLAR (tekrar seçme):
 SON 14 GÜNDE KULLANILAN KONULAR:
 {recent_text}
 
-KURALLAR:
+OPERASYONEL SINIRLAR:
 1. Günde max {MAX_DAILY_POSTS} paylaşım
 2. Paylaşımlar arası min {MIN_POST_INTERVAL_HOURS} saat
 3. Haber bazlı içerik 48 saatten eski olmamalı
 4. Aynı konu 14 gün içinde tekrarlanmamalı
-5. Haftalık mix: ~%50 haber bazlı, ~%25 uzmanlık, ~%25 eğitici
-6. Optimal saatler: {OPTIMAL_HOURS}
-7. Min skor: {MIN_SCORE_TO_PRODUCE}
+5. Optimal saatler: {OPTIMAL_HOURS}
+6. Min skor: {MIN_SCORE_TO_PRODUCE}
+
+İÇERİK TÜRLERİ VE MALİYETLER:
+- news_reels: Sinematik/3D render video (15s). Maliyet ~$1.70. Model: kling-3.0-pro. Ambient ses, TTS yok.
+- short_reels: Kısa video loop (5-10s). Maliyet ~$0.28-0.56. Model: kling-3.0-std. Hızlı, ucuz.
+- image_post: Tek çarpıcı AI görsel + caption. Maliyet ~$0.10. Model: nano-banana-pro. En hızlı ve ucuz.
+- carousel: 3-5 slayt infografik. Maliyet ~$0.45-0.75. Model: nano-banana-pro.
+- image_to_video: Önce referans görsel üret, sonra Kling i2v ile animate et. Maliyet ~$1.80. Premium kalite.
+- voice_reels: Sesli anlatım + altyazılı video. Maliyet ~$1.80. Model: sora-2-pro. Türkçe TTS.
+
+KARAR VERİRKEN DÜŞÜN:
+Kuralları takip etme — DÜŞÜN. Her haber farklıdır. Şunları göz önünde bulundur:
+
+HABERİN DOĞASI:
+- Görsel olarak güçlü mü? (fabrika, robot, sensör, enerji santrali → video)
+- İstatistik/veri ağırlıklı mı? (→ carousel veya image_post)
+- Hızlı paylaşılması mı gerekiyor? (→ image_post, ucuz ve hızlı)
+- Derinlemesine analiz mi? (→ carousel)
+- Özel/premium konu mu? (→ image_to_video veya news_reels)
+
+BU HAFTA NE ÜRETTİN:
+- Üst üste aynı format sıkıcı olur — ama zorunlu değil
+- İyi bir haber varsa üst üste reels de olabilir
+- Format çeşitliliği iyi ama buna takılma
+
+MALİYET:
+- Her gün $1.70 video üretmek pahalı
+- image_post ($0.10) ile hacim oluştur, arada premium video yap
+- Haftalık toplam $5-8 arası makul
+
+GÖRSEL STİL:
+- Olivenet tarzı: 3D render, cinematic, neon_cyberpunk, minimalist
+- Kling Pro: 3D render ve sinematik sahneler için mükemmel
+- Kling Std: Daha basit sahneler, loop videolar için yeterli
+- Nano Banana Pro: Tipografi destekli, istatistik görselleri, infografikler
+
+ZAMANLAMA:
+- Büyük haber → hemen video
+- Orta haber → image_post ile hızlı paylaş
+- Eğitici konu → carousel, acele yok
+
+Kendi kararını ver. Gerekçeni açıkla.
 
 İÇERİK TONU (zorunlu — content_tone alanını MUTLAKA doldur):
-- "news_commentary": Haber bazlı. Kaynağı referans ver, ne olduğunu anlat, Olivenet perspektifinden yorumla. ASLA pazarlama tonu kullanma.
-  Örnek: "AT&T, Cisco ve NVIDIA edge computing için güçlerini birleştirdi. Bu, endüstriyel IoT sektörü için önemli bir sinyal..."
+- "news_commentary": Haber bazlı. Kaynağı referans ver, ne olduğunu anlat, Olivenet perspektifinden yorumla. Pazarlama tonu YASAK.
 - "educational": Eğitici. Bir konuyu öğret, teknik detay ver. Bilgi paylaşımı tonu.
-  Örnek: "Edge AI nedir? Veriyi buluta göndermeden yerinde işlemek demek. İşte 4 temel avantajı..."
 - "showcase": Olivenet'in yaptığı işleri göster. Sadece gerçek projeler ve deneyimler.
-  Örnek: "KKTC'de sera otomasyonu projemizden bir kesit. LoRaWAN sensörlerle nem ve sıcaklığı izliyoruz."
 - "thought_leadership": Sektör yorumu, trend analizi. Kişisel görüş ve vizyon.
-  Örnek: "Endüstriyel IoT'nin geleceği edge'de. İşte neden böyle düşünüyorum..."
 KURAL: source='rss' olan fırsatlar için content_tone MUTLAKA 'news_commentary' olmalı.
-Evergreen fırsatlar için 'educational' veya 'showcase' kullan.
 
 YARATICI PARAMETRELER:
-- model_id: Video model seçimi. İçeriğe göre aktif seçim yap.
-  MODEL SEÇİMİ REHBERİ:
-  - kling-3.0-pro: Hızlı üretim (2-3 dk), 15s'e kadar, ambient ses destekli. Endüstriyel, gerçekçi sahneler için ideal. news_reels için varsayılan (saf sinematik görsel + ambient ses, TTS/altyazı YOK).
-  - sora-2: Yüksek sinematik kalite, 12s max, yavaş (5-8 dk). Yaratıcı ve artistik sahneler için.
-  - sora-2-pro: Sora 2'nin premium versiyonu, native speech destekli. voice_reels ve conversational için en iyi seçim (TTS ile Türkçe seslendirme).
-
-  Modeli içeriğe göre seç:
-  - Haber bazlı acil içerik → kling-3.0-pro (hızlı)
-  - Sinematik showcase → sora-2
-  - Sesli anlatım → sora-2-pro
-  - Conversational diyalog → sora-2-pro
-  - Teknik demo → kling-3.0-pro
-  Mevcut modeller: {', '.join(VALID_MODELS)}
 - visual_style: Görsel stil. Seçenekler: {', '.join(VALID_VISUAL_STYLES)}. Varsayılan: cinematic_4k
-  Stil rehberi:
-  - Haber bazlı içerik → cinematic_4k
-  - Teknik/ürün odaklı → 3d_render
-  - Eğitici/dikkat çekici → anime
-  - Futuristik/trend → neon_cyberpunk
-  - İnfografik tarzı/clean → minimalist
-- hook_type: Sadece reels için. Seçenekler: {', '.join(VALID_HOOK_TYPES)}. Fırsatın hook önerisini dikkate al.
-- voice_mode: Sesli içerik mi? voice_reels/conversational→true, diğerleri→false. news_reels DAIMA false (saf sinematik görsel).
+- hook_type: Sadece reels için. Seçenekler: {', '.join(VALID_HOOK_TYPES)}
+- voice_mode: voice_reels/conversational→true, diğer tüm tipler→false
+- target_duration: short_reels için 5 veya 10 (saniye)
 
 CAROUSEL PARAMETRELERİ (sadece content_type=carousel ise):
-- carousel_style: Renk paleti. Seçenekler: {', '.join(CAROUSEL_STYLES.keys())}
-  IoT/teknoloji haberi → tech_blue
-  Enerji/sürdürülebilirlik → energy_green
-  Endüstriyel/fabrika → warm_industrial
-  Genel profesyonel → dark_premium
-  Veri/istatistik ağırlıklı → clean_minimal
-- carousel_layout: Sunum tarzı. Seçenekler: {', '.join(CAROUSEL_LAYOUTS)}
-- slide_count: 4-8 arası (kısa haber: 4, detaylı analiz: 6-8)
+- carousel_style: {', '.join(CAROUSEL_STYLES.keys())}
+- carousel_layout: {', '.join(CAROUSEL_LAYOUTS)}
+- slide_count: 4-8 arası
 
 KARAR VER ve JSON formatında yanıt ver:
 {{
     "action": "produce" | "wait",
     "reason": "Kararın sebebi (Türkçe, 1-2 cümle)",
     "opportunity_id": null | <fırsat ID>,
-    "content_type": null | "reels" | "voice_reels" | "news_reels" | "carousel" | "post",
+    "content_type": null | "news_reels" | "short_reels" | "image_post" | "carousel" | "image_to_video" | "voice_reels",
     "content_tone": null | "news_commentary" | "educational" | "showcase" | "thought_leadership",
     "weekly_strategy_note": "Bu hafta neden bu formatı seçtim (1 cümle)",
     "urgency": "low" | "medium" | "high",
@@ -300,6 +307,7 @@ KARAR VER ve JSON formatında yanıt ver:
     "visual_style": null | "<stil>",
     "hook_type": null | "<hook tipi>",
     "voice_mode": null | true | false,
+    "target_duration": null | 5 | 10,
     "carousel_style": null | "<style>",
     "carousel_layout": null | "<layout>",
     "slide_count": null | 4-8
@@ -314,14 +322,31 @@ KARAR VER ve JSON formatında yanıt ver:
                 result["action"] = "wait"
                 result["reason"] = result.get("reason", "Invalid action from LLM")
 
+            # Valid content types
+            VALID_CONTENT_TYPES = [
+                "news_reels", "short_reels", "image_post", "carousel",
+                "image_to_video", "voice_reels", "reels", "post",
+                "long_video", "conversational"
+            ]
+
             # Creative parameter defaults
             content_type = result.get("content_type")
             if content_type and result.get("action") == "produce":
-                if not result.get("model_id") or result.get("model_id") not in VALID_MODELS:
+                # Validate content_type
+                if content_type not in VALID_CONTENT_TYPES:
+                    result["content_type"] = "news_reels"
+                    content_type = "news_reels"
+
+                # Model validation — image_post uses nano-banana-pro (not a video model)
+                model_id = result.get("model_id")
+                if content_type in ("image_post",) and model_id == "nano-banana-pro":
+                    pass  # Valid non-video model
+                elif not model_id or model_id not in VALID_MODELS:
                     result["model_id"] = MODEL_DEFAULTS.get(content_type)
+
                 if not result.get("visual_style"):
                     result["visual_style"] = "cinematic_4k"
-                if content_type != "reels":
+                if content_type not in ("reels", "short_reels"):
                     result["hook_type"] = None
                 if result.get("voice_mode") is None:
                     result["voice_mode"] = content_type in ("voice_reels", "conversational")
@@ -361,10 +386,13 @@ KARAR VER ve JSON formatında yanıt ver:
         "reels": ("app.production.reels_pipeline", "ReelsPipeline"),
         "voice_reels": ("app.production.voice_reels_pipeline", "VoiceReelsPipeline"),
         "news_reels": ("app.production.news_reels_pipeline", "NewsReelsPipeline"),
+        "short_reels": ("app.production.news_reels_pipeline", "NewsReelsPipeline"),
         "carousel": ("app.production.carousel_pipeline", "CarouselPipeline"),
         "post": ("app.production.post_pipeline", "PostPipeline"),
         "long_video": ("app.production.long_video_pipeline", "LongVideoPipeline"),
         "conversational": ("app.production.conversational_pipeline", "ConversationalPipeline"),
+        "image_post": ("app.production.image_post_pipeline", "ImagePostPipeline"),
+        "image_to_video": ("app.production.image_to_video_pipeline", "ImageToVideoPipeline"),
     }
 
     async def trigger_production(self, opportunity: Dict, content_type: str, decision: Dict = None) -> Dict:
@@ -432,6 +460,33 @@ KARAR VER ve JSON formatında yanıt ver:
 
                 elif content_type in ("long_video", "conversational"):
                     kwargs = {"topic": opportunity.get("title", ""), "opportunity": opportunity, "content_tone": content_tone}
+                    if model_id:
+                        kwargs["model_id"] = model_id
+                    if visual_style:
+                        kwargs["visual_style"] = visual_style
+                    result = await pipeline.run(**kwargs)
+
+                elif content_type == "short_reels":
+                    kwargs = {
+                        "opportunity": opportunity, "autonomous": True, "content_tone": content_tone,
+                        "model_id": model_id or "kling-3.0-std",
+                        "target_duration": creative.get("target_duration", 5),
+                    }
+                    if visual_style:
+                        kwargs["visual_style"] = visual_style
+                    result = await pipeline.run(**kwargs)
+
+                elif content_type == "image_post":
+                    kwargs = {
+                        "opportunity": opportunity, "autonomous": True, "content_tone": content_tone,
+                        "aspect_ratio": creative.get("aspect_ratio", "1:1"),
+                    }
+                    result = await pipeline.run(**kwargs)
+
+                elif content_type == "image_to_video":
+                    kwargs = {
+                        "opportunity": opportunity, "autonomous": True, "content_tone": content_tone,
+                    }
                     if model_id:
                         kwargs["model_id"] = model_id
                     if visual_style:

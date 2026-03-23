@@ -675,6 +675,10 @@ class CreatorAgent(BaseAgent):
             return await self.create_multi_scene_prompts(input_data)
         elif action == "create_conversation_content":
             return await self.create_conversation_content(input_data)
+        elif action == "create_image_prompt":
+            return await self.create_image_prompt(input_data)
+        elif action == "create_image_and_animation_prompt":
+            return await self.create_image_and_animation_prompt(input_data)
         else:
             return {"error": f"Unknown action: {action}"}
 
@@ -1722,6 +1726,193 @@ Sadece JSON döndür.
 
         except json.JSONDecodeError:
             return {"error": "JSON parse error", "raw_response": response}
+
+    async def create_image_prompt(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """image_post pipeline icin tek gorsel prompt'u olustur (Nano Banana Pro)"""
+        self.log("Image post prompt'u oluşturuluyor...")
+
+        topic = input_data.get("topic", "")
+        post_text = input_data.get("post_text_ig") or input_data.get("post_text", "")
+        content_tone = input_data.get("content_tone", "educational")
+        news_context = input_data.get("news_context")
+        aspect_ratio = input_data.get("aspect_ratio", "1:1")
+
+        visual_guidelines = self.load_context("visual-guidelines.md")
+
+        TONE_MOOD_MAP = {
+            "news_commentary": "dramatic, urgent, news-worthy atmosphere",
+            "educational": "clean, bright, educational, approachable",
+            "showcase": "professional, real-world, industrial",
+            "thought_leadership": "bold, visionary, futuristic",
+        }
+        mood_hint = TONE_MOOD_MAP.get(content_tone, "professional")
+
+        news_context_section = ""
+        if news_context:
+            news_context_section = f"""
+### Haber/Fırsat Bağlamı
+{news_context}
+"""
+
+        prompt = f"""
+## GÖREV: Tek Görsel İçin Image Prompt Oluştur
+
+Bu prompt Nano Banana Pro (fal.ai) ile görsel üretmek için kullanılacak.
+İnfografik DEĞİL — konuyu temsil eden çarpıcı, artistik bir görsel.
+
+### Görsel Rehberi
+{visual_guidelines}
+
+### Konu
+{topic}
+
+### Post Metni
+{post_text[:500]}
+
+### İçerik Tonu: {content_tone}
+Mood: {mood_hint}
+{news_context_section}
+### Aspect Ratio: {aspect_ratio}
+
+### KURALLAR:
+1. Prompt İNGİLİZCE olmalı (fal.ai modeli İngilizce çalışır)
+2. Görselde YAZI/TEXT OLMAMALI — sadece görsel öğeler
+3. Olivenet tarzı: endüstriyel IoT, teknoloji, sinematik
+4. Marka renkleri referans: olive green (#4a7c4a), sky blue (#38bdf8) — zorunlu değil ama uyumlu
+5. 40-80 kelime arası prompt
+6. Fotorealistik, 3D render veya sinematik stil
+7. İnsan yüzü veya gerçekçi insan figürü KULLANMA
+
+---
+
+ÇIKTI FORMATI (JSON):
+```json
+{{
+    "image_prompt": "English image generation prompt...",
+    "style": "photorealistic|3d_render|cinematic",
+    "aspect_ratio": "{aspect_ratio}",
+    "mood": "dramatic|professional|educational|visionary"
+}}
+```
+
+Sadece JSON döndür.
+"""
+
+        response = await self.call_claude(prompt, timeout=90)
+
+        try:
+            result = json.loads(self._clean_json_response(response))
+            result["success"] = True
+
+            log_agent_action(
+                agent_name=self.name,
+                action="create_image_prompt",
+                input_data={"topic": topic, "content_tone": content_tone},
+                output_data=result,
+                success=True
+            )
+
+            self.log(f"Image prompt oluşturuldu ({result.get('style', 'unknown')})")
+            return result
+
+        except json.JSONDecodeError:
+            return {"success": False, "error": "JSON parse error", "raw_response": response}
+
+    async def create_image_and_animation_prompt(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """image_to_video pipeline icin referans gorsel + animasyon prompt'u olustur"""
+        self.log("Image-to-video prompt çifti oluşturuluyor...")
+
+        topic = input_data.get("topic", "")
+        post_text = input_data.get("post_text_ig") or input_data.get("post_text", "")
+        content_tone = input_data.get("content_tone", "educational")
+        news_context = input_data.get("news_context")
+        visual_style = input_data.get("visual_style", "cinematic_4k")
+
+        visual_guidelines = self.load_context("visual-guidelines.md")
+
+        news_context_section = ""
+        if news_context:
+            news_context_section = f"""
+### Haber/Fırsat Bağlamı
+{news_context}
+"""
+
+        prompt = f"""
+## GÖREV: Image-to-Video İçin İkili Prompt Oluştur
+
+Bu iki aşamalı bir üretim:
+1. Önce Nano Banana Pro ile referans görsel üretilecek (image_prompt)
+2. Sonra Kling AI ile bu görsel canlandırılacak (animation_prompt)
+
+### Görsel Rehberi
+{visual_guidelines}
+
+### Konu
+{topic}
+
+### Post Metni
+{post_text[:500]}
+
+### İçerik Tonu: {content_tone}
+### Görsel Stil: {visual_style}
+{news_context_section}
+### KURALLAR:
+
+IMAGE PROMPT (referans kare):
+1. İNGİLİZCE, 40-80 kelime
+2. 9:16 dikey format (Instagram Reels)
+3. Statik sahne — ama hareket potansiyeli olan öğeler içermeli
+4. Görselde YAZI OLMAMALI
+5. Detaylı: ışık, materyal, atmosfer, derinlik
+6. Olivenet tarzı: endüstriyel, teknoloji, sinematik
+7. İnsan yüzü KULLANMA
+
+ANIMATION PROMPT (Kling i2v):
+1. İNGİLİZCE, 20-40 kelime
+2. Referans görselden nasıl hareket edeceğini tanımla
+3. Kamera hareketi (push in, orbit, dolly, pan)
+4. Obje hareketi (kıvılcım, parçacık, duman, ışık değişimi)
+5. Atmosfer değişimi (ışık geçişi, bokeh, lens flare)
+6. 5 saniyelik video için uygun tempo
+
+ÖNEMLİ: İki prompt birbirini tamamlamalı. Image prompt sahnedeki öğeleri tanımlar,
+animation prompt bu öğelerin nasıl hareket edeceğini tanımlar.
+
+---
+
+ÇIKTI FORMATI (JSON):
+```json
+{{
+    "image_prompt": "Static scene description...",
+    "animation_prompt": "Camera slowly pushes in, sparks fly from welding...",
+    "style": "cinematic_4k|3d_render|neon_cyberpunk",
+    "mood": "dramatic|professional|energetic",
+    "recommended_duration": 5
+}}
+```
+
+Sadece JSON döndür.
+"""
+
+        response = await self.call_claude(prompt, timeout=90)
+
+        try:
+            result = json.loads(self._clean_json_response(response))
+            result["success"] = True
+
+            log_agent_action(
+                agent_name=self.name,
+                action="create_image_and_animation_prompt",
+                input_data={"topic": topic, "visual_style": visual_style},
+                output_data=result,
+                success=True
+            )
+
+            self.log(f"i2v prompt çifti oluşturuldu ({result.get('style', 'unknown')})")
+            return result
+
+        except json.JSONDecodeError:
+            return {"success": False, "error": "JSON parse error", "raw_response": response}
 
     async def revise_post(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Post'u revizyonla"""

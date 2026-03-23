@@ -504,6 +504,17 @@ def init_database():
         except sqlite3.OperationalError:
             pass  # Kolon zaten var
 
+    # Content Opportunities - multi-dimensional scoring columns
+    opp_migrations = [
+        "ALTER TABLE content_opportunities ADD COLUMN visual_potential REAL DEFAULT 0",
+        "ALTER TABLE content_opportunities ADD COLUMN originality_score REAL DEFAULT 0",
+    ]
+    for stmt in opp_migrations:
+        try:
+            cursor.execute(stmt)
+        except sqlite3.OperationalError:
+            pass
+
     conn.commit()
     conn.close()
     print("✅ Database initialized")

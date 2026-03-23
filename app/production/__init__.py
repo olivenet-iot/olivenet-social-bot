@@ -15,4 +15,6 @@ __all__ = [
     "PostPipeline",
     "LongVideoPipeline",
     "ConversationalPipeline",
+    "ImagePostPipeline",
+    "ImageToVideoPipeline",
 ]

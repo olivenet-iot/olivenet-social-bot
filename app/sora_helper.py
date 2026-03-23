@@ -238,12 +238,16 @@ async def generate_video_smart(
         model = complexity.get("model", "kling_v3_pro")
         duration = complexity.get("duration", duration)
 
+    # Save original model ID before alias resolution (for config lookup)
+    original_model = force_model or model
+
     # Model isim normalizasyonu (UI'dan gelen kısa isimler ve video_models.py ID'leri)
     model_aliases = {
         "sora2": "sora-2",
         "sora2-pro": "sora-2-pro",
         # Multi-model voice reels ID'leri (video_models.py → kling_helper.py)
         "kling-3.0-pro": "kling_v3_pro",
+        "kling-3.0-std": "kling_v3_std",
     }
     if model in model_aliases:
         model = model_aliases[model]
@@ -256,11 +260,15 @@ async def generate_video_smart(
         print(f"[VIDEO] → Kling fal.ai ({model}) kullaniliyor...")
         try:
             from app.kling_helper import KlingHelper
+            from app.video_models import get_model_config
+            mc = get_model_config(original_model)
+            kling_mode = mc.get("kling_mode", "pro")
             kling = KlingHelper()
             result = await kling.generate_video(
                 prompt=prompt,
-                duration=min(duration, 15),
+                duration=min(duration, mc.get("max_duration", 15)),
                 aspect_ratio="9:16",
+                mode=kling_mode,
             )
             if result.get("success"):
                 return result
@@ -293,6 +301,43 @@ async def generate_video_smart(
     # Sora basarisiz - hata döndür
     print(f"[VIDEO] ⚠️ Sora basarisiz: {sora_result.get('error')}")
     return sora_result
+
+
+async def generate_video_from_image_smart(
+    image_url: str,
+    prompt: str,
+    model_id: str = "kling-3.0-pro",
+    duration: int = 5,
+    aspect_ratio: str = "9:16",
+) -> Dict[str, Any]:
+    """Generate video from a reference image using Kling i2v.
+
+    Args:
+        image_url: Public URL of the reference image
+        prompt: Animation/motion description
+        model_id: Video model (kling-3.0-pro or kling-3.0-std)
+        duration: Video duration in seconds
+        aspect_ratio: Video aspect ratio
+
+    Returns:
+        Dict with success, video_path, etc.
+    """
+    from app.kling_helper import KlingHelper
+    from app.video_models import get_model_config
+
+    mc = get_model_config(model_id)
+    kling_mode = mc.get("kling_mode", "pro")
+
+    print(f"[VIDEO] → Kling i2v ({kling_mode}) kullaniliyor...")
+
+    kling = KlingHelper()
+    return await kling.generate_video_from_image(
+        image_url=image_url,
+        prompt=prompt,
+        duration=min(duration, mc.get("max_duration", 15)),
+        aspect_ratio=aspect_ratio,
+        mode=kling_mode,
+    )
 
 
 async def generate_videos_parallel(
