@@ -2459,6 +2459,55 @@ async def cmd_pool(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("\n".join(lines))
 
 
+def _format_brain_decision(d: dict) -> str:
+    """Format a single brain decision compactly."""
+    emoji_map = {"produce": "🎬", "wait": "⏸️", "adjust_strategy": "🔄"}
+    action = str(d.get("action", "?"))
+    emoji = emoji_map.get(action, "🧠")
+
+    # Timestamp: show HH:MM only
+    ts_raw = str(d.get("timestamp", ""))
+    if len(ts_raw) >= 16:
+        hhmm = ts_raw[11:16]
+    else:
+        hhmm = ts_raw
+
+    # Reason truncated to 120 chars
+    reason = str(d.get("reason", ""))
+    if len(reason) > 120:
+        reason = reason[:120] + "..."
+
+    parts = [f"{emoji} {action} — {hhmm}", reason]
+
+    if action == "produce":
+        opp_id = d.get("opportunity_id", "")
+        score = d.get("combined_score", "")
+        ctype = d.get("content_type", "")
+        if opp_id or score or ctype:
+            score_str = f"{float(score):.1f}" if score else "?"
+            parts.append(f"📊 Opp: #{opp_id} | Skor: {score_str} | Tür: {ctype or '?'}")
+
+        model_id = d.get("model_id", "")
+        tone = d.get("content_tone", "")
+        if model_id or tone:
+            parts.append(f"🎬 Model: {model_id or '?'} | Ton: {tone or '?'}")
+
+    # Production result
+    prod = d.get("production_result", {}) or {}
+    if isinstance(prod, dict) and prod:
+        inner = prod.get("production_result", prod)
+        if isinstance(inner, dict):
+            success = inner.get("success")
+            if success is True:
+                post_id = inner.get("instagram_post_id", "?")
+                parts.append(f"✅ Sonuç: {post_id}")
+            elif success is False:
+                err = str(inner.get("error", "?"))[:60]
+                parts.append(f"❌ Sonuç: {err}")
+
+    return "\n".join(parts)
+
+
 async def cmd_brain(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Brain Agent son kararları"""
     global brain_agent
@@ -2482,32 +2531,36 @@ async def cmd_brain(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         lines = ["🧠 Brain Agent (DB Logs)\n"]
         for log in logs:
-            action = str(log.get("action", "?"))
-            ts = str(log.get("timestamp", "?"))[:16]
             output = log.get("output_data", "{}")
             try:
                 import json as _json
                 data = _json.loads(output) if isinstance(output, str) else (output or {})
-                reason = str(data.get("reason", ""))[:80]
             except Exception:
-                reason = ""
-            lines.append(f"• {action} {ts}\n  {reason}")
+                data = {}
+            decision = {
+                "action": log.get("action", "?"),
+                "timestamp": str(log.get("timestamp", "")),
+                "reason": data.get("reason", ""),
+                "opportunity_id": data.get("opportunity_id", ""),
+                "content_type": data.get("content_type", ""),
+                "model_id": data.get("model_id", ""),
+                "content_tone": data.get("content_tone", ""),
+                "production_result": data.get("production_result"),
+            }
+            lines.append(_format_brain_decision(decision))
 
-        await update.message.reply_text("\n".join(lines))
+        await update.message.reply_text("\n\n".join(lines))
         return
 
     lines = ["🧠 Brain Agent (Son Kararlar)\n"]
     for d in decisions:
-        action = str(d.get("action", "?"))
-        reason = str(d.get("reason", ""))[:80]
-        ts = str(d.get("timestamp", "?"))[:16]
-        lines.append(f"• {action} {ts}\n  {reason}")
+        lines.append(_format_brain_decision(d))
 
     dry_run = brain_agent.is_dry_run if brain_agent else True
     mode = "DRY-RUN" if dry_run else "LIVE"
-    lines.append(f"\nMod: {mode}")
+    lines.append(f"Mod: {mode}")
 
-    await update.message.reply_text("\n".join(lines))
+    await update.message.reply_text("\n\n".join(lines))
 
 
 async def cmd_feeds(update: Update, context: ContextTypes.DEFAULT_TYPE):
