@@ -26,7 +26,7 @@ VALID_CONTENT_TONES = ["news_commentary", "educational", "showcase", "thought_le
 # Günlük limitler
 MAX_DAILY_POSTS = int(os.getenv("BRAIN_MAX_DAILY_POSTS", "2"))
 MIN_POST_INTERVAL_HOURS = int(os.getenv("BRAIN_MIN_POST_INTERVAL_HOURS", "4"))
-MIN_SCORE_TO_PRODUCE = float(os.getenv("BRAIN_MIN_SCORE_PRODUCE", "60"))
+MIN_SCORE_TO_PRODUCE = float(os.getenv("BRAIN_MIN_SCORE_PRODUCE", "50"))
 
 # Optimal paylaşım saatleri (KKTC UTC+3)
 OPTIMAL_HOURS = [10, 14, 19]

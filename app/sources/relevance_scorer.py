@@ -134,10 +134,11 @@ JSON formatında yanıt ver:
             if result.get("reasoning"):
                 logger.info(f"Score reasoning [{opportunity.get('title', '')[:40]}]: {result['reasoning']}")
 
-            # Backward-compat mapping (DB column names)
+            # Backward-compat mapping (prompt key → DB column name)
             result["relevance_score"] = result["olivenet_relevance"]
             result["timeliness_score"] = result["timeliness"]
-            # virality_potential stays as-is (same key name from prompt → DB)
+            result["virality_potential"] = result["viral_potential"]
+            result["originality_score"] = result["originality"]
 
             # Combined score hesapla
             result["combined_score"] = self.calculate_combined_score(
