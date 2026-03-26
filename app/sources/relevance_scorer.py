@@ -49,7 +49,7 @@ class RelevanceScorer(BaseAgent):
         company_profile = self.load_context("company-profile.md")
         content_strategy = self.load_context("content-strategy.md")
 
-        prompt = f"""Sen bir içerik fırsat değerlendirme uzmanısın. Olivenet, KKTC merkezli bir teknoloji şirketidir — IoT, Edge AI, enerji izleme ve yapay zeka çözümleri sunar. Instagram'da hem teknik hem popüler bilim içeriği üretir.
+        prompt = f"""Sen bir içerik fırsat değerlendirme uzmanısın. Olivenet haberleri birebir çevirmez — haberlerden İLHAM ALARAK orijinal, görsel olarak etkileyici içerikler üretir (3D render, sinematik video, infografik). Değerlendirirken "bu haberden ne kadar orijinal görsel konsept üretebiliriz?" sorusunu sor.
 
 OLIVENET HAKKINDA:
 {company_profile[:1500]}
@@ -75,10 +75,10 @@ Bu fırsatı aşağıdaki 5 boyutta 1-10 arası puanla:
    - Alakasız (politika, spor, magazin) = 1-2
 
 2. **visual_potential** (1-10): Bu konu Instagram Reels/video olarak ne kadar görsel ve sinematik olabilir?
-   - Robot, drone, fabrika, sensör görseli = 8-10
-   - Veri dashboard, grafik, karşılaştırma = 6-8
-   - Soyut konsept ama animasyonla anlatılabilir = 4-6
-   - Sadece metin bazlı, görsel potansiyeli düşük = 1-3
+   - Orijinal 3D render/sinematik konsept potansiyeli yüksek (fabrika, sensör, gateway, sera) = 8-10
+   - Soyut ama yaratıcı görsel konsepte dönüştürülebilir = 6-8
+   - Veri/istatistik bazlı, infografik potansiyeli var = 4-6
+   - Orijinal görsel konsept üretmek çok zor = 1-3
 
 3. **viral_potential** (1-10): Bu konu sosyal medyada ne kadar dikkat çekip paylaşılabilir?
    - "Bunu bilmiyordum!" etkisi yaratır = 8-10
@@ -102,7 +102,7 @@ Bu fırsatı aşağıdaki 5 boyutta 1-10 arası puanla:
 
 Ayrıca şunları da belirt:
 - **reasoning**: Neden bu skorları verdin? (1-2 cümle, Türkçe)
-- **olivenet_angle**: Bu haberi Olivenet perspektifinden nasıl anlatırız? (1-2 cümle, Türkçe)
+- **olivenet_angle**: Bu haberden ilham alarak nasıl bir ORİJİNAL görsel konsept oluşturabiliriz? Haberi çevirme, orijinal fikir ver. (1-2 cümle, Türkçe)
 - **content_type_suggestion**: En uygun format nedir? ("reels", "carousel", "post", "voice_reels")
 - **hook_suggestion**: Önerilen hook/açılış cümlesi (Türkçe, max 15 kelime)
 
@@ -134,10 +134,11 @@ JSON formatında yanıt ver:
             if result.get("reasoning"):
                 logger.info(f"Score reasoning [{opportunity.get('title', '')[:40]}]: {result['reasoning']}")
 
-            # Backward-compat mapping (DB column names)
+            # Backward-compat mapping (prompt key → DB column name)
             result["relevance_score"] = result["olivenet_relevance"]
             result["timeliness_score"] = result["timeliness"]
-            # virality_potential stays as-is (same key name from prompt → DB)
+            result["virality_potential"] = result["viral_potential"]
+            result["originality_score"] = result["originality"]
 
             # Combined score hesapla
             result["combined_score"] = self.calculate_combined_score(
