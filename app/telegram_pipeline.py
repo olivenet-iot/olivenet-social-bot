@@ -1843,6 +1843,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text += "/next - Sıradaki içerik\n"
         text += "/schedule - Haftalık program\n"
         text += "/sync - Metrics sync\n"
+        text += "/cc <soru> - Claude Code'a sor\n"
 
         keyboard = [[InlineKeyboardButton("🏠 Ana Menü", callback_data="main_menu")]]
         await query.edit_message_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
@@ -2701,6 +2702,47 @@ async def cmd_force(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"✅ Production tetiklendi: {result.get('triggered', False)}")
 
 
+async def cc_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Ad-hoc Claude Code query from Telegram"""
+    if not is_admin(update.effective_user.id):
+        await update.message.reply_text("⛔ Yetkiniz yok.")
+        return
+
+    if not context.args:
+        await update.message.reply_text("Kullanım: /cc <soru veya komut>")
+        return
+
+    prompt = " ".join(context.args)
+    await update.message.reply_text("⏳ Çalışıyor...")
+
+    try:
+        process = await asyncio.create_subprocess_exec(
+            "claude", "-p", prompt, "--print",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            cwd="/opt/olivenet-social-bot"
+        )
+        stdout, stderr = await asyncio.wait_for(
+            process.communicate(), timeout=120
+        )
+
+        result = stdout.decode("utf-8", errors="replace").strip()
+        if not result:
+            result = "Boş yanıt döndü."
+
+        # Telegram 4096 char limit
+        if len(result) <= 4000:
+            await update.message.reply_text(result)
+        else:
+            for i in range(0, len(result), 4000):
+                await update.message.reply_text(result[i:i+4000])
+
+    except asyncio.TimeoutError:
+        await update.message.reply_text("⏰ Timeout (120s)")
+    except Exception as e:
+        await update.message.reply_text(f"❌ Hata: {str(e)[:500]}")
+
+
 async def main():
     """Ana fonksiyon"""
     global pipeline, scheduler, admin_chat_id
@@ -2753,6 +2795,7 @@ async def main():
     app.add_handler(CommandHandler("pause", cmd_pause))
     app.add_handler(CommandHandler("resume", cmd_resume))
     app.add_handler(CommandHandler("force", cmd_force))
+    app.add_handler(CommandHandler("cc", cc_command))
 
     # Handler'lar - Callback ve Mesaj
     app.add_handler(CallbackQueryHandler(handle_callback))
