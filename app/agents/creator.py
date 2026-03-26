@@ -1375,6 +1375,8 @@ Sadece JSON döndür.
         original_user_brief = input_data.get("original_user_brief")
         content_tone = input_data.get("content_tone", "educational")
         news_context = input_data.get("news_context")
+        content_concept = input_data.get("content_concept")
+        inspiration_source = input_data.get("inspiration_source")
 
         # Orijinal kullanıcı açıklaması varsa prompt'a eklenecek bölüm
         original_brief_section = ""
@@ -1392,6 +1394,18 @@ Sadece JSON döndür.
 5. Eğer brief "A vs B" karşılaştırması içeriyorsa, caption da bu karşılaştırmayı korumalı
 6. Spesifik teknik terimleri koru — genel terimlerle DEĞİŞTİRME
 7. Genel bilgi verme, kullanıcının SPESİFİK anlatımını özetle"""
+
+        # Orijinal içerik konsepti (Brain'den gelen yaratıcı yönerge)
+        concept_section = ""
+        if content_concept:
+            concept_section = f"""
+
+### ORİJİNAL İÇERİK KONSEPTİ (Brain'in yaratıcı yönergesi):
+{content_concept}
+{f"İlham kaynağı: {inspiration_source}" if inspiration_source else ""}
+
+⚠️ BU KONSEPTİ TEMEL AL. Haberi birebir çevirmek yerine bu orijinal konsepti uygula.
+Haber sadece arka plan bilgisi olarak kullanılabilir, ana içerik konsepte odaklanmalı."""
 
         company_profile = self.load_context("company-profile.md")
         content_strategy = self.load_context("content-strategy.md")
@@ -1483,16 +1497,16 @@ Sadece JSON döndür.
         if news_context:
             news_context_section = f"""
 
-### HABER/FIRSAT BAĞLAMI
+### İLHAM KAYNAĞI (referans bilgi — birebir çevirme)
 {news_context}
-Bu bağlamı caption'a entegre et — kaynak bilgisini ve detayları kullan."""
+Bu bağlamı doğrudan içerik olarak kullanma. Trend ve perspektif için referans al."""
 
         # Instagram içeriği (kısa)
         ig_prompt = f"""
 ## GÖREV: Instagram Post Yaz
 
 ### Konu
-{topic}{original_brief_section}{news_context_section}
+{topic}{original_brief_section}{concept_section}{news_context_section}
 
 ### Kategori
 {category}
@@ -1514,6 +1528,16 @@ Bu bağlamı caption'a entegre et — kaynak bilgisini ve detayları kullan."""
 - "📌 Kaydet!", "🔖 Yer imi ekle!", "Takip et!" gibi agresif CTA'lar
 - "Bizi arayın", "info@olivenet.io", "İletişime geçin" gibi satış dili
 - Problem → Çözüm → "Biz yaparız" reklam yapısı
+- "Biz de Olivenet olarak..." veya "Olivenet olarak biz de..." kalıbı YASAK
+- Haberi Türkçe'ye çevirip yayınlama — orijinal perspektif sun
+- "Kaynak: X" ile başlayıp haberi özetleme
+- Haberdeki şirket/ürün isimlerini ana konu yapma — trende odaklan
+
+### İÇERİK YAKLAŞIMI
+- Haberler İLHAM KAYNAGIDIR, kopyalanacak içerik değil
+- Haberdeki TRENDE odaklan, Olivenet perspektifinden ORİJİNAL içerik yarat
+- Haber referansı kullan ama içerik haberin kendisi OLMASIN
+- Teknik derinlik kat — yüzeysel haber özeti değil
 
 Sadece post metnini yaz, başka açıklama ekleme.
 """
@@ -1544,7 +1568,7 @@ Sadece post metnini yaz, başka açıklama ekleme.
 ## GÖREV: Facebook Post Yaz
 
 ### Konu
-{topic}{original_brief_section}
+{topic}{original_brief_section}{concept_section}
 
 ### Kategori
 {category}
@@ -1736,6 +1760,7 @@ Sadece JSON döndür.
         content_tone = input_data.get("content_tone", "educational")
         news_context = input_data.get("news_context")
         aspect_ratio = input_data.get("aspect_ratio", "1:1")
+        content_concept = input_data.get("content_concept")
 
         visual_guidelines = self.load_context("visual-guidelines.md")
 
@@ -1748,9 +1773,15 @@ Sadece JSON döndür.
         mood_hint = TONE_MOOD_MAP.get(content_tone, "professional")
 
         news_context_section = ""
-        if news_context:
+        if content_concept:
             news_context_section = f"""
-### Haber/Fırsat Bağlamı
+### Orijinal İçerik Konsepti
+{content_concept}
+Bu konsepti görsel olarak yorumla — haberin kendisini değil, konseptin ruhunu yansıt.
+"""
+        elif news_context:
+            news_context_section = f"""
+### İlham Kaynağı (referans — birebir görsellestirme değil)
 {news_context}
 """
 
@@ -1782,6 +1813,9 @@ Mood: {mood_hint}
 5. 40-80 kelime arası prompt
 6. Fotorealistik, 3D render veya sinematik stil
 7. İnsan yüzü veya gerçekçi insan figürü KULLANMA
+8. ORİJİNAL GÖRSEL KONSEPT oluştur — haber fotoğrafı veya illüstrasyon değil
+9. 3D render, sinematik atmosfer, endüstriyel sahneler tercih et
+10. Haberi görsel olarak anlatma, konseptin ruhunu yansıt
 
 ---
 
@@ -1827,13 +1861,20 @@ Sadece JSON döndür.
         content_tone = input_data.get("content_tone", "educational")
         news_context = input_data.get("news_context")
         visual_style = input_data.get("visual_style", "cinematic_4k")
+        content_concept = input_data.get("content_concept")
 
         visual_guidelines = self.load_context("visual-guidelines.md")
 
         news_context_section = ""
-        if news_context:
+        if content_concept:
             news_context_section = f"""
-### Haber/Fırsat Bağlamı
+### Orijinal İçerik Konsepti
+{content_concept}
+Bu konsepti görsel + animasyon olarak yorumla. Haberi illüstre etme, orijinal sahne yarat.
+"""
+        elif news_context:
+            news_context_section = f"""
+### İlham Kaynağı (referans)
 {news_context}
 """
 
@@ -2016,6 +2057,8 @@ Sadece JSON döndür.
         voice_mode = input_data.get("voice_mode", False)
         visual_style = input_data.get("visual_style", "cinematic_4k")
         style_prefix = get_style_prefix(visual_style)
+        content_concept = input_data.get("content_concept")
+        news_context = input_data.get("news_context")
 
         # Context yükle
         reels_guide = self.load_context("reels-prompts.md")
@@ -2179,6 +2222,29 @@ Bu Reels için önerilen viral format: **{viral_format['format_name']}**
 Her model için bu format'a uygun AYRI ve OPTİMİZE prompt yaz!
 """
 
+        # Orijinal içerik konsepti yönergesi
+        concept_instruction = ""
+        if content_concept:
+            concept_instruction = f"""
+### ORİJİNAL İÇERİK KONSEPTİ
+{content_concept}
+Bu konsepti sinematik olarak canlandır. Haberi illüstre etme, orijinal görsel sahne yarat.
+
+İYİ ÖRNEKLER:
+"Camera pushes through holographic data streams inside a smart greenhouse, sensor particles flowing like aurora"
+"3D render of a LoRaWAN gateway tower, data packets as luminous cubes flowing through colored pipes"
+
+KÖTÜ ÖRNEKLER (YASAK):
+"A news broadcast about NVIDIA AI Grid" ← haber illüstrasyonu
+"People reading about technology on screens" ← generic
+"""
+        elif news_context:
+            concept_instruction = f"""
+### İLHAM KAYNAĞI (birebir görsellestirme değil)
+{news_context}
+Haberi illüstre etme. Haberdeki KAVRAMDAN ilham al, orijinal sinematik sahne hayal et.
+"""
+
         prompt = f"""
 ## GÖREV: Instagram Reels için Profesyonel Video Prompt Oluştur
 
@@ -2203,6 +2269,7 @@ Tüm video prompt'larının BAŞINA şu stil prefix'ini ekle: "{style_prefix}"
 {sync_guide}
 {watch_time_instruction}
 {viral_format_instruction}
+{concept_instruction}
 ---
 
 ## ÇIKTI FORMATI (JSON)

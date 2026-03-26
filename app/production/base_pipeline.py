@@ -48,17 +48,23 @@ class BasePipeline(ABC):
         timestamp = datetime.now().strftime("%H:%M:%S")
         print(f"[{self.pipeline_name.upper()} {timestamp}] {message}")
 
-    def _build_news_context(self, opportunity: Dict) -> str:
+    def _build_news_context(self, opportunity: Dict, content_concept: str = None, inspiration_source: str = None) -> str:
         """Opportunity dict'ten Creator için news_context string'i oluştur."""
         if not opportunity:
             return ""
-        return (
+        context = (
+            f"--- İLHAM KAYNAĞI (DOĞRUDAN PAYLAŞIM İÇİN DEĞİL) ---\n"
             f"HABER: {opportunity.get('title', '')}\n"
             f"KAYNAK: {opportunity.get('source_name', '')}\n"
             f"OZET: {(opportunity.get('summary') or '')[:500]}\n"
             f"OLIVENET ACISI: {opportunity.get('olivenet_angle', '')}\n"
             f"HOOK ONERISI: {opportunity.get('hook_suggestion', '')}"
         )
+        if content_concept:
+            context += f"\n\nORİJİNAL KONSEPT: {content_concept}"
+        if inspiration_source:
+            context += f"\nİLHAM: {inspiration_source}"
+        return context
 
     async def notify_telegram(self, message: str, data: Dict = None, buttons: list = None):
         """Telegram'a bildirim gönder"""

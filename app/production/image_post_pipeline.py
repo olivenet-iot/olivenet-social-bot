@@ -38,6 +38,8 @@ class ImagePostPipeline(BasePipeline):
         aspect_ratio: str = "1:1",
         autonomous: bool = True,
         content_tone: str = "educational",
+        content_concept: str = None,
+        inspiration_source: str = None,
     ) -> Dict[str, Any]:
         """
         Haber fırsatını tek görsel post'a çevir.
@@ -61,13 +63,7 @@ class ImagePostPipeline(BasePipeline):
         self.log(f"Image Post Pipeline baslatildi: '{title[:50]}...'")
         self.state = PipelineState.CREATING_CONTENT
 
-        news_context = (
-            f"HABER: {title}\n"
-            f"KAYNAK: {source_name}\n"
-            f"OZET: {summary[:500]}\n"
-            f"OLIVENET ACISI: {olivenet_angle}\n"
-            f"HOOK ONERISI: {hook_suggestion}"
-        )
+        news_context = self._build_news_context(opportunity, content_concept, inspiration_source)
 
         result = {
             "success": False,
@@ -86,6 +82,8 @@ class ImagePostPipeline(BasePipeline):
                 "visual_type": "image",
                 "news_context": news_context,
                 "content_tone": content_tone,
+                "content_concept": content_concept,
+                "inspiration_source": inspiration_source,
             })
 
             if "error" in content_result:
@@ -108,6 +106,8 @@ class ImagePostPipeline(BasePipeline):
                 "content_tone": content_tone,
                 "news_context": news_context,
                 "aspect_ratio": aspect_ratio,
+                "content_concept": content_concept,
+                "inspiration_source": inspiration_source,
             })
 
             if not prompt_result.get("success"):

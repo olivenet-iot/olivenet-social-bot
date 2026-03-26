@@ -235,6 +235,43 @@ OPERASYONEL SINIRLAR:
 5. Optimal saatler: {OPTIMAL_HOURS}
 6. Min skor: {MIN_SCORE_TO_PRODUCE}
 
+İÇERİK FELSEFESİ — SEN BİR YARATICI YÖNETMEN'SİN:
+Sen bir haber çevirmeni DEĞİLSİN. Sen Olivenet'in yaratıcı direktörüsün.
+Haber akışları İLHAM KAYNAĞI olarak kullan, doğrudan paylaşım için DEĞİL.
+Bir haber gördüğünde şunu düşün:
+- Bu haber hangi KONSEPTE işaret ediyor? (Edge AI, predictive maintenance, akıllı tarım, enerji izleme...)
+- Bu konsepti ORİJİNAL bir görsel içerikle nasıl anlatırım?
+- Haberi referans olarak verebilirim ama içerik benim orijinal bakış açım olmalı.
+
+DÖNÜŞÜM ÖRNEKLERİ:
+Haber: "NVIDIA AI Grid duyurdu"
+→ Düşünce: "Edge AI konsepti trend"
+→ İçerik: "Edge computing fabrikada" 3D render konsept videosu
+→ Caption'da NVIDIA referans, ama asıl içerik orijinal konsept anlatımı
+
+Haber: "LoRa Alliance CEO AI katmanlarını açıkladı"
+→ Düşünce: "LoRaWAN + AI entegrasyonu bizim alan"
+→ İçerik: LoRaWAN ağ katmanlarını gösteren sinematik 3D sahne
+→ Caption'da teknik derinlik, LoRa Alliance referans
+
+Haber: "Agrifoodtech yatırımları upstream'e kayıyor"
+→ Düşünce: "Tarım-IoT trendi, veri odaklı"
+→ İçerik: IoT sensörlü sera infografik carousel
+→ Caption'da trend analizi, rapor referans
+
+YAPMA:
+- Haberi Türkçe'ye çevirip paylaşma
+- Her habere "biz de Olivenet olarak..." ekleme
+- Alakasız haberlere zoraki bağlantı kurma
+- Haber sitesi gibi davranma
+
+YAP:
+- Haberdeki TRENDE odaklan, haberin kendisine değil
+- Orijinal görsel konsept oluştur (3D render, sinematik, infografik)
+- Teknik derinlik sun — yüzeysel haber özeti değil
+- Soru sor, tartışma aç
+- Haberi kaynak/referans olarak ver, ana içerik yapma
+
 İÇERİK TÜRLERİ VE MALİYETLER:
 - news_reels: Sinematik/3D render video (15s). Maliyet ~$1.70. Model: kling-3.0-pro. Ambient ses, TTS yok.
 - short_reels: Kısa video loop (5-10s). Maliyet ~$0.28-0.56. Model: kling-3.0-std. Hızlı, ucuz.
@@ -281,7 +318,7 @@ Kendi kararını ver. Gerekçeni açıkla.
 - "educational": Eğitici. Bir konuyu öğret, teknik detay ver. Bilgi paylaşımı tonu.
 - "showcase": Olivenet'in yaptığı işleri göster. Sadece gerçek projeler ve deneyimler.
 - "thought_leadership": Sektör yorumu, trend analizi. Kişisel görüş ve vizyon.
-KURAL: source='rss' olan fırsatlar için content_tone MUTLAKA 'news_commentary' olmalı.
+KURAL: source='rss' olan fırsatlar için content_tone 'news_commentary' veya 'educational' olabilir. Haberi referans vermek istiyorsan news_commentary, haberden ilham alıp orijinal eğitici içerik oluşturacaksan educational seç.
 
 YARATICI PARAMETRELER:
 - visual_style: Görsel stil. Seçenekler: {', '.join(VALID_VISUAL_STYLES)}. Varsayılan: cinematic_4k
@@ -310,7 +347,9 @@ KARAR VER ve JSON formatında yanıt ver:
     "target_duration": null | 5 | 10,
     "carousel_style": null | "<style>",
     "carousel_layout": null | "<layout>",
-    "slide_count": null | 4-8
+    "slide_count": null | 4-8,
+    "content_concept": "Orijinal içerik konsepti — haberin kendisi değil, haberden ilham alan yaratıcı fikir (örn: 'Edge AI fabrikada: sensörden edge device'a veri akışı 3D render')",
+    "inspiration_source": "İlham alınan haber/trend (1 cümle özet, örn: 'NVIDIA AI Grid haberi')"
 }}"""
 
         try:
@@ -414,6 +453,8 @@ KARAR VER ve JSON formatında yanıt ver:
         visual_style = creative.get("visual_style", "cinematic_4k")
         hook_type = creative.get("hook_type")
         content_tone = creative.get("content_tone", "educational")
+        content_concept = creative.get("content_concept")
+        inspiration_source = creative.get("inspiration_source")
 
         self.log(f"Triggering production: type={content_type}, opp={opp_id}, "
                  f"model={model_id}, style={visual_style}, title={opportunity['title'][:50]}")
@@ -438,6 +479,10 @@ KARAR VER ve JSON formatında yanıt ver:
                         kwargs["model_id"] = model_id
                     if visual_style:
                         kwargs["visual_style"] = visual_style
+                    if content_concept:
+                        kwargs["content_concept"] = content_concept
+                    if inspiration_source:
+                        kwargs["inspiration_source"] = inspiration_source
                     result = await pipeline.run(**kwargs)
 
                 elif content_type == "reels":
@@ -448,6 +493,10 @@ KARAR VER ve JSON formatında yanıt ver:
                         kwargs["visual_style"] = visual_style
                     if hook_type:
                         kwargs["hook_type"] = hook_type
+                    if content_concept:
+                        kwargs["content_concept"] = content_concept
+                    if inspiration_source:
+                        kwargs["inspiration_source"] = inspiration_source
                     result = await pipeline.run(**kwargs)
 
                 elif content_type == "voice_reels":
@@ -456,6 +505,10 @@ KARAR VER ve JSON formatında yanıt ver:
                         kwargs["model_id"] = model_id
                     if visual_style:
                         kwargs["visual_style"] = visual_style
+                    if content_concept:
+                        kwargs["content_concept"] = content_concept
+                    if inspiration_source:
+                        kwargs["inspiration_source"] = inspiration_source
                     result = await pipeline.run(**kwargs)
 
                 elif content_type in ("long_video", "conversational"):
@@ -464,6 +517,10 @@ KARAR VER ve JSON formatında yanıt ver:
                         kwargs["model_id"] = model_id
                     if visual_style:
                         kwargs["visual_style"] = visual_style
+                    if content_concept:
+                        kwargs["content_concept"] = content_concept
+                    if inspiration_source:
+                        kwargs["inspiration_source"] = inspiration_source
                     result = await pipeline.run(**kwargs)
 
                 elif content_type == "short_reels":
@@ -474,6 +531,10 @@ KARAR VER ve JSON formatında yanıt ver:
                     }
                     if visual_style:
                         kwargs["visual_style"] = visual_style
+                    if content_concept:
+                        kwargs["content_concept"] = content_concept
+                    if inspiration_source:
+                        kwargs["inspiration_source"] = inspiration_source
                     result = await pipeline.run(**kwargs)
 
                 elif content_type == "image_post":
@@ -481,6 +542,10 @@ KARAR VER ve JSON formatında yanıt ver:
                         "opportunity": opportunity, "autonomous": True, "content_tone": content_tone,
                         "aspect_ratio": creative.get("aspect_ratio", "1:1"),
                     }
+                    if content_concept:
+                        kwargs["content_concept"] = content_concept
+                    if inspiration_source:
+                        kwargs["inspiration_source"] = inspiration_source
                     result = await pipeline.run(**kwargs)
 
                 elif content_type == "image_to_video":
@@ -491,6 +556,10 @@ KARAR VER ve JSON formatında yanıt ver:
                         kwargs["model_id"] = model_id
                     if visual_style:
                         kwargs["visual_style"] = visual_style
+                    if content_concept:
+                        kwargs["content_concept"] = content_concept
+                    if inspiration_source:
+                        kwargs["inspiration_source"] = inspiration_source
                     result = await pipeline.run(**kwargs)
 
                 elif content_type == "carousel":
@@ -503,10 +572,19 @@ KARAR VER ve JSON formatında yanıt ver:
                         "carousel_layout": creative.get("carousel_layout", "storytelling"),
                         "slide_count": creative.get("slide_count", 5),
                     }
+                    if content_concept:
+                        kwargs["content_concept"] = content_concept
+                    if inspiration_source:
+                        kwargs["inspiration_source"] = inspiration_source
                     result = await pipeline.run(**kwargs)
 
                 else:  # post — no video/carousel params
-                    result = await pipeline.run(topic=opportunity.get("title", ""), opportunity=opportunity, content_tone=content_tone)
+                    kwargs = {"topic": opportunity.get("title", ""), "opportunity": opportunity, "content_tone": content_tone}
+                    if content_concept:
+                        kwargs["content_concept"] = content_concept
+                    if inspiration_source:
+                        kwargs["inspiration_source"] = inspiration_source
+                    result = await pipeline.run(**kwargs)
 
         except Exception as e:
             self.log(f"Production error: {e}")

@@ -43,7 +43,9 @@ class NewsReelsPipeline(BasePipeline):
         target_duration: int = 15,
         visual_style: str = "cinematic_4k",
         autonomous: bool = True,
-        content_tone: str = "news_commentary"
+        content_tone: str = "news_commentary",
+        content_concept: str = None,
+        inspiration_source: str = None,
     ) -> Dict[str, Any]:
         """
         Haber fırsatını sinematik reels'e çevir.
@@ -76,13 +78,7 @@ class NewsReelsPipeline(BasePipeline):
         self.log(f"News Reels Pipeline baslatildi: '{title[:50]}...' (model: {model_name})")
         self.state = PipelineState.CREATING_CONTENT
 
-        news_context = (
-            f"HABER: {title}\n"
-            f"KAYNAK: {source_name}\n"
-            f"OZET: {summary[:500]}\n"
-            f"OLIVENET ACISI: {olivenet_angle}\n"
-            f"HOOK ONERISI: {hook_suggestion}"
-        )
+        news_context = self._build_news_context(opportunity, content_concept, inspiration_source)
 
         result = {
             "success": False,
@@ -104,6 +100,8 @@ class NewsReelsPipeline(BasePipeline):
                 "visual_type": "video",
                 "news_context": news_context,
                 "content_tone": content_tone,
+                "content_concept": content_concept,
+                "inspiration_source": inspiration_source,
             })
 
             if "error" in content_result:
@@ -128,6 +126,8 @@ class NewsReelsPipeline(BasePipeline):
                 "voice_mode": False,
                 "visual_style": visual_style,
                 "news_context": news_context,
+                "content_concept": content_concept,
+                "inspiration_source": inspiration_source,
             })
 
             if not reels_prompt_result.get("success"):

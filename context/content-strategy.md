@@ -1,5 +1,30 @@
 # Olivenet Sosyal Medya İçerik Stratejisi
 
+## İçerik Felsefesi
+
+Olivenet'in Instagram'ı bir haber sitesi DEĞİLDİR.
+Bir görsel teknoloji galerisi ve sektörel düşünce platformudur.
+
+### İçerik Kaynakları
+1. **Orijinal Konseptler** (öncelikli): 3D render teknoloji sahneleri, konsept videolar, teknik infografikler. Habere bağımlı değil.
+2. **Trend İlhamı**: Haber akışından yakalanan trendlerden ilham alan orijinal içerikler. Haber çevirisi değil.
+3. **Showcase**: Gerçek Olivenet projeleri, kurulumlar, sahadan kareler.
+
+### YASAK
+- Haber çevirisi/özeti olarak paylaşım
+- Her posta "biz de Olivenet olarak..." ekleme
+- Alakasız haberlere zoraki şirket bağlantısı
+- Generic teknoloji haberleri sayfası olmak
+
+### Ton ve Dil
+- Teknik ama anlaşılır
+- Perspektif sun, haber aktarma
+- Soru sor, tartışma aç
+- Olivenet'i sadece doğal bağlam varsa bahset
+- Zoraki pazarlama YASAK
+
+---
+
 ## İçerik Hedefleri
 
 1. **Marka Bilinirliği** - Olivenet'i KKTC'nin önde gelen IoT çözüm ortağı olarak konumlandırma
