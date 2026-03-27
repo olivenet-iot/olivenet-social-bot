@@ -1398,16 +1398,14 @@ def get_weekly_progress() -> Dict[str, Any]:
     conn.close()
 
     # İçerik tiplerine göre say
-    counts = {'reels': 0, 'carousel': 0, 'post': 0, 'flux': 0}
+    counts = {'reels': 0, 'carousel': 0, 'post': 0}
+    type_map = {'video': 'reels', 'image': 'post', 'flux': 'post', 'reels': 'reels', 'carousel': 'carousel', 'post': 'post'}
     for row in rows:
         vtype = (row['visual_type'] or 'post').lower()
-        if vtype in counts:
-            counts[vtype] = row['count']
-        elif vtype == 'flux':
-            counts['post'] += row['count']  # flux = post
+        mapped = type_map.get(vtype, 'post')
+        counts[mapped] += row['count']
 
-    # Post ve flux'u birleştir
-    post_count = counts['post'] + counts.get('flux', 0)
+    post_count = counts['post']
 
     return {
         'total': sum(counts.values()),
